@@ -1,3 +1,5 @@
+import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
+
 type TFunc = (key: string, opts?: Record<string, unknown>) => string;
 
 // An event/edition reads as "cancelled" either because it was explicitly cancelled at that level,
@@ -215,6 +217,45 @@ export function daysBetween(dateStr: string, now: Date = new Date()): number {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+// #1227: EventTableView (table view) and RacesPage (swipeable-card list view) each independently
+// flattened the same EventSummary[] into per-row data — exploding a Series event's seriesRaces
+// into one row per race, plus a date ternary reused for both sorting and year-divider/holiday-
+// banner grouping. The two copies had already drifted once (comp vs event field names) and would
+// have drifted again, so both views now share this single flattening function instead. rowDate is
+// precomputed per row (not left for callers to re-derive) so the sort key and the grouping key are
+// guaranteed to be the exact same value.
+export type FlattenedEventRow =
+    | { kind: 'event'; event: EventSummary; rowDate: string | null }
+    | { kind: 'series-race'; event: EventSummary; race: SeriesRaceDto; rowDate: string | null };
+
+export function flattenEventRows(events: EventSummary[]): FlattenedEventRow[] {
+    const rows: FlattenedEventRow[] = [];
+    for (const event of events) {
+        if (event.type === 'Series' && event.seriesRaces && event.seriesRaces.length > 0) {
+            for (const race of event.seriesRaces) {
+                rows.push({ kind: 'series-race', event, race, rowDate: race.dateOfRace });
+            }
+        } else {
+            rows.push({ kind: 'event', event, rowDate: event.displayDate ?? event.nextEditionDate });
+        }
+    }
+    return rows;
+}
+
+// Per-row "days until" for a flattened row — a series-race row has its own dateOfRace (the
+// #1223/#1226 bug was exactly this ternary computed inconsistently in two places), while a plain
+// event row already carries a backend-precomputed daysUntil that must keep being used as-is.
+export function getRowDaysUntil(row: FlattenedEventRow, now: Date = new Date()): number | null {
+    if (row.kind === 'series-race') {
+        return row.race.dateOfRace ? daysBetween(row.race.dateOfRace, now) : null;
+    }
+    // #1231: both production call sites only invoke this helper from inside a
+    // `row.kind === 'series-race'` branch and read `event.daysUntil` directly for 'event' rows,
+    // so this branch is unreached today. Kept so the function stays total over FlattenedEventRow
+    // rather than assuming a caller never passes a plain 'event' row.
+    return row.event.daysUntil;
 }
 
 export function formatRaceDateTime(

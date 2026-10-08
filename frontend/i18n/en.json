@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_5": {
+                "title": "Fixed the same 'Yesterday' race-day bug in the events list view, plus internal cleanup",
+                "description": "The previous release fixed a race in a running series showing as \"Yesterday\" instead of \"Today\" in the main table view — it turned out the events list view had its own separate copy of the same date calculation, with the same bug. That's now fixed there too, and the underlying logic was consolidated into one shared place so a fix like this only has to happen once in the future."
+            },
             "v1_15_4": {
                 "title": "Fixed a race in a running series showing as 'Yesterday' on the day it actually happens",
                 "description": "A race belonging to a multi-race series could show up as having happened \"Yesterday\" in the events list while it was still today, once any time had passed since midnight — a date-math slip that only affected that one countdown label. It now correctly reads \"Today\" for the whole day of the race."

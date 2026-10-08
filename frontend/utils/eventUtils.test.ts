@@ -1,5 +1,73 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, daysBetween, formatYearRanges, getEditionTimingStatus, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import { addDays, daysBetween, flattenEventRows, formatYearRanges, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
+
+// Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
+// flattenEventRows/getRowDaysUntil actually read are meaningful, the rest are harmless defaults.
+function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
+    return {
+        id: overrides.slug ?? 'event-1',
+        name: 'Test Race',
+        nameEn: null,
+        slug: 'test-race',
+        description: null,
+        descriptionEn: null,
+        type: 'Race',
+        activityType: 'TrailRunning',
+        activityTypes: null,
+        status: 'Active',
+        organizerId: null,
+        organizerName: null,
+        organizerNameEn: null,
+        organizerWebsite: null,
+        organizerSlug: null,
+        alertMessage: null,
+        alertMessageEn: null,
+        alertSeverity: null,
+        locationId: null,
+        locationName: null,
+        scheduleRule: null,
+        socialLinks: null,
+        nextEditionDate: null,
+        daysUntil: 10,
+        displayDate: '2026-06-15',
+        editionCount: 1,
+        distances: null,
+        registrationUrl: null,
+        registrationStatus: null,
+        registrationCloses: null,
+        resultsUrl: null,
+        galleries: [],
+        certifications: null,
+        youtubeUrl: null,
+        championshipCategories: null,
+        itraPoints: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: null,
+        seriesRaces: null,
+        gpxPointLat: null,
+        gpxPointLng: null,
+        isMountainRace: false,
+        endDisplayDate: null,
+        editionStatus: null,
+        editionEffectiveCancelled: false,
+        ...overrides,
+    };
+}
+
+function makeSeriesRace(overrides: Partial<SeriesRaceDto> = {}): SeriesRaceDto {
+    return {
+        raceId: 'race-1',
+        raceName: 'Test Sub-Race',
+        raceNameEn: null,
+        dateOfRace: '2026-07-01',
+        startTime: null,
+        distanceLabel: null,
+        ticketStatus: 'Available',
+        registrationUrl: null,
+        ...overrides,
+    };
+}
 
 // #546: the recorded-editions badge must be gap-tolerant — a missing year in the middle of the
 // record must stay visible as a gap, never smoothed into a continuous range.
@@ -130,6 +198,92 @@ describe('daysBetween', () => {
     it('returns 1 for tomorrow checked late in the day', () => {
         const now = new Date('2026-03-15T23:00:00');
         expect(daysBetween('2026-03-16', now)).toBe(1);
+    });
+});
+
+// #1227: flattenEventRows replaces the two independent copies of this exact loop that used to
+// live in EventTableView and RacesPage (one named the row field `event`, the other `comp`) —
+// exploding a Series event's seriesRaces into one row per race, leaving every other event/type as
+// a single row, with rowDate precomputed so sorting and year-divider/holiday-banner grouping read
+// the exact same value instead of re-deriving their own ternary.
+describe('flattenEventRows', () => {
+    it('keeps a non-Series event as a single "event" row, with rowDate from displayDate', () => {
+        const event = makeEvent({ type: 'Race', displayDate: '2026-06-15', nextEditionDate: '2026-06-01' });
+        const rows = flattenEventRows([event]);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: '2026-06-15' }]);
+    });
+
+    it('falls back to nextEditionDate for rowDate when displayDate is null', () => {
+        const event = makeEvent({ displayDate: null, nextEditionDate: '2026-06-01' });
+        const rows = flattenEventRows([event]);
+        expect(rows[0].rowDate).toBe('2026-06-01');
+    });
+
+    it('explodes a Series event into one row per seriesRace, each carrying the parent event', () => {
+        const raceA = makeSeriesRace({ raceId: 'a', dateOfRace: '2026-05-01' });
+        const raceB = makeSeriesRace({ raceId: 'b', dateOfRace: '2026-09-01' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [raceA, raceB] });
+        const rows = flattenEventRows([event]);
+        expect(rows).toEqual([
+            { kind: 'series-race', event, race: raceA, rowDate: '2026-05-01' },
+            { kind: 'series-race', event, race: raceB, rowDate: '2026-09-01' },
+        ]);
+    });
+
+    it('treats a Series event with an empty seriesRaces array as a plain single row', () => {
+        const event = makeEvent({ type: 'Series', seriesRaces: [] });
+        const rows = flattenEventRows([event]);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
+    });
+
+    it('treats a Series event with a null seriesRaces as a plain single row', () => {
+        const event = makeEvent({ type: 'Series', seriesRaces: null });
+        const rows = flattenEventRows([event]);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
+    });
+
+    it('preserves input order across a mix of plain events and exploded series rows', () => {
+        const plain = makeEvent({ slug: 'plain' });
+        const seriesRace = makeSeriesRace();
+        const series = makeEvent({ slug: 'series', type: 'Series', seriesRaces: [seriesRace] });
+        const rows = flattenEventRows([plain, series]);
+        expect(rows.map(r => r.kind)).toEqual(['event', 'series-race']);
+    });
+});
+
+// #1223/#1226/#1227: this ternary (dateOfRace ? daysBetween(...) : null) drifted between
+// EventTableView and RacesPage once already — getRowDaysUntil is the single place it's computed
+// now. A plain "event" row keeps using the backend-precomputed daysUntil as-is, never recomputing
+// it from a date string.
+describe('getRowDaysUntil', () => {
+    it('computes days-until from the series race\'s own dateOfRace, not the parent event\'s', () => {
+        const now = new Date('2026-03-15T00:00:00');
+        const event = makeEvent({ displayDate: '2099-01-01' }); // deliberately far off, must be ignored
+        const race = makeSeriesRace({ dateOfRace: '2026-03-20' });
+        const row = { kind: 'series-race' as const, event, race, rowDate: race.dateOfRace };
+        expect(getRowDaysUntil(row, now)).toBe(5);
+    });
+
+    it('returns null for a series-race row whose race has no dateOfRace', () => {
+        const now = new Date('2026-03-15T00:00:00');
+        const event = makeEvent();
+        const race = makeSeriesRace({ dateOfRace: null });
+        const row = { kind: 'series-race' as const, event, race, rowDate: null };
+        expect(getRowDaysUntil(row, now)).toBeNull();
+    });
+
+    it('returns the event\'s own backend-precomputed daysUntil for a plain "event" row', () => {
+        const event = makeEvent({ daysUntil: 42 });
+        const row = { kind: 'event' as const, event, rowDate: event.displayDate };
+        expect(getRowDaysUntil(row, new Date('2026-03-15T00:00:00'))).toBe(42);
+    });
+
+    it('defaults `now` to the current time when not provided', () => {
+        const today = new Date().toISOString().slice(0, 10);
+        const event = makeEvent();
+        const race = makeSeriesRace({ dateOfRace: today });
+        const row = { kind: 'series-race' as const, event, race, rowDate: race.dateOfRace };
+        expect(getRowDaysUntil(row)).toBe(0);
     });
 });
 
