@@ -17,13 +17,13 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
-import type { EventSummary, EventDetail, RaceDto, SeriesRaceDto } from '../hooks/useEvents';
+import type { EventSummary, EventDetail, RaceDto } from '../hooks/useEvents';
 import { NewYearSplitterRows } from './NewYearSplitter';
 import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled, isOngoingPastDayTwo, daysBetween } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
 import { ActivityIcons } from '../utils/activityIcon';
 import { getActivityIcon } from '../utils/getActivityIcon';
 import { useLocalize } from '../utils/localize';
@@ -41,13 +41,6 @@ interface EventTableViewProps {
 
 type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type' | 'distance';
 type SortDir = 'asc' | 'desc';
-
-type TableRow =
-    | { kind: 'event'; event: EventSummary }
-    | { kind: 'series-race'; event: EventSummary; race: SeriesRaceDto };
-
-
-
 
 const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, onToggleFavorite, isFavoriteEvent }) => {
     const { t } = useTranslation();
@@ -104,7 +97,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
             : null,
     [userLocation]);
 
-    const sortedRows = useMemo((): TableRow[] => {
+    const sortedRows = useMemo((): FlattenedEventRow[] => {
         const dir = sortDir === 'asc' ? 1 : -1;
         const sorted = [...events].sort((a, b) => {
             switch (sortField) {
@@ -142,21 +135,16 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
             }
         });
 
-        const rows: TableRow[] = [];
-        for (const event of sorted) {
-            if (event.type === 'Series' && event.seriesRaces && event.seriesRaces.length > 0) {
-                for (const race of event.seriesRaces) {
-                    rows.push({ kind: 'series-race', event, race });
-                }
-            } else {
-                rows.push({ kind: 'event', event });
-            }
-        }
+        // Spread into a fresh array before the in-place .sort() below — react-hooks/immutability
+        // otherwise can't prove flattenEventRows()'s return value is safe to mutate here, and
+        // (surprisingly) flags the unrelated lastYear/lastHolidayDate reassignment further down
+        // this same component as a purity violation.
+        const rows = [...flattenEventRows(sorted)];
         // Re-sort by individual race date when sorting by date fields
         if (sortField === 'daysUntil' || sortField === 'nextEditionDate') {
             rows.sort((a, b) => {
-                const aDate = a.kind === 'series-race' ? a.race.dateOfRace : (a.event.displayDate ?? a.event.nextEditionDate);
-                const bDate = b.kind === 'series-race' ? b.race.dateOfRace : (b.event.displayDate ?? b.event.nextEditionDate);
+                const aDate = a.rowDate;
+                const bDate = b.rowDate;
                 if (!aDate && !bDate) return 0;
                 if (!aDate) return dir;
                 if (!bDate) return -dir;
@@ -211,9 +199,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                         let lastHolidayDate: string | null = null;
                         let lastYear: string | null = null;
                         return sortedRows.map((row, idx) => {
-                        const rowDate = row.kind === 'series-race'
-                            ? row.race.dateOfRace
-                            : (row.event.displayDate ?? row.event.nextEditionDate);
+                        const rowDate = row.rowDate;
                         const rowYear = rowDate ? rowDate.slice(0, 4) : null;
                         // #1053: lastYear starts null, so it must be checked explicitly — otherwise
                         // the very first row (whatever year it happens to fall in) reads as a
@@ -260,9 +246,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                         })() : null;
                         if (row.kind === 'series-race') {
                             const { event, race } = row;
-                            const raceDaysUntil = race.dateOfRace
-                                ? daysBetween(race.dateOfRace, new Date(nowMs))
-                                : null;
+                            const raceDaysUntil = getRowDaysUntil(row, new Date(nowMs));
                             return (
                                 <React.Fragment key={`${event.id}-${race.raceId}`}>
                                     {yearDivider}
