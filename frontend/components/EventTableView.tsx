@@ -23,7 +23,7 @@ import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled, isOngoingPastDayTwo } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled, isOngoingPastDayTwo, daysBetween } from '../utils/eventUtils';
 import { ActivityIcons } from '../utils/activityIcon';
 import { getActivityIcon } from '../utils/getActivityIcon';
 import { useLocalize } from '../utils/localize';
@@ -261,7 +261,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                         if (row.kind === 'series-race') {
                             const { event, race } = row;
                             const raceDaysUntil = race.dateOfRace
-                                ? Math.round((new Date(race.dateOfRace + 'T00:00:00').getTime() - nowMs) / 86400000)
+                                ? daysBetween(race.dateOfRace, new Date(nowMs))
                                 : null;
                             return (
                                 <React.Fragment key={`${event.id}-${race.raceId}`}>

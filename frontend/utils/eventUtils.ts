@@ -205,6 +205,18 @@ export function msUntilNextMidnight(now: Date = new Date()): number {
     return nextMidnight.getTime() - now.getTime();
 }
 
+// Whole-day difference between `dateStr` and `now`, both normalized to local midnight before
+// diffing so the result can't drift to an off-by-one depending on what time of day `now` is
+// (e.g. a same-day date must stay 0 even checked at 23:59, not round down to -1). Positive =
+// `dateStr` is in the future, negative = in the past, 0 = today. Mirrors the midnight-
+// normalization pattern in getEditionTimingStatus above.
+export function daysBetween(dateStr: string, now: Date = new Date()): number {
+    const target = new Date(dateStr + 'T00:00:00');
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,
