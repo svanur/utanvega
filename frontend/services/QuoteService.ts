@@ -112,6 +112,8 @@ export class QuoteService {
         { text: "It is not about the start. It is about the finish", author: "Andy Glaze." },
         { text: "The only way through is forward...", author: "Andy Glaze." },
         { text: "þetta eru ekki kálfar... Þetta eru naut!", author: "Guðbrandur Benediktsson um kálfana á Tomma G." },
+        { text: "The most important step a man can take. It's not the first one, is it?\n" +
+                "It's the next one. Always the next step.", author: "Brandon Sanderson, Oathbringer" },
     ];
 
     static getRandomQuote(): Quote {
