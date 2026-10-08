@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_4": {
+                "title": "Lagfær bögg sem varð til þess að seríu viðburðir voru off-by-one",
+                "description": "Dagsetningarvilla löguð sem birtist aðeins fyrir seríu viðburði. Hafði aðeins áhrif á þessa einu merkingu í viðburðalista. Nú sést \"í dag\" keppnisdaginn sjálfan, en ekki \"Í gær\" eins og var áður."
+            },
             "v1_15_3": {
                 "title": "Forsíðuforskoðun á 360Runs.com loksins löguð",
                 "description": "Lagfæringin í síðustu útgáfu fyrir leitarvélar sem sáu ranga forskoðun á forsíðu 360runs.com reyndist ekki virka í raun, þrátt fyrir að líta rétt út að utan. Þessi útgáfa skiptir yfir í aðra, staðfesta aðferð (nýrri \"routing middleware\" frá Vercel í stað kyrrstæðrar endurskrifunarreglu), staðfest með því að skoða beint fyrirspurnaskrár í framleiðsluumhverfi frekar en bara svar síðunnar."

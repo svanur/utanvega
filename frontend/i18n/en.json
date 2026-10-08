@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_15_4": {
+                "title": "Fixed a race in a running series showing as 'Yesterday' on the day it actually happens",
+                "description": "A race belonging to a multi-race series could show up as having happened \"Yesterday\" in the events list while it was still today, once any time had passed since midnight — a date-math slip that only affected that one countdown label. It now correctly reads \"Today\" for the whole day of the race."
+            },
             "v1_15_3": {
                 "title": "Homepage crawler previews on 360Runs.com actually fixed this time",
                 "description": "Last release's fix for crawlers seeing the wrong preview on 360runs.com's homepage turned out not to actually work in production, despite looking correct from the outside. This release replaces it with a different, verified approach (Vercel's newer routing middleware instead of a static rewrite rule), confirmed working by checking production request logs directly rather than just the page's response."

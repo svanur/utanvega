@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, formatYearRanges, getEditionTimingStatus, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import { addDays, daysBetween, formatYearRanges, getEditionTimingStatus, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
 
 // #546: the recorded-editions badge must be gap-tolerant — a missing year in the middle of the
 // record must stay visible as a gap, never smoothed into a continuous range.
@@ -93,6 +93,43 @@ describe('msUntilNextMidnight', () => {
     it('returns the remaining ms in the day for a "now" mid-day', () => {
         const now = new Date('2026-03-15T12:00:00.000');
         expect(msUntilNextMidnight(now)).toBe(12 * 60 * 60 * 1000);
+    });
+});
+
+// #1223: EventTableView's series sub-race countdown chip computed Math.round((raceMidnight -
+// nowMs) / 86400000) with `nowMs` a raw timestamp instead of a midnight-normalized one — on race
+// day, once any time had elapsed, the diff went negative-fractional and rounded to -1, showing
+// "Yesterday" instead of "Today". daysBetween normalizes both sides to local midnight first, like
+// getEditionTimingStatus above, so the result can't depend on what time of day `now` is.
+describe('daysBetween', () => {
+    it('returns 0 for today checked late in the day — the exact #1223 repro', () => {
+        const now = new Date('2026-03-15T23:00:00');
+        expect(daysBetween('2026-03-15', now)).toBe(0);
+    });
+
+    it('returns 0 for today checked just after midnight', () => {
+        const now = new Date('2026-03-15T00:00:01');
+        expect(daysBetween('2026-03-15', now)).toBe(0);
+    });
+
+    it('returns -1 for yesterday, not -2, even checked just after midnight', () => {
+        const now = new Date('2026-03-15T00:00:01');
+        expect(daysBetween('2026-03-14', now)).toBe(-1);
+    });
+
+    it('returns 1 for tomorrow', () => {
+        const now = new Date('2026-03-15T12:00:00');
+        expect(daysBetween('2026-03-16', now)).toBe(1);
+    });
+
+    it('returns -1 for yesterday checked late in the day', () => {
+        const now = new Date('2026-03-15T23:00:00');
+        expect(daysBetween('2026-03-14', now)).toBe(-1);
+    });
+
+    it('returns 1 for tomorrow checked late in the day', () => {
+        const now = new Date('2026-03-15T23:00:00');
+        expect(daysBetween('2026-03-16', now)).toBe(1);
     });
 });
 
