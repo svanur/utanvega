@@ -452,6 +452,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         return { justRaced: jr, upcoming: up };
     }, [sortedFiltered]);
     const flattenedUpcoming = useMemo((): FlattenedEventRow[] => {
+        // Unlike EventTableView.tsx's equivalent call site, no defensive spread is needed here —
+        // react-hooks/immutability doesn't flag this file's in-place .sort() below as mutating
+        // flattenEventRows()'s return value.
         const rows = flattenEventRows(upcoming);
         if (sortBy === 'date') {
             rows.sort((a, b) => {
