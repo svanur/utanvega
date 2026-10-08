@@ -251,6 +251,10 @@ export function getRowDaysUntil(row: FlattenedEventRow, now: Date = new Date()):
     if (row.kind === 'series-race') {
         return row.race.dateOfRace ? daysBetween(row.race.dateOfRace, now) : null;
     }
+    // #1231: both production call sites only invoke this helper from inside a
+    // `row.kind === 'series-race'` branch and read `event.daysUntil` directly for 'event' rows,
+    // so this branch is unreached today. Kept so the function stays total over FlattenedEventRow
+    // rather than assuming a caller never passes a plain 'event' row.
     return row.event.daysUntil;
 }
 
