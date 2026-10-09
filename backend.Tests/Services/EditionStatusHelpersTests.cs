@@ -223,6 +223,22 @@ public class EditionStatusHelpersTests
         Assert.Equal(RegistrationStatus.NotRequired, result);
     }
 
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_StoredInvitational_ReturnsInvitationalEvenWithBothDatesSet()
+    {
+        // Invitational is the same kind of override as NotRequired — entry by selection, not a
+        // public registration window, e.g. the Backyard Ultra World Championship — and must not
+        // be clobbered by a live computation.
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc); // would compute Open
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Invitational, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Invitational, result);
+    }
+
     [Theory]
     [InlineData(EditionStatus.Cancelled)]
     [InlineData(EditionStatus.Completed)]
@@ -276,6 +292,15 @@ public class EditionStatusHelpersTests
             RaceStatus.Active, TicketStatus.Available, RegistrationStatus.NotRequired);
 
         Assert.Equal(TicketStatus.Free, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_EditionInvitational_ReturnsInvitational()
+    {
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Invitational);
+
+        Assert.Equal(TicketStatus.Invitational, result);
     }
 
     [Theory]

@@ -1616,7 +1616,8 @@
             "Open": "Registration is open",
             "Closed": "Registration closed",
             "NotStarted": "Registration not started",
-            "NotRequired": "Free entry"
+            "NotRequired": "Free entry",
+            "Invitational": "Invitation only"
         },
         "ticketStatus": {
             "Free": "Registration: Free",
@@ -1624,7 +1625,8 @@
             "Available": "Registration: Open",
             "AlmostSoldOut": "Registration: Almost Full",
             "SoldOut": "Registration: Sold Out",
-            "Closed": "Registration: Closed"
+            "Closed": "Registration: Closed",
+            "Invitational": "Registration: Invitation only"
         }
     },
     "calendar": {

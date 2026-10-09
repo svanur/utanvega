@@ -58,7 +58,7 @@ export function isAllSoldOut(distances: DistanceEntry[] | null | undefined): boo
 // event's seriesRaces, since those can span multiple editions each with their own registration
 // window. Use isRegistrationRequiredForRace below for that case.
 export function isRegistrationRequired(registrationStatus: string | null | undefined): boolean {
-    return registrationStatus !== 'NotRequired';
+    return registrationStatus !== 'NotRequired' && registrationStatus !== 'Invitational';
 }
 
 // Per-race equivalent of isRegistrationRequired, for Series events where seriesRaces/races can
@@ -67,7 +67,7 @@ export function isRegistrationRequired(registrationStatus: string | null | undef
 // RegistrationStatus.NotRequired -> TicketStatus.Free and only NotRequired maps to Free — so 'Free'
 // here reliably means "this specific race's edition needs no registration."
 export function isRegistrationRequiredForRace(ticketStatus: string | null | undefined): boolean {
-    return ticketStatus !== 'Free';
+    return ticketStatus !== 'Free' && ticketStatus !== 'Invitational';
 }
 
 // RegistrationCloses is a date-only value under the hood (the admin's DatePicker only captures a
@@ -90,6 +90,7 @@ export function getTicketStatusColor(status: string | null): 'success' | 'error'
         case 'SoldOut': return 'error';
         case 'NotStarted': return 'info';
         case 'Closed': return 'default';
+        case 'Invitational': return 'default';
         default: return 'default';
     }
 }

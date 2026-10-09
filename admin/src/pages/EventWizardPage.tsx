@@ -311,7 +311,7 @@ function emptyEditionForm(): EditionFormState {
   };
 }
 
-const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired'];
+const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired', 'Invitational'];
 
 // #666: the edition created here — carried into Step 3 (Races) so it can create races against the
 // right editionId and so createEmptyRaceForm can mirror CreateRaceCommand's Completed-edition ->

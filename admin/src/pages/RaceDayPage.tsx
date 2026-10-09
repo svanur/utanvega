@@ -24,7 +24,7 @@ import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, norm
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
-const TICKET_STATUSES: TicketStatus[] = ['Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'NotStarted', 'Free'];
+const TICKET_STATUSES: TicketStatus[] = ['Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'NotStarted', 'Free', 'Invitational'];
 const REGISTRATION_STATUSES = ['NotStarted', 'Open', 'Closed'] as const;
 
 type Mode = 'setup' | 'wrapup';

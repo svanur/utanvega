@@ -6,6 +6,7 @@ public enum RegistrationStatus
     Open,
     Closed,
     NotRequired,
+    Invitational,
 }
 
 public enum EditionStatus
