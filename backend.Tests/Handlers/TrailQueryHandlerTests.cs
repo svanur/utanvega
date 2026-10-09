@@ -373,6 +373,7 @@ public class TrailQueryHandlerTests : IDisposable
     [InlineData(RegistrationStatus.Open, "Available")]
     [InlineData(RegistrationStatus.Closed, "Closed")]
     [InlineData(RegistrationStatus.NotRequired, "Free")]
+    [InlineData(RegistrationStatus.Invitational, "Invitational")]
     public async Task GetTrailBySlug_LinkedRace_RegistrationStatus_MapsToExpectedTicketStatus(
         RegistrationStatus storedRegistrationStatus, string expectedTicketStatus)
     {
