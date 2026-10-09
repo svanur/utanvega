@@ -35,28 +35,37 @@ describe('editionStatusForYear', () => {
   });
 });
 
-// #778: a cloned edition takes the same "isNew" (create) path as a plain Add, but
+// #778/#1068: a cloned edition takes the same "isNew" (create) path as a plain Add, but
 // handleCloneEdition deliberately seeds Status/RegistrationStatus itself (Unconfirmed, plus a
-// RegistrationStatus derived from the suggested date), so the Year nudge must not re-fire and
-// clobber that seed the way it does for a plain Add — while a manual Status/RegistrationStatus
-// change must still win regardless of isNew/isClone, same as before.
+// RegistrationStatus derived from the suggested date). The Year nudge must not blindly re-fire and
+// clobber that seed the way it does for a plain Add — but correcting a clone's Year to a genuinely
+// past year is new information the seed didn't have, and must still land on Completed/Closed
+// (#1068); only a still-upcoming (Hidden) bucket keeps suppressing the nudge for a clone. A manual
+// Status/RegistrationStatus change must still win regardless of isNew/isClone/bucket, same as before.
 describe('shouldNudgeStatusForYear', () => {
-  it('fires for a plain new edition that has not been manually touched', () => {
-    expect(shouldNudgeStatusForYear(true, false, false)).toBe(true);
+  it('fires for a plain new edition that has not been manually touched, regardless of bucket', () => {
+    expect(shouldNudgeStatusForYear(true, false, false, 'Hidden')).toBe(true);
+    expect(shouldNudgeStatusForYear(true, false, false, 'Completed')).toBe(true);
   });
 
-  it('does not fire for a cloned edition, even though isNew is also true', () => {
-    expect(shouldNudgeStatusForYear(true, true, false)).toBe(false);
+  it('does not fire for a cloned edition when the corrected year still buckets to Hidden (#778 regression guard)', () => {
+    expect(shouldNudgeStatusForYear(true, true, false, 'Hidden')).toBe(false);
   });
 
-  it('does not fire once the admin has manually touched Status/RegistrationStatus, clone or not', () => {
-    expect(shouldNudgeStatusForYear(true, false, true)).toBe(false);
-    expect(shouldNudgeStatusForYear(true, true, true)).toBe(false);
+  it('fires for a cloned edition when the corrected year buckets to Completed (#1068)', () => {
+    expect(shouldNudgeStatusForYear(true, true, false, 'Completed')).toBe(true);
+  });
+
+  it('does not fire once the admin has manually touched Status/RegistrationStatus, clone or not, any bucket', () => {
+    expect(shouldNudgeStatusForYear(true, false, true, 'Hidden')).toBe(false);
+    expect(shouldNudgeStatusForYear(true, false, true, 'Completed')).toBe(false);
+    expect(shouldNudgeStatusForYear(true, true, true, 'Hidden')).toBe(false);
+    expect(shouldNudgeStatusForYear(true, true, true, 'Completed')).toBe(false);
   });
 
   it('does not fire for an existing (non-new) edition', () => {
-    expect(shouldNudgeStatusForYear(false, false, false)).toBe(false);
-    expect(shouldNudgeStatusForYear(false, true, false)).toBe(false);
+    expect(shouldNudgeStatusForYear(false, false, false, 'Hidden')).toBe(false);
+    expect(shouldNudgeStatusForYear(false, true, false, 'Completed')).toBe(false);
   });
 });
 

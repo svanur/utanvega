@@ -248,7 +248,13 @@ interface EditionDialogProps {
   edition: EventEditionDto | null;
   eventId: string;
   onClose: () => void;
-  onSaved: (newEditionId?: string) => void;
+  // #1068: the second argument is the edition's actually-saved date (form.date at Save time, not
+  // the initialValues/editionInitialValues snapshot taken when the dialog was opened) — the
+  // caller needs this to compute cloned race dates relative to what was really saved, since the
+  // admin may have corrected Year/Start date in the dialog before saving. null covers both "no
+  // date was set" and the non-new (edit) branch's needsReview-only PUT, where the caller has no
+  // use for it anyway.
+  onSaved: (newEditionId?: string, savedDate?: string | null) => void;
   // Fired after any gallery create/update/delete made via PhotoGalleryManager's own inline
   // checkmark — independent of Save/Cancel, so the edition meta row's Galleries entry stays
   // live even if the dialog is later dismissed via Cancel (see handleCancelOrDismiss, which
@@ -363,7 +369,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
         // prop, so this stays correct if that gate is ever relaxed.
         await galleryManagerRef.current?.flushPending(result.id);
         onNotify('Edition created', 'success');
-        onSaved(result.id);
+        onSaved(result.id, form.date || null);
       } else {
         // needsReview is patch-if-provided on the backend (UpdateEditionCommand) — the field only
         // exists on an already-created edition (mirrors Trail.NeedsReview, which likewise has no
@@ -378,7 +384,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
           return; // keep the dialog open so the admin can retry the gallery save
         }
         onNotify('Edition saved', 'success');
-        onSaved();
+        onSaved(undefined, form.date || null);
       }
       onClose();
     } catch (err) {
@@ -451,13 +457,17 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
                   // picked a Status/RegistrationStatus of their own, a later Year edit (e.g.
                   // fixing a typo) must not silently clobber that choice again. A clone is also
                   // "new" in the isNew sense but handleCloneEdition already seeded a deliberate
-                  // Status/RegistrationStatus (see #778), so it's excluded here too.
-                  if (shouldNudgeStatusForYear(isNew, isCloneRef.current, statusManuallySetRef.current) && newYear.length === 4 && !isNaN(ny)) {
+                  // Status/RegistrationStatus (see #778) — shouldNudgeStatusForYear still lets a
+                  // clone's correction through when it buckets to Completed, i.e. the admin fixed
+                  // the Year to a genuinely past one (#1068); it only keeps suppressing the nudge
+                  // when the bucket is still Hidden (present/future), which is what the clone's
+                  // Unconfirmed seed already represents.
+                  if (newYear.length === 4 && !isNaN(ny)) {
                     // #797: editionStatusForYear returns null for an out-of-range year (e.g.
                     // '-100', '0000', '9999') — same "leave it alone" behaviour as the other
                     // guard failures below, so an implausible typed year doesn't nudge Status.
                     const nudged = editionStatusForYear(ny);
-                    if (nudged) {
+                    if (nudged && shouldNudgeStatusForYear(isNew, isCloneRef.current, statusManuallySetRef.current, nudged.status)) {
                       updates.status = nudged.status;
                       updates.registrationStatus = nudged.registrationStatus;
                     }
@@ -1999,11 +2009,15 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         siblingEditions={detail.editions}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
-        onSaved={async (newEditionId) => {
+        onSaved={async (newEditionId, savedDate) => {
           setEditionDialogOpen(false);
           if (newEditionId && cloneFromEditionId) {
             const sourceEdition = detail?.editions.find(ed => ed.id === cloneFromEditionId);
-            const newEdition = { date: editionInitialValues?.date ?? null };
+            // #1068: use the edition's actually-saved date, not the editionInitialValues snapshot
+            // taken when the clone icon was clicked — the admin may have corrected Year/Start
+            // date in the dialog before Save, and cloned race dates must be computed relative to
+            // what was really saved so each race's day-offset from the source edition still holds.
+            const newEdition = { date: savedDate ?? null };
             if (sourceEdition && sourceEdition.races.length > 0) {
               const results = await Promise.allSettled(
                 [...sourceEdition.races].sort(sortRaces).map(race =>

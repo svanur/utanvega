@@ -171,17 +171,24 @@ export function editionStatusForYear(year: number, currentYear: number = new Dat
     : { status: 'Hidden', registrationStatus: 'NotStarted' };
 }
 
-// #778: a cloned edition is created via the same "isNew" (create) path as a plain Add, but
+// #778/#1068: a cloned edition is created via the same "isNew" (create) path as a plain Add, but
 // handleCloneEdition deliberately seeds Status as Unconfirmed (and RegistrationStatus from
 // whether the suggested date is already past) regardless of the year-bucket default above — so
-// the Year nudge above must not re-fire for a clone the way it does for a plain Add, or it
-// silently discards that seed the moment the admin corrects the suggested year. Manually touching
-// Status/RegistrationStatus must still win over both "isNew" and "isClone", same as before.
-// Pulled out as a pure function (rather than left inline in the Year onChange) so the gating
-// decision is unit-testable — see eventForms.test.ts — independently of the refs that track
-// dialog-open-scoped state in EventDetailPage.
-export function shouldNudgeStatusForYear(isNew: boolean, isClone: boolean, statusManuallySet: boolean): boolean {
-  return isNew && !isClone && !statusManuallySet;
+// the Year nudge above must not blindly re-fire for a clone the way it does for a plain Add, or
+// it would discard that seed the moment the admin touches the suggested year. But suppressing the
+// nudge unconditionally for a clone (the original #778 fix) went too far: correcting a clone's
+// Year to a genuinely past year is new information the Unconfirmed seed didn't have, and should
+// still land the edition on Completed/Closed rather than be shipped as a never-happened
+// "Unconfirmed" historical edition (#1068). So a clone only suppresses the nudge when the
+// corrected year still buckets to Hidden (present/future, i.e. "still upcoming" — which is what
+// the Unconfirmed seed already represents) — a Completed bucket is allowed through. Manually
+// touching Status/RegistrationStatus must still win over both "isNew" and "isClone", same as
+// before. Pulled out as a pure function (rather than left inline in the Year onChange) so the
+// gating decision is unit-testable — see eventForms.test.ts — independently of the refs that
+// track dialog-open-scoped state in EventDetailPage.
+export function shouldNudgeStatusForYear(isNew: boolean, isClone: boolean, statusManuallySet: boolean, bucket: EditionStatus): boolean {
+  if (!isNew || statusManuallySet) return false;
+  return !isClone || bucket === 'Completed';
 }
 
 // #780: the Year field's onChange also auto-syncs Title/titleEn to the typed year, but only while
