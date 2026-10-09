@@ -88,6 +88,7 @@ import { useTrailCheckIns } from '../hooks/useTrailCheckIns';
 import { getAvatarFallbackText, getAvatarImageSrc } from '../utils/avatarPresets';
 import { useLocalize } from '../utils/localize';
 import AssociatedEventBanner from '../components/AssociatedEventBanner';
+import LinkifiedText from '../components/LinkifiedText';
 
 const ALLOWED_YT_HOSTS = ['www.youtube.com', 'youtube.com', 'youtu.be', 'www.youtube-nocookie.com'];
 
@@ -661,7 +662,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
                     {trail.description && (
                         <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
-                            {trail.description}
+                            <LinkifiedText text={trail.description} />
                         </Typography>
                     )}
 

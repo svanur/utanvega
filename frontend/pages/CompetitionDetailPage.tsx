@@ -67,6 +67,7 @@ import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
+import LinkifiedText from '../components/LinkifiedText';
 import { useEventBySlug, useEventSuggestions } from '../hooks/useEvents';
 import type { EventEditionDto, RaceDto, ScheduleRule } from '../hooks/useEvents';
 import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
@@ -232,7 +233,7 @@ function EditionMeta({
             </Stack>
             {edition.notes && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
-                    {loc(edition.notes, edition.notesEn)}
+                    <LinkifiedText text={loc(edition.notes, edition.notesEn)} />
                 </Typography>
             )}
             {!hideMeta && (
@@ -792,7 +793,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {event.description && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, whiteSpace: 'pre-line' }}>
-                            {loc(event.description, event.descriptionEn)}
+                            <LinkifiedText text={loc(event.description, event.descriptionEn)} />
                         </Typography>
                     )}
 
@@ -1575,7 +1576,7 @@ function RaceCard({
 
                 {race.description && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-line' }}>
-                        {loc(race.description, race.descriptionEn)}
+                        <LinkifiedText text={loc(race.description, race.descriptionEn)} />
                     </Typography>
                 )}
             </CardContent>

@@ -32,6 +32,7 @@ import { TrailMapView } from '../components/TrailMapView';
 import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
 import LostLocation from '../components/LostLocation';
+import LinkifiedText from '../components/LinkifiedText';
 import { useLocalize } from '../utils/localize';
 import { breadcrumbContext } from '../utils/breadcrumbContext';
 
@@ -255,7 +256,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
                     {location.description && (
                         <Typography variant="body1" color="text.secondary" paragraph>
-                            {loc(location.description, location.descriptionEn)}
+                            <LinkifiedText text={loc(location.description, location.descriptionEn)} />
                         </Typography>
                     )}
 
