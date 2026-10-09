@@ -74,7 +74,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
+import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
 import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -462,14 +462,22 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const isRecentlyCompleted = (c: EventSummary) =>
             c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && !isEffectivelyCancelled(c);
         const jr = sortedFiltered.filter(isRecentlyCompleted);
+        // #1244: a Series event's season edition can still read as "ongoing" (or even upcoming)
+        // while one of its individual races just finished — so unlike isRecentlyCompleted above,
+        // this must not be mutually exclusive with `upcoming`: the event keeps its place there via
+        // its next race, and also gets a "Nýlokið" card for the one that just raced.
+        const seriesJustRaced = sortedFiltered.filter(c => c.recentlyCompletedSeriesRace != null && !isRecentlyCompleted(c));
         const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
-        return { justRaced: jr, upcoming: up };
+        return { justRaced: [...jr, ...seriesJustRaced], upcoming: up };
     }, [sortedFiltered]);
     const flattenedUpcoming = useMemo((): FlattenedEventRow[] => {
         // Unlike EventTableView.tsx's equivalent call site, no defensive spread is needed here —
         // react-hooks/immutability doesn't flag this file's in-place .sort() below as mutating
         // flattenEventRows()'s return value.
-        const rows = flattenEventRows(upcoming);
+        // includeRecentlyCompleted: false — this list already excludes recently-completed events via
+        // `upcoming` above, and the dedicated "Nýlokið" card (justRaced, below) covers series races;
+        // flattening recentlyCompletedSeriesRace into this list too would show it twice.
+        const rows = flattenEventRows(upcoming, false);
         if (sortBy === 'date') {
             rows.sort((a, b) => {
                 const dateA = a.rowDate;
@@ -1032,7 +1040,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         🏁 {t('races.justRacedSection', { defaultValue: 'Recently completed' })}
                                     </Typography>
                                     <Stack spacing={1.5}>
-                                        {justRaced.map(comp => (
+                                        {justRaced.map(comp => {
+                                            // #1244: a Series event in this section may be here because its whole
+                                            // season edition recently completed (recentRace null — comp's own
+                                            // name/displayDate are the season's), or because a single race within
+                                            // a still-ongoing/upcoming season just finished (recentRace set — name
+                                            // and date must point at that specific race, not the event/season).
+                                            const recentRace = comp.recentlyCompletedSeriesRace;
+                                            const recentRaceDaysUntil = recentRace?.dateOfRace ? daysBetween(recentRace.dateOfRace) : null;
+                                            return (
                                             <SwipeableCard
                                                 key={comp.id}
                                                 onSwipeRight={() => {
@@ -1060,9 +1076,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 } }}>
                                                             <Box sx={{ minWidth: 0, width: '100%' }}>
                                                                 <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
-                                                                    {loc(comp.name, comp.nameEn)}
+                                                                    {recentRace
+                                                                        ? `${loc(comp.name, comp.nameEn)} – ${loc(recentRace.raceName, recentRace.raceNameEn) ?? recentRace.raceName}`
+                                                                        : loc(comp.name, comp.nameEn)}
                                                                 </Typography>
-                                                                {(comp.displayDate ?? comp.nextEditionDate) && (
+                                                                {recentRace?.dateOfRace ? (
+                                                                    <Typography variant="body2" color="text.secondary">
+                                                                        {formatNextDate(recentRace.dateOfRace, t)}
+                                                                    </Typography>
+                                                                ) : (comp.displayDate ?? comp.nextEditionDate) && (
                                                                     <Typography variant="body2" color="text.secondary">
                                                                         {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                     </Typography>
@@ -1096,7 +1118,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 )}
                                                             </Box>
                                                                 <Chip
-                                                                label={getCountdownLabel(comp.daysUntil, t)}
+                                                                label={getCountdownLabel(recentRace ? recentRaceDaysUntil : comp.daysUntil, t)}
                                                                 color="success"
                                                                 size="small"
                                                                 sx={{ fontWeight: 700 }}
@@ -1115,7 +1137,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 </Tooltip>
                                             </Card>
                                             </SwipeableCard>
-                                        ))}
+                                            );
+                                        })}
                                     </Stack>
                                 </Box>
                             )}

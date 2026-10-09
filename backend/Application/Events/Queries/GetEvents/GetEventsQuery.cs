@@ -237,6 +237,48 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                     .ToList();
             }
 
+            // #1244: a Series event's whole season edition reads as "ongoing" for its entire span
+            // (see ongoingEdition above, and isOngoingPastDayTwo on the frontend) — correct for the
+            // edition as a whole, but it means recentlyCompleted (gated on ongoingEdition == null)
+            // can never fire for an individual race within that span. Compute race-level recency
+            // independently, same 3-day window as mostRecentPast/recentlyCompleted, but without that
+            // gate, so e.g. a Thursday heat that just raced still surfaces even though the season
+            // keeps going into next week.
+            SeriesRaceDto? recentlyCompletedSeriesRace = null;
+            if (e.Type == EventType.Series)
+            {
+                var mostRecentPastRace = editionsForCalc
+                    .SelectMany(ed => ed.Races
+                        .Where(r => r.Status != RaceStatus.Cancelled && r.DateOfRace.HasValue && r.DateOfRace.Value < today)
+                        .Select(r => (Edition: ed, Race: r)))
+                    .OrderByDescending(x => x.Race.DateOfRace)
+                    .FirstOrDefault();
+
+                if (e.Status != EventStatus.Cancelled
+                    && mostRecentPastRace.Race != null
+                    && (today.DayNumber - mostRecentPastRace.Race.DateOfRace!.Value.DayNumber) <= 3)
+                {
+                    var recentRaceEdition = mostRecentPastRace.Edition;
+                    var recentRace = mostRecentPastRace.Race;
+                    var recentEdEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                        recentRaceEdition.Status, recentRaceEdition.RegistrationStatus, recentRaceEdition.RegistrationOpens, recentRaceEdition.RegistrationCloses, now);
+
+                    recentlyCompletedSeriesRace = new SeriesRaceDto(
+                        recentRace.Id,
+                        recentRace.Name,
+                        recentRace.NameEn,
+                        recentRace.DateOfRace,
+                        recentRace.StartTime,
+                        !string.IsNullOrWhiteSpace(recentRace.DistanceLabel) ? recentRace.DistanceLabel
+                            : GetTrail(recentRace.TrailId) is { Length: > 0 } rst ? $"{rst.Length / 1000.0:0.#} km"
+                            : null,
+                        recentRace.DistanceLabelEn,
+                        EditionStatusHelpers.ComputeEffectiveTicketStatus(recentRace.Status, recentRace.TicketStatus, recentEdEffectiveRegStatus).ToString(),
+                        recentRaceEdition.RegistrationUrl
+                    );
+                }
+            }
+
             var isMountainRace = editionsForCalc
                 .SelectMany(ed => ed.Races)
                 .Any(r => GetTrail(r.TrailId)?.TerrainType == Core.Entities.TerrainType.Mountainous);
@@ -313,7 +355,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 // must never leak it; only the admin events list (IncludeHidden=true) sees the real aggregate.
                 AnyEditionNeedsReview: request.IncludeHidden && editionsForCalc.Any(ed => ed.NeedsReview),
                 AnyEditionUnconfirmed: request.IncludeHidden && editionsForCalc.Any(ed => ed.Status == EditionStatus.Unconfirmed),
-                RegistrationCloses: relevantEdition?.RegistrationCloses
+                RegistrationCloses: relevantEdition?.RegistrationCloses,
+                RecentlyCompletedSeriesRace: recentlyCompletedSeriesRace
             );
         }).ToList();
     }

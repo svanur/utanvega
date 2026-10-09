@@ -80,7 +80,13 @@ public record EventSummaryDto(
     // Raw registration close instant for the relevant edition, alongside the already-derived
     // RegistrationStatus string — lets the frontend gate UI (e.g. the resale link) on "has
     // registration actually closed" without re-deriving it from RegistrationStatus alone.
-    DateTime? RegistrationCloses = null
+    DateTime? RegistrationCloses = null,
+    // #1244: Series-only. The most recent individual race (across editionsForCalc, not just the
+    // relevant edition) that finished within the last 3 days — independent of whether the season
+    // edition as a whole still reads as "ongoing" (see isOngoingPastDayTwo on the frontend). Null
+    // for non-Series events and whenever no race in the series finished that recently. Reuses
+    // SeriesRaceDto rather than introducing a new shape.
+    SeriesRaceDto? RecentlyCompletedSeriesRace = null
 );
 
 public record RaceDto(
