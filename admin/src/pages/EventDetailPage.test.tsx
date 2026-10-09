@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -34,6 +35,9 @@ import { EVENTS_QUERY_KEY, type EventDetailDto, type EventEditionDto } from '../
 const mockState = vi.hoisted(() => ({
   eventDetail: null as EventDetailDto | null,
   editionPutShouldFail: false,
+  editionDeleteShouldFail: false,
+  editionCancelShouldFail: false,
+  editionCompleteShouldFail: false,
 }));
 
 vi.mock('../hooks/api', () => ({
@@ -45,6 +49,24 @@ vi.mock('../hooks/api', () => ({
     if (method === 'PUT' && /^\/api\/v1\/admin\/editions\/[^/]+$/.test(endpoint)) {
       return mockState.editionPutShouldFail
         ? Promise.reject(new Error('Failed to update edition status'))
+        : Promise.resolve({});
+    }
+    // #1028: handleDeleteEdition/handleCancelEdition/handleCompleteEdition each hit their own
+    // DELETE/POST endpoint — mirrors the PUT branch above's success-vs-failure toggle so each
+    // handler's success and failure paths can be exercised independently.
+    if (method === 'DELETE' && /^\/api\/v1\/admin\/editions\/[^/]+$/.test(endpoint)) {
+      return mockState.editionDeleteShouldFail
+        ? Promise.reject(new Error('Failed to delete edition'))
+        : Promise.resolve({});
+    }
+    if (method === 'POST' && /^\/api\/v1\/admin\/editions\/[^/]+\/cancel$/.test(endpoint)) {
+      return mockState.editionCancelShouldFail
+        ? Promise.reject(new Error('Failed to cancel edition'))
+        : Promise.resolve({});
+    }
+    if (method === 'POST' && /^\/api\/v1\/admin\/editions\/[^/]+\/complete$/.test(endpoint)) {
+      return mockState.editionCompleteShouldFail
+        ? Promise.reject(new Error('Failed to complete edition'))
         : Promise.resolve({});
     }
     return Promise.resolve([]);
@@ -203,12 +225,12 @@ function buildEventDetailFixture(): EventDetailDto {
   };
 }
 
-function renderEventDetailPage(queryClient: QueryClient) {
+function renderEventDetailPage(queryClient: QueryClient, onNotify: (msg: ReactNode, severity?: 'success' | 'error') => void = () => {}) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[`/events/${EVENT_SLUG}`]}>
         <Routes>
-          <Route path="/events/:slug" element={<EventDetailPage onNotify={() => {}} />} />
+          <Route path="/events/:slug" element={<EventDetailPage onNotify={onNotify} />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -262,6 +284,172 @@ describe('EventDetailPage — handleCycleEditionStatus invalidates the events li
     // .catch() rolls it back to "Active" — waiting for that reappearance is also proof the
     // rollback ran, not just that invalidateEventsList wasn't called.
     await screen.findByText('Active');
+    expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+});
+
+// #1028: handleDeleteEdition/handleCancelEdition/handleCompleteEdition each only called
+// `await refresh()` on success, never invalidateEventsList() — unlike their sibling
+// handleToggleEditionNeedsReview (#923) and handleCycleEditionStatus (#1024) above, both of which
+// already invalidate EVENTS_QUERY_KEY. EventsListPage derives hasFutureEdition/
+// anyEditionUnconfirmed chips from that same cached list, so deleting, cancelling or completing an
+// edition left those chips stale for up to the list's 30s staleTime. Each button is a
+// confirm-then-click control (first click arms deletingEditionId/cancelingEditionId/
+// completingEditionId, second click actually fires the request — see the `if (xId !== edition.id)`
+// guards at the top of each handler), so every test here clicks its icon button twice.
+describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleCompleteEdition invalidate the events list cache (#1028)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  function seedQueryClient() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Seed the events list cache the same way useEvents' own useQuery would populate it — an
+    // absent cache entry can't demonstrate invalidation, since invalidateQueries would have
+    // nothing to mark stale.
+    queryClient.setQueryData(EVENTS_QUERY_KEY, []);
+    return queryClient;
+  }
+
+  // Each icon button is the edition header's own — always rendered, expanding the edition is not
+  // required — found via the MUI icon's own data-testid (createSvgIcon sets
+  // data-testid={displayName + 'Icon'} regardless of accessible name, and none of these
+  // IconButtons carry an aria-label). DeleteIcon/EventBusyIcon both also label the event-level
+  // "Delete event"/"Cancel event" buttons higher up the page (EventDetailPage.tsx:1579-1589), so
+  // getByTestId's single-match assumption doesn't hold here — the edition-row instance is the one
+  // rendered last in DOM order (the single fixture edition from buildEventDetailFixture).
+  function getEditionIconButton(testId: string) {
+    const icons = screen.getAllByTestId(testId);
+    const icon = icons[icons.length - 1];
+    if (!icon) throw new Error(`No icon found for ${testId}`);
+    const button = icon.closest('button');
+    if (!button) throw new Error(`No <button> ancestor for icon ${testId}`);
+    return button;
+  }
+
+  it('handleDeleteEdition invalidates EVENTS_QUERY_KEY after a successful delete', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionDeleteShouldFail = false;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    renderEventDetailPage(queryClient);
+    await screen.findByText('Active');
+
+    const deleteButton = getEditionIconButton('DeleteIcon');
+    fireEvent.click(deleteButton); // arms deletingEditionId
+    fireEvent.click(deleteButton); // fires the DELETE
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+    });
+  });
+
+  it('handleDeleteEdition does not invalidate EVENTS_QUERY_KEY when the DELETE fails', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionDeleteShouldFail = true;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onNotify = vi.fn();
+
+    renderEventDetailPage(queryClient, onNotify);
+    await screen.findByText('Active');
+
+    const deleteButton = getEditionIconButton('DeleteIcon');
+    fireEvent.click(deleteButton);
+    fireEvent.click(deleteButton);
+
+    // Waiting for the catch block's onNotify call is the deterministic signal that the rejected
+    // DELETE has settled — the MUI Tooltip's own text isn't in the DOM without a hover/focus, so
+    // it can't stand in for that like the chip-rollback check in the #1024 tests above does.
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Failed to delete edition', 'error');
+    });
+    expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+
+  it('handleCancelEdition invalidates EVENTS_QUERY_KEY after a successful cancel', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCancelShouldFail = false;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    renderEventDetailPage(queryClient);
+    await screen.findByText('Active');
+
+    const cancelButton = getEditionIconButton('EventBusyIcon');
+    fireEvent.click(cancelButton); // arms cancelingEditionId
+    fireEvent.click(cancelButton); // fires the POST .../cancel
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+    });
+  });
+
+  it('handleCancelEdition does not invalidate EVENTS_QUERY_KEY when the cancel POST fails', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCancelShouldFail = true;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onNotify = vi.fn();
+
+    renderEventDetailPage(queryClient, onNotify);
+    await screen.findByText('Active');
+
+    const cancelButton = getEditionIconButton('EventBusyIcon');
+    fireEvent.click(cancelButton);
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Failed to cancel edition', 'error');
+    });
+    expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+
+  it('handleCompleteEdition invalidates EVENTS_QUERY_KEY after a successful complete', async () => {
+    // isPast (and the Complete button it gates) is derived from edition.date vs today — the
+    // default fixture's '2026-06-01' is already in the past relative to this suite's fixed clock.
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCompleteShouldFail = false;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    renderEventDetailPage(queryClient);
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('TaskAltIcon');
+    fireEvent.click(completeButton); // arms completingEditionId
+    fireEvent.click(completeButton); // fires the POST .../complete
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+    });
+  });
+
+  it('handleCompleteEdition does not invalidate EVENTS_QUERY_KEY when the complete POST fails', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCompleteShouldFail = true;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onNotify = vi.fn();
+
+    renderEventDetailPage(queryClient, onNotify);
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('TaskAltIcon');
+    fireEvent.click(completeButton);
+    fireEvent.click(completeButton);
+
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Failed to complete edition', 'error');
+    });
     expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
   });
 });
