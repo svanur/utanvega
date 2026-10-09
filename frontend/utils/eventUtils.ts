@@ -230,7 +230,14 @@ export type FlattenedEventRow =
     | { kind: 'event'; event: EventSummary; rowDate: string | null }
     | { kind: 'series-race'; event: EventSummary; race: SeriesRaceDto; rowDate: string | null };
 
-export function flattenEventRows(events: EventSummary[]): FlattenedEventRow[] {
+// #1244: `includeRecentlyCompleted` opts a caller into also flattening
+// `event.recentlyCompletedSeriesRace` (a Series race that finished 0-3 days ago, computed
+// independently of the season edition's own "ongoing" status) into its own row — table view has
+// no separate "recently completed" section, so its past rows need to carry this inline, sorted to
+// their actual race date, same as any other past row. RacesPage's main upcoming list passes false
+// since it renders a dedicated "Nýlokið" card for this instead; duplicating it into the flattened
+// list there would show it twice.
+export function flattenEventRows(events: EventSummary[], includeRecentlyCompleted = false): FlattenedEventRow[] {
     const rows: FlattenedEventRow[] = [];
     for (const event of events) {
         if (event.type === 'Series' && event.seriesRaces && event.seriesRaces.length > 0) {
@@ -239,6 +246,14 @@ export function flattenEventRows(events: EventSummary[]): FlattenedEventRow[] {
             }
         } else {
             rows.push({ kind: 'event', event, rowDate: event.displayDate ?? event.nextEditionDate });
+        }
+        if (includeRecentlyCompleted && event.recentlyCompletedSeriesRace) {
+            rows.push({
+                kind: 'series-race',
+                event,
+                race: event.recentlyCompletedSeriesRace,
+                rowDate: event.recentlyCompletedSeriesRace.dateOfRace,
+            });
         }
     }
     return rows;

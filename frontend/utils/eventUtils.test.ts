@@ -45,6 +45,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: null,
         seriesRaces: null,
+        recentlyCompletedSeriesRace: null,
         gpxPointLat: null,
         gpxPointLng: null,
         isMountainRace: false,
@@ -248,6 +249,44 @@ describe('flattenEventRows', () => {
         const series = makeEvent({ slug: 'series', type: 'Series', seriesRaces: [seriesRace] });
         const rows = flattenEventRows([plain, series]);
         expect(rows.map(r => r.kind)).toEqual(['event', 'series-race']);
+    });
+
+    // #1244: recentlyCompletedSeriesRace is a separate, explicitly-opted-in field from
+    // seriesRaces (which is future-only) — ignored by default so RacesPage's main upcoming list
+    // (which renders its own dedicated "Nýlokið" card) doesn't double it up.
+    it('ignores recentlyCompletedSeriesRace by default (includeRecentlyCompleted omitted)', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: null, recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event]);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
+    });
+
+    it('ignores recentlyCompletedSeriesRace when includeRecentlyCompleted is explicitly false', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: null, recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], false);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
+    });
+
+    it('appends a series-race row for recentlyCompletedSeriesRace when includeRecentlyCompleted is true', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: null, recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([
+            { kind: 'event', event, rowDate: event.displayDate },
+            { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
+        ]);
+    });
+
+    it('appends the recently-completed row alongside the future seriesRaces rows, not instead of them', () => {
+        const futureRace = makeSeriesRace({ raceId: 'future', dateOfRace: '2026-10-15' });
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [futureRace], recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([
+            { kind: 'series-race', event, race: futureRace, rowDate: '2026-10-15' },
+            { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
+        ]);
     });
 });
 

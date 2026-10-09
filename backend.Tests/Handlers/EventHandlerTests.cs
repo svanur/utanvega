@@ -2357,6 +2357,286 @@ public class EventHandlerTests : IDisposable
         Assert.False(dto.HasFutureEdition);
     }
 
+    // ─── GetEventsQuery — Series race-level recently-completed (#1244) ───
+    //
+    // A Series event's season edition reads as "ongoing" for its entire span (see ongoingEdition
+    // above), so the edition-level recentlyCompleted/mostRecentPast computation (gated on
+    // ongoingEdition == null) can never fire for an individual race within that span. These tests
+    // cover RecentlyCompletedSeriesRace, which mirrors that pattern at race granularity instead,
+    // independent of ongoingEdition.
+
+    [Fact]
+    public async Task GetEvents_Series_RecentlyCompletedRace_PopulatedWhileSeasonStillOngoing()
+    {
+        var ev = CreateTestEvent("Powerade vetrarhlaupin");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-3),   // season started months ago
+            EndDate = today.AddMonths(3), // season continues for months yet — ongoingEdition applies
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var justRaced = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Hlaup 1",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-1),
+            Status = RaceStatus.Completed,
+        };
+        var nextUp = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Hlaup 2",
+            SortOrder = 1,
+            DateOfRace = today.AddDays(7),
+            Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(justRaced, nextUp);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        // Edition-level fields stay "ongoing", untouched by this feature (isOngoingPastDayTwo's
+        // documented behavior) — the season as a whole is still in progress.
+        Assert.Equal(0, dto.DaysUntil);
+        Assert.NotNull(dto.RecentlyCompletedSeriesRace);
+        Assert.Equal(justRaced.Id, dto.RecentlyCompletedSeriesRace!.RaceId);
+        Assert.Equal("Hlaup 1", dto.RecentlyCompletedSeriesRace.RaceName);
+        Assert.Equal(justRaced.DateOfRace, dto.RecentlyCompletedSeriesRace.DateOfRace);
+    }
+
+    [Fact]
+    public async Task GetEvents_Series_RecentlyCompletedRace_3DayBoundary()
+    {
+        var ev = CreateTestEvent("Three Day Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-3),
+            EndDate = today.AddMonths(3),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Hlaup 1",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-3),
+            Status = RaceStatus.Completed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.NotNull(dto.RecentlyCompletedSeriesRace);
+        Assert.Equal(race.Id, dto.RecentlyCompletedSeriesRace!.RaceId);
+    }
+
+    [Fact]
+    public async Task GetEvents_Series_RecentlyCompletedRace_BeyondBoundary_ReturnsNull()
+    {
+        var ev = CreateTestEvent("Four Day Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-3),
+            EndDate = today.AddMonths(3),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Hlaup 1",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-4),
+            Status = RaceStatus.Completed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.RecentlyCompletedSeriesRace);
+    }
+
+    [Fact]
+    public async Task GetEvents_Series_RecentlyCompletedRace_IgnoresCancelledRace()
+    {
+        var ev = CreateTestEvent("Cancelled Heat Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-3),
+            EndDate = today.AddMonths(3),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var cancelledRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Cancelled Heat",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-1),
+            Status = RaceStatus.Cancelled,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(cancelledRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.RecentlyCompletedSeriesRace);
+    }
+
+    [Fact]
+    public async Task GetEvents_Series_RecentlyCompletedRace_NullForCancelledEvent()
+    {
+        var ev = CreateTestEvent("Cancelled Series");
+        ev.Type = EventType.Series;
+        ev.Status = EventStatus.Cancelled;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-3),
+            EndDate = today.AddMonths(3),
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Hlaup 1",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-1),
+            Status = RaceStatus.Completed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(IncludeHidden: true), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Null(dto.RecentlyCompletedSeriesRace);
+    }
+
+    [Fact]
+    public async Task GetEvents_NonSeriesEvent_RecentlyCompletedSeriesRace_AlwaysNull()
+    {
+        // #1244's RecentlyCompletedSeriesRace is Series-only — a plain Race event's existing
+        // edition-level recentlyCompleted behavior (DaysUntil/DisplayDate) must be unaffected, and
+        // this new field must stay null regardless of how its races are dated.
+        var ev = CreateTestEvent("Plain Past Race");
+        ev.Type = EventType.Race;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(-1),
+            RegistrationStatus = RegistrationStatus.Closed,
+        };
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Main Race",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-1),
+            Status = RaceStatus.Completed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(-1, dto.DaysUntil);
+        Assert.Null(dto.RecentlyCompletedSeriesRace);
+    }
+
     // ─── GetEventsQuery — AnyEditionNeedsReview aggregate ───
 
     [Fact]
