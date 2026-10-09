@@ -45,7 +45,6 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
-import MyLocationIcon from '@mui/icons-material/MyLocation';
 import TimerIcon from '@mui/icons-material/Timer';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
@@ -74,30 +73,10 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
-import { useTrailWeather } from '../hooks/useTrails';
+import { useTrailWeather, useTrails } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import MapFollowController from '../components/MapFollowController';
-import L from 'leaflet';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import 'leaflet/dist/leaflet.css';
-// @ts-expect-error - Leaflet internal
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIconRetina, iconUrl: markerIcon, shadowUrl: markerShadow });
-
-const userLocationIcon = L.divIcon({
-    className: '',
-    html: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
-        <circle cx="10" cy="10" r="8" fill="#1976d2" fill-opacity="0.9" stroke="white" stroke-width="2"/>
-        <circle cx="10" cy="10" r="3" fill="white"/>
-    </svg>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-    popupAnchor: [0, -12],
-});
+import { TrailMapView } from '../components/TrailMapView';
 
 import { splitMinutes } from '../utils/cutoffTime';
 
@@ -308,20 +287,19 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const { locations } = useLocations();
     const { toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
 
-    const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [eventQROpen, setEventQROpen] = useState(false);
     const [eventQRCopied, setEventQRCopied] = useState(false);
 
+    // One-shot geolocation fetch to feed TrailMapView's userLocation prop — mirrors
+    // LocationDetailsPage.tsx's pattern. TrailMapView owns its own follow-me toggle internally.
     useEffect(() => {
-        if (!followMe || !navigator.geolocation) return;
-        const watchId = navigator.geolocation.watchPosition(
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
             (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
             (err) => console.warn('Geolocation error:', err),
-            { enableHighAccuracy: true },
         );
-        return () => navigator.geolocation.clearWatch(watchId);
-    }, [followMe]);
+    }, []);
 
     const mapPin = useMemo(() => {
         if (!event) return null;
@@ -536,6 +514,29 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [event, primaryEdition, visibleRaces]);
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
+
+    // Collects every distinct trail referenced by the current edition — mirroring weatherTrailSlug's
+    // fallback tiers above (edition-level trailSlug, then primaryEdition's races, then the broader
+    // visibleRaces) but gathering all distinct slugs across those tiers instead of stopping at the
+    // first match, since a single edition can legitimately link a race-level trail per distance on
+    // top of (or instead of) its own edition-level one.
+    const eventTrailSlugs = useMemo(() => {
+        const primaryRaces = primaryEdition?.visibleRaces ?? [];
+        const racesWithTrails = primaryRaces.some(race => race.trailSlug) ? primaryRaces : visibleRaces;
+        const slugs = new Set(
+            racesWithTrails
+                .map(race => race.trailSlug)
+                .filter((trailSlug): trailSlug is string => !!trailSlug),
+        );
+        if (primaryEdition?.trailSlug) slugs.add(primaryEdition.trailSlug);
+        return slugs;
+    }, [primaryEdition, visibleRaces]);
+
+    const { trails: allTrails } = useTrails(true);
+    const eventTrails = useMemo(
+        () => allTrails.filter(trail => eventTrailSlugs.has(trail.slug)),
+        [allTrails, eventTrailSlugs],
+    );
     const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
         bib: false,
         shoes: false,
@@ -795,67 +796,20 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         </Typography>
                     )}
 
-                    {mapPin && (
+                    {(mapPin || eventTrails.length > 0) && (
                         <Box
                             sx={{
                                 mt: 2,
                                 borderRadius: 2,
                                 overflow: 'hidden',
-                                height: 220,
+                                height: '400px',
                                 width: '100%',
                                 maxWidth: '100%',
                                 border: '1px solid',
                                 borderColor: 'divider',
-                                position: 'relative',
                             }}
                         >
-                            <Paper
-                                elevation={3}
-                                sx={{
-                                    position: 'absolute',
-                                    top: 10,
-                                    right: 10,
-                                    zIndex: 1100,
-                                    borderRadius: '50%',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setFollowMe(f => !f)}
-                                    color={followMe ? 'primary' : 'default'}
-                                    title={followMe ? t('map.stopFollowing') : t('map.followLocation')}
-                                    aria-label="follow my location"
-                                    sx={{
-                                        backgroundColor: followMe ? 'rgba(25,118,210,0.1)' : 'white',
-                                        '&:hover': { backgroundColor: followMe ? 'rgba(25,118,210,0.2)' : '#f5f5f5' },
-                                    }}
-                                >
-                                    <MyLocationIcon fontSize="small" />
-                                </IconButton>
-                            </Paper>
-                            <MapContainer
-                                center={[mapPin.lat, mapPin.lng]}
-                                zoom={12}
-                                style={{ height: '100%', width: '100%' }}
-                                scrollWheelZoom={false}
-                                attributionControl={false}
-                            >
-                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                <Marker position={[mapPin.lat, mapPin.lng]} />
-                                {userLocation && (
-                                    <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
-                                        <Popup>{t('map.yourLocation', 'Your location')}</Popup>
-                                    </Marker>
-                                )}
-                                <MapFollowController
-                                    followMe={followMe}
-                                    userLocation={userLocation}
-                                    returnCenter={[mapPin.lat, mapPin.lng]}
-                                    returnZoom={12}
-                                    onDrag={() => setFollowMe(false)}
-                                />
-                            </MapContainer>
+                            <TrailMapView trails={eventTrails} userLocation={userLocation} />
                         </Box>
                     )}
 
