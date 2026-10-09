@@ -39,9 +39,14 @@ public static class EditionStatusHelpers
             return storedStatus;
 
         // NotRequired is a deliberate override that has nothing to do with timing — e.g. a free,
-        // no-signup fun run — and must not be clobbered by a live computation.
+        // no-signup fun run — and must not be clobbered by a live computation. Invitational is the
+        // same kind of override — entry by selection, not a public registration window — e.g. the
+        // Backyard Ultra World Championship.
         if (storedStatus == RegistrationStatus.NotRequired)
             return RegistrationStatus.NotRequired;
+
+        if (storedStatus == RegistrationStatus.Invitational)
+            return RegistrationStatus.Invitational;
 
         if (registrationOpens.HasValue && registrationCloses.HasValue)
         {
@@ -87,6 +92,7 @@ public static class EditionStatusHelpers
             RegistrationStatus.Open => TicketStatus.Available,
             RegistrationStatus.Closed => TicketStatus.Closed,
             RegistrationStatus.NotRequired => TicketStatus.Free,
+            RegistrationStatus.Invitational => TicketStatus.Invitational,
             _ => storedTicketStatus,
         };
     }

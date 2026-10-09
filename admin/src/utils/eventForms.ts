@@ -52,7 +52,7 @@ export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', '
 // so it must never be a click-through step in a status cycle — it's only reachable via the dedicated
 // Cancel Event confirmation dialog.
 export const EVENT_STATUS_CYCLE: EventStatus[] = ['Hidden', 'Unconfirmed', 'Confirmed', 'Unlisted'];
-export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed'];
+export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'Invitational'];
 // null (not yet rated) is a distinct step from 0 (rated at zero points) — keep both in the cycle.
 export const ITRA_VALUES: (number | null)[] = [null, 0, 1, 2, 3, 4, 5, 6];
 export const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];

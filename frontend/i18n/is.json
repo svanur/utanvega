@@ -1616,7 +1616,8 @@
             "Open": "Skráning er hafin",
             "Closed": "Skráning er lokuð",
             "NotStarted": "Skráning er ekki hafin",
-            "NotRequired": "Ekki þarf að skrá sig"
+            "NotRequired": "Ekki þarf að skrá sig",
+            "Invitational": "Eingöngu eftir boði"
         },
         "ticketStatus": {
             "Free": "Skráning: Frítt",
@@ -1624,7 +1625,8 @@
             "Available": "Skráning: hafin",
             "AlmostSoldOut": "Skráning: næstum uppselt",
             "SoldOut": "Skráning: fullt",
-            "Closed": "Skráning: lokuð"
+            "Closed": "Skráning: lokuð",
+            "Invitational": "Skráning: eingöngu eftir boði"
         }
     },
     "calendar": {

@@ -6,6 +6,7 @@ public enum RegistrationStatus
     Open,
     Closed,
     NotRequired,
+    Invitational,
 }
 
 public enum EditionStatus
@@ -68,7 +69,10 @@ public class EventEdition
     public void CancelWithRaces()
     {
         Status = EditionStatus.Cancelled;
-        if (RegistrationStatus != RegistrationStatus.NotRequired)
+        // NotRequired and Invitational are both deliberate overrides that have nothing to do with
+        // a registration window — forcing either to Closed on cancellation would misrepresent a
+        // free walk-in or invitation-only event as one whose registration window simply ended.
+        if (RegistrationStatus != RegistrationStatus.NotRequired && RegistrationStatus != RegistrationStatus.Invitational)
             RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status != RaceStatus.Cancelled))
         {
@@ -81,7 +85,8 @@ public class EventEdition
     public void CompleteWithRaces()
     {
         Status = EditionStatus.Completed;
-        if (RegistrationStatus != RegistrationStatus.NotRequired)
+        // Same NotRequired/Invitational exemption as CancelWithRaces above — see its comment.
+        if (RegistrationStatus != RegistrationStatus.NotRequired && RegistrationStatus != RegistrationStatus.Invitational)
             RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status == RaceStatus.Active))
         {

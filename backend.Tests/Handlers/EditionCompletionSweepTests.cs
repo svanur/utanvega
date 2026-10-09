@@ -185,6 +185,32 @@ public class EditionCompletionSweepTests : IDisposable
     }
 
     [Fact]
+    public async Task PreservesInvitationalRegistrationStatus()
+    {
+        // Same guarantee as PreservesNotRequiredRegistrationStatus above — an unattended sweep
+        // completing an invitation-only edition must not relabel it Closed.
+        var ev = CreateEvent();
+        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-1), registrationStatus: RegistrationStatus.Invitational);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            await EditionCompletionSweep.RunAsync(ctx, _cacheInvalidator.Object, Today);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        var updated = verifyCtx.EventEditions.Find(edition.Id)!;
+        Assert.Equal(EditionStatus.Completed, updated.Status);
+        Assert.Equal(RegistrationStatus.Invitational, updated.RegistrationStatus);
+    }
+
+    [Fact]
     public async Task LeavesASeriesEditionAloneWhileALaterLegIsStillInTheFuture()
     {
         // Series editions typically have Date = first leg's date and no EndDate (see

@@ -7,10 +7,10 @@ export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
 export type EventType = 'Race' | 'Series' | 'Social' | 'Advertisement' | 'Festival' | 'Other';
 export type ActivityType = 'TrailRunning' | 'Running' | 'Cycling' | 'Hiking' | 'FunRun' | 'ObstacleCourse' | 'CrossCountryRun' | 'Swim' | 'Canicross' | 'IronMan' | 'Other';
 export type EventStatus = 'Unconfirmed' | 'Confirmed' | 'Cancelled' | 'Hidden' | 'Unlisted';
-export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed' | 'NotRequired';
+export type RegistrationStatus = 'NotStarted' | 'Open' | 'Closed' | 'NotRequired' | 'Invitational';
 export type RaceStatus = 'Active' | 'Completed' | 'Cancelled' | 'Hidden';
 export type EditionStatus = 'Active' | 'Unconfirmed' | 'Cancelled' | 'Hidden' | 'Completed';
-export type TicketStatus = 'Available' | 'AlmostSoldOut' | 'SoldOut' | 'Closed' | 'NotStarted' | 'Free';
+export type TicketStatus = 'Available' | 'AlmostSoldOut' | 'SoldOut' | 'Closed' | 'NotStarted' | 'Free' | 'Invitational';
 export type ResultType = 'Time' | 'Distance' | 'Laps';
 export type AlertSeverity = 'info' | 'success' | 'warning' | 'error';
 

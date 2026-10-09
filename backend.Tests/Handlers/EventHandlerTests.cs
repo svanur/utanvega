@@ -3678,6 +3678,32 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateEdition_SettingStatusToCancelled_WhenRegistrationIsInvitational_PreservesInvitational()
+    {
+        // Same deliberate-override treatment as NotRequired above — an invitation-only event has
+        // nothing to do with a registration window ending, so cancellation must not relabel it Closed.
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.RegistrationStatus = RegistrationStatus.Invitational;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Cancelled"), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Cancelled, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RegistrationStatus.Invitational, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);
+    }
+
+    [Fact]
     public async Task UpdateEdition_SettingStatusToHidden_DoesNotCascadeRaces()
     {
         var ev = CreateTestEvent();
@@ -3803,6 +3829,32 @@ public class EventHandlerTests : IDisposable
         using var verifyCtx = _factory.CreateContext();
         Assert.Equal(EditionStatus.Completed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
         Assert.Equal(RegistrationStatus.NotRequired, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);
+    }
+
+    [Fact]
+    public async Task UpdateEdition_SettingStatusToCompleted_WhenRegistrationIsInvitational_PreservesInvitational()
+    {
+        // Same deliberate-override treatment as NotRequired above — an invitation-only event
+        // concluding must still read "Invitation only," not "Closed."
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        edition.RegistrationStatus = RegistrationStatus.Invitational;
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Completed"), CancellationToken.None);
+        }
+
+        using var verifyCtx = _factory.CreateContext();
+        Assert.Equal(EditionStatus.Completed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(RegistrationStatus.Invitational, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);
     }
 
     [Fact]

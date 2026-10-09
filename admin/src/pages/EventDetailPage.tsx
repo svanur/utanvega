@@ -181,11 +181,11 @@ function formatSchedule(rule: import('../hooks/useEvents').ScheduleRule | null |
   return null;
 }
 
-const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired'];
+const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired', 'Invitational'];
 
 function getRegistrationStatusColor(status: RegistrationStatus): 'default' | 'success' | 'warning' {
   if (status === 'Open') return 'success';
-  if (status === 'Closed' || status === 'NotRequired') return 'default';
+  if (status === 'Closed' || status === 'NotRequired' || status === 'Invitational') return 'default';
   return 'warning';
 }
 
