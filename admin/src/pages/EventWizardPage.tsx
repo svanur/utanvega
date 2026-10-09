@@ -458,9 +458,12 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
                 // re-fire and clobber a since-saved Status on that revisit, exactly as
                 // EditionDialogInner doesn't nudge for an existing (!isNew) edition. The wizard has
                 // no clone concept, so isClone is always false here.
-                if (shouldNudgeStatusForYear(!isEdit, false, statusManuallySetRef.current) && newYear.length === 4 && !isNaN(ny)) {
+                if (newYear.length === 4 && !isNaN(ny)) {
                   const nudged = editionStatusForYear(ny);
-                  if (nudged) {
+                  // The wizard has no clone concept (isClone is always false below), so the
+                  // bucket argument never actually gates anything here — see
+                  // shouldNudgeStatusForYear's own doc comment for why a clone needs it.
+                  if (nudged && shouldNudgeStatusForYear(!isEdit, false, statusManuallySetRef.current, nudged.status)) {
                     updates.status = nudged.status;
                     updates.registrationStatus = nudged.registrationStatus;
                   }
