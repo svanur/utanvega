@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyFilters, matchesDistanceBucket, parseDistanceKm, type EventFilters } from './eventFilters';
+import { applyFilters, eventFiltersEqual, matchesDistanceBucket, parseDistanceKm, type EventFilters } from './eventFilters';
 import type { EventSummary } from '../hooks/useEvents';
 
 const DEFAULT_FILTERS: EventFilters = {
@@ -297,5 +297,33 @@ describe('matchesDistanceBucket', () => {
         expect(matchesDistanceBucket(42.195, '42-100')).toBe(true);
         expect(matchesDistanceBucket(100, '42-100')).toBe(false);
         expect(matchesDistanceBucket(100, '100+')).toBe(true);
+    });
+});
+
+describe('eventFiltersEqual', () => {
+    it('treats two default-shaped filter objects as equal despite different array references', () => {
+        expect(eventFiltersEqual(DEFAULT_FILTERS, { ...DEFAULT_FILTERS })).toBe(true);
+    });
+
+    it('ignores array element order within each field as long as content is identical and ordered the same', () => {
+        const a = { ...DEFAULT_FILTERS, activityTypes: ['TrailRunning', 'Running'] };
+        const b = { ...DEFAULT_FILTERS, activityTypes: ['TrailRunning', 'Running'] };
+        expect(eventFiltersEqual(a, b)).toBe(true);
+    });
+
+    it('detects a difference in a scalar boolean field', () => {
+        expect(eventFiltersEqual(DEFAULT_FILTERS, { ...DEFAULT_FILTERS, itraAny: true })).toBe(false);
+    });
+
+    it('detects a difference in array length', () => {
+        const a = { ...DEFAULT_FILTERS, months: [1, 2] };
+        const b = { ...DEFAULT_FILTERS, months: [1] };
+        expect(eventFiltersEqual(a, b)).toBe(false);
+    });
+
+    it('detects a difference in array order', () => {
+        const a = { ...DEFAULT_FILTERS, locations: ['Reykjavik', 'Akureyri'] };
+        const b = { ...DEFAULT_FILTERS, locations: ['Akureyri', 'Reykjavik'] };
+        expect(eventFiltersEqual(a, b)).toBe(false);
     });
 });

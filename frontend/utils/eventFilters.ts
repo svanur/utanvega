@@ -19,6 +19,28 @@ export interface EventFilters {
     distanceBuckets: RaceDistanceBucket[];
 }
 
+// #1026: used by RacesPage's URL→state hydration effect to bail out of `setFilters` when the
+// freshly-parsed-from-URL filters are value-equal to what's already in state, so re-running that
+// effect on every `searchParams` change (not just on mount) doesn't spuriously re-render or
+// re-trigger the state→URL sync effect.
+export function eventFiltersEqual(a: EventFilters, b: EventFilters): boolean {
+    const arraysEqual = (x: readonly unknown[], y: readonly unknown[]) =>
+        x.length === y.length && x.every((v, i) => v === y[i]);
+    return a.itraAny === b.itraAny
+        && a.weekendOnly === b.weekendOnly
+        && a.thisWeekOnly === b.thisWeekOnly
+        && a.nextWeekOnly === b.nextWeekOnly
+        && a.mountainRaceOnly === b.mountainRaceOnly
+        && a.favoritesOnly === b.favoritesOnly
+        && arraysEqual(a.activityTypes, b.activityTypes)
+        && arraysEqual(a.months, b.months)
+        && arraysEqual(a.locations, b.locations)
+        && arraysEqual(a.itraPoints, b.itraPoints)
+        && arraysEqual(a.certifications, b.certifications)
+        && arraysEqual(a.championships, b.championships)
+        && arraysEqual(a.distanceBuckets, b.distanceBuckets);
+}
+
 export function parseDistanceKm(label: string): number | null {
     const m = label.match(/^(\d+(?:[.,]\d+)?)/);
     return m ? parseFloat(m[1].replace(',', '.')) : null;
