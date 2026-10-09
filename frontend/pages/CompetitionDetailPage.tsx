@@ -515,17 +515,21 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
 
-    // Collects every distinct trail referenced by the current edition's races (falling back to the
-    // broader visibleRaces when the primary edition has none), mirroring weatherTrailSlug's fallback
-    // order above but gathering all distinct slugs instead of just the first one.
+    // Collects every distinct trail referenced by the current edition — mirroring weatherTrailSlug's
+    // fallback tiers above (edition-level trailSlug, then primaryEdition's races, then the broader
+    // visibleRaces) but gathering all distinct slugs across those tiers instead of stopping at the
+    // first match, since a single edition can legitimately link a race-level trail per distance on
+    // top of (or instead of) its own edition-level one.
     const eventTrailSlugs = useMemo(() => {
         const primaryRaces = primaryEdition?.visibleRaces ?? [];
         const racesWithTrails = primaryRaces.some(race => race.trailSlug) ? primaryRaces : visibleRaces;
-        return new Set(
+        const slugs = new Set(
             racesWithTrails
                 .map(race => race.trailSlug)
                 .filter((trailSlug): trailSlug is string => !!trailSlug),
         );
+        if (primaryEdition?.trailSlug) slugs.add(primaryEdition.trailSlug);
+        return slugs;
     }, [primaryEdition, visibleRaces]);
 
     const { trails: allTrails } = useTrails(true);
