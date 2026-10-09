@@ -1297,6 +1297,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       onNotify('Edition deleted');
       setDeletingEditionId(null);
       await refresh();
+      // The events list caches its own copy of hasFutureEdition/anyEditionUnconfirmed
+      // (EVENTS_QUERY_KEY) — without this it can show a stale chip for up to its 30s staleTime.
+      await invalidateEventsList();
     } catch {
       onNotify('Failed to delete edition', 'error');
     }
@@ -1312,6 +1315,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       onNotify('Edition cancelled — races cancelled along with it');
       setCancelingEditionId(null);
       await refresh();
+      // The events list caches its own copy of hasFutureEdition/anyEditionUnconfirmed
+      // (EVENTS_QUERY_KEY) — without this it can show a stale chip for up to its 30s staleTime.
+      await invalidateEventsList();
     } catch {
       onNotify('Failed to cancel edition', 'error');
     }
@@ -1327,6 +1333,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       onNotify('Edition marked Completed — Active races completed along with it', 'success');
       setCompletingEditionId(null);
       await refresh();
+      // The events list caches its own copy of hasFutureEdition/anyEditionUnconfirmed
+      // (EVENTS_QUERY_KEY) — without this it can show a stale chip for up to its 30s staleTime.
+      await invalidateEventsList();
     } catch {
       onNotify('Failed to complete edition', 'error');
     }
