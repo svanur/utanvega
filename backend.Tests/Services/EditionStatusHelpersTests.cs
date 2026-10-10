@@ -345,6 +345,40 @@ public class EditionStatusHelpersTests
     }
 
     [Fact]
+    public void IsEditionDateDerivedFromRaces_SeriesWithDatedRace_ReturnsTrue()
+    {
+        var result = EditionStatusHelpers.IsEditionDateDerivedFromRaces(
+            EventType.Series, [new DateOnly(2026, 4, 1)]);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsEditionDateDerivedFromRaces_SeriesWithNoDatedRaces_ReturnsFalse()
+    {
+        var result = EditionStatusHelpers.IsEditionDateDerivedFromRaces(EventType.Series, []);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData(EventType.Race)]
+    [InlineData(EventType.Social)]
+    [InlineData(EventType.Advertisement)]
+    [InlineData(EventType.Festival)]
+    [InlineData(EventType.Other)]
+    public void IsEditionDateDerivedFromRaces_NonSeriesEventTypeWithDatedRaces_ReturnsFalse(EventType eventType)
+    {
+        // Mirrors ComputeEffectiveEditionDates_NonSeriesEventType_ReturnsStoredDatesEvenWithRaces
+        // below — the write-side gate must agree with the read-side one on every non-Series type,
+        // or the two would drift and reintroduce exactly the bug this helper exists to prevent.
+        var result = EditionStatusHelpers.IsEditionDateDerivedFromRaces(
+            eventType, [new DateOnly(2026, 4, 1), new DateOnly(2026, 8, 20)]);
+
+        Assert.False(result);
+    }
+
+    [Fact]
     public void ComputeEffectiveEditionDates_SeriesWithRaces_ReturnsMinMaxOfRaceDates()
     {
         var storedDate = new DateOnly(2026, 1, 1);

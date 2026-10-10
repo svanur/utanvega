@@ -97,6 +97,18 @@ public static class EditionStatusHelpers
         };
     }
 
+    // Single source of truth for "does this edition's Date/EndDate come from its races rather than
+    // its stored columns" — shared by both the read-side derivation (ComputeEffectiveEditionDates
+    // below) and the write-side guard (UpdateEditionCommandHandler) that must stop persisting
+    // whatever a client sends for Date/EndDate once this is true, or a client re-submitting an
+    // already-derived snapshot (e.g. the admin dialog's own disabled-but-still-serialized form
+    // fields) would silently overwrite the stored columns with that snapshot — corrupting the very
+    // "fall back to stored values" escape hatch this feature relies on for the next read where the
+    // race set has since changed. Keeping both sides behind one predicate is what keeps them from
+    // drifting apart the way the two would if each re-implemented this condition separately.
+    public static bool IsEditionDateDerivedFromRaces(EventType eventType, IReadOnlyCollection<DateOnly> raceDates) =>
+        eventType == EventType.Series && raceDates.Count > 0;
+
     // A Series edition's Date/EndDate are stored columns with nothing keeping them in sync with its
     // races' DateOfRace values as races are added/edited/removed. Rather than recompute-and-persist
     // on every race write (same tradeoff ComputeEffectiveRegistrationStatus already made in favour
@@ -110,7 +122,7 @@ public static class EditionStatusHelpers
         DateOnly? storedEndDate,
         IReadOnlyCollection<DateOnly> raceDates)
     {
-        if (eventType != EventType.Series || raceDates.Count == 0)
+        if (!IsEditionDateDerivedFromRaces(eventType, raceDates))
             return (storedDate, storedEndDate);
 
         return (raceDates.Min(), raceDates.Max());
