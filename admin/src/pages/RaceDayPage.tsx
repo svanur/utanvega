@@ -78,7 +78,8 @@ interface RaceDayPageProps {
 
 // Parses the `date` query param, falling back to today when it's absent or not a valid date —
 // keeps a bad/missing param from crashing the page instead of just losing the bookmark.
-function parseDateParam(param: string | null): Dayjs {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for RaceDayPage.test.tsx
+export function parseDateParam(param: string | null): Dayjs {
     if (param) {
         const parsed = dayjs(param);
         if (parsed.isValid()) return parsed;
