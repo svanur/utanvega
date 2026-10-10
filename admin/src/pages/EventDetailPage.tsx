@@ -65,6 +65,7 @@ import {
   type RaceDto,
   type RaceStatus,
   type RegistrationStatus,
+  type ScheduleRule,
   type TicketStatus,
   type UpdateEventInput,
 } from '../hooks/useEvents';
@@ -86,6 +87,8 @@ import {
   shouldNudgeStatusForYear,
   titleSyncForYear,
   referenceDateForYear,
+  recomputeYearlyWeekdayDate,
+  suggestSeriesLegDates,
   getRaceStatusColor,
   getEditionStatusColor,
   getTicketStatusColor,
@@ -130,32 +133,6 @@ function editionHasStaleTx(edition: EventEditionDto): boolean {
   return isTxStale(edition.title, edition.titleEn, h['Title'])
     || isTxStale(edition.notes, edition.notesEn, h['Notes']);
 }
-
-const DAY_OF_WEEK_INDEX: Record<string, number> = {
-  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
-};
-
-function nthWeekdayOfMonth(year: number, month: number, weekOfMonth: number, dayOfWeek: string): string {
-  const dayIdx = DAY_OF_WEEK_INDEX[dayOfWeek] ?? 0;
-  const firstOfMonth = dayjs(new Date(year, month - 1, 1));
-  const firstOccurrence = firstOfMonth.day() <= dayIdx
-    ? firstOfMonth.day(dayIdx)
-    : firstOfMonth.day(dayIdx + 7);
-  return firstOccurrence.add((weekOfMonth - 1) * 7, 'day').format('YYYY-MM-DD');
-}
-
-function suggestSeriesLegDates(rule: import('../hooks/useEvents').ScheduleRule, year: number, legCount: number): string[] {
-  if (!rule.weekOfMonth || !rule.dayOfWeek || !rule.monthStart) return [];
-  const dates: string[] = [];
-  for (let i = 0; i < legCount; i++) {
-    const month = rule.monthStart + i;
-    const actualYear = month > 12 ? year + 1 : year;
-    const actualMonth = month > 12 ? month - 12 : month;
-    dates.push(nthWeekdayOfMonth(actualYear, actualMonth, rule.weekOfMonth, rule.dayOfWeek));
-  }
-  return dates;
-}
-
 
 function formatSchedule(rule: import('../hooks/useEvents').ScheduleRule | null | undefined): string | null {
   if (!rule) return null;
@@ -286,12 +263,21 @@ interface EditionDialogProps {
   // because EventDetailPage.test.tsx mounts EditionDialogInner directly without a parent event
   // around it — undefined behaves the same as non-Series, i.e. stays editable.
   eventType?: EventType;
+  // #1251: the parent event's ScheduleRule — needed by the Year field's onChange below to tell
+  // whether a Year correction should recompute the date from the rule's weekOfMonth/dayOfWeek/
+  // month (recomputeYearlyWeekdayDate), rather than blindly swapping the year digits in the
+  // stored date, which breaks the weekday for a "Nth weekday of month" event. Same
+  // prop-passed-down-from-the-call-site pattern as isApproximateScheduleClone/eventType above,
+  // sourced there from detail.scheduleRule. Optional for the same reason as eventType:
+  // EventDetailPage.test.tsx mounts EditionDialogInner directly without a parent event —
+  // undefined behaves the same as "no rule", i.e. falls back to today's year-swap behaviour.
+  eventScheduleRule?: ScheduleRule | null;
 }
 
 // #977: exported (unlike previously) so EventDetailPage.test.tsx can mount this dialog directly
 // and cover its Status/Registration status Selects via getByLabelText, mirroring EventWizardPage's
 // own EditionDetailsStep/RacesStep exports, which exist for the same reason.
-export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions, eventType }: EditionDialogProps) {
+export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions, eventType, eventScheduleRule }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -472,8 +458,27 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
                     updates.titleEn = titleSync.titleEn;
                   }
                   if (newYear.length === 4 && !isNaN(ny) && oldYear.length === 4 && !isNaN(oy)) {
-                    if (prev.date) updates.date = prev.date.replace(/^\d{4}/, newYear);
-                    if (prev.endDate) updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
+                    // #1251: a Yearly event scheduled by weekOfMonth+dayOfWeek+month (e.g. "3rd
+                    // Saturday of August") has a correct date for the new year that a plain
+                    // year-digit swap (the fallback below) would get wrong — the swap keeps the
+                    // old month/day, which lands on the wrong weekday whenever the Nth occurrence
+                    // shifts. recomputeYearlyWeekdayDate returns null for every other rule shape
+                    // (Fixed, Yearly-by-dayOfMonth, Seasonal, Approximate, or no rule), in which
+                    // case the swap below is unchanged from before this fix.
+                    const recomputedDate = prev.date ? recomputeYearlyWeekdayDate(eventScheduleRule, ny) : null;
+                    if (prev.date) updates.date = recomputedDate ?? prev.date.replace(/^\d{4}/, newYear);
+                    if (prev.endDate) {
+                      if (recomputedDate && prev.date) {
+                        // Shift endDate by the same day-offset the recompute produced relative to
+                        // the edition's original Start date, preserving its day-span length — a
+                        // year-digit swap here would otherwise leave End date on the old weekday
+                        // while Start date moves to the recomputed one.
+                        const dayOffset = dayjs(recomputedDate).diff(dayjs(prev.date), 'day');
+                        updates.endDate = dayjs(prev.endDate).add(dayOffset, 'day').format('YYYY-MM-DD');
+                      } else {
+                        updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
+                      }
+                    }
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
                   // A brand-new edition has no saved Status/RegistrationStatus for the admin to
@@ -2048,6 +2053,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         isApproximateScheduleClone={cloneFromEditionId !== null && detail.scheduleRule?.type === 'Approximate'}
         siblingEditions={detail.editions}
         eventType={detail.type}
+        eventScheduleRule={detail.scheduleRule}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
         onSaved={async (newEditionId, savedDate) => {
