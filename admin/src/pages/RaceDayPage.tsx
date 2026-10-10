@@ -132,6 +132,20 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
         setMode(defaultMode(date));
     }, [dateStr]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Syncs local state from the URL's `date` param whenever it changes without this component's
+    // own `setDate` having caused it — e.g. re-clicking the "Race Manager" sidebar item (which
+    // navigates to the bare /race-day path, dropping the param) or a direct navigation to a new
+    // ?date= link (e.g. from an edition's "jump to Race Manager") without a full page reload.
+    // Closes the URL→state direction that the mount-time lazy initializers above only cover once.
+    // Must not call setSearchParams itself — setDate remains the single writer to the URL, so this
+    // can't ping-pong with it.
+    useEffect(() => {
+        const paramDate = parseDateParam(searchParams.get('date'));
+        if (paramDate.format('YYYY-MM-DD') !== dateStr) {
+            setDateState(paramDate);
+        }
+    }, [searchParams, dateStr]);
+
     // Page-local shortcuts: s = Setup, w = Wrap-up
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
