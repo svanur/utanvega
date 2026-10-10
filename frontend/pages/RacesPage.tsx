@@ -289,6 +289,9 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             months: months ? months.split(',').map(Number) : [],
             locations: locations ? locations.split(',') : [],
             itraAny,
+            // itraAny and itraPoints are mutually exclusive filters (see activeFilterCount below,
+            // which treats them as alternatives) — mirrors the state→URL sync effect's equivalent
+            // gating below (line 331) in the opposite direction.
             itraPoints: !itraAny && itraPoints ? itraPoints.split(',').map(Number) : [],
             certifications: certs ? certs.split(',') : [],
             championships: champs ? champs.split(',') : [],
