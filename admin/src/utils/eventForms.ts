@@ -1,6 +1,6 @@
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { ActivityType, EditionStatus, EventStatus, RaceDto, RaceStatus, RegistrationStatus, ResultType, TicketStatus } from '../hooks/useEvents';
+import type { ActivityType, EditionStatus, EventStatus, RaceDto, RaceStatus, RegistrationStatus, ResultType, ScheduleRule, TicketStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, normalizeCutoffTimeOnBlur, parseHHmmToMinutes } from './cutoffTime';
 import { trimToUndefined } from './strings';
 import { hashText } from './translationHash';
@@ -216,6 +216,64 @@ export function titleSyncForYear(newYear: string, currentTitle: string): { title
 export function referenceDateForYear(year: string): Dayjs | undefined {
   const parsed = parseInt(year, 10);
   return year.length === 4 && !isNaN(parsed) && isPlausibleYear(parsed) ? dayjs().year(parsed) : undefined;
+}
+
+const DAY_OF_WEEK_INDEX: Record<string, number> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
+};
+
+// #1251: computes the Nth (or last, weekOfMonth === -1) occurrence of a given weekday in a given
+// month/year — the shared date math behind a Series' "suggest dates from schedule" button
+// (suggestSeriesLegDates, below) and an Edition's Year-field recompute for a Yearly+weekOfMonth
+// event (recomputeYearlyWeekdayDate, below). Moved here from EventDetailPage.tsx so it's
+// unit-testable as a pure function, mirroring referenceDateForYear/editionStatusForYear above —
+// see eventForms.test.ts.
+// The weekOfMonth === -1 ("last") branch walks backward from the last day of the month instead of
+// forward from the first — walking forward from the first occurrence and adding weeks has no fixed
+// stopping point that's correct for every month length, and previously produced a date that could
+// land in the following month.
+export function nthWeekdayOfMonth(year: number, month: number, weekOfMonth: number, dayOfWeek: string): string {
+  const dayIdx = DAY_OF_WEEK_INDEX[dayOfWeek] ?? 0;
+  if (weekOfMonth === -1) {
+    // new Date(year, month, 0) is the last day of `month` (1-12) — day 0 of the following month.
+    const lastOfMonth = dayjs(new Date(year, month, 0));
+    const lastOccurrence = lastOfMonth.day() >= dayIdx
+      ? lastOfMonth.day(dayIdx)
+      : lastOfMonth.day(dayIdx - 7);
+    return lastOccurrence.format('YYYY-MM-DD');
+  }
+  const firstOfMonth = dayjs(new Date(year, month - 1, 1));
+  const firstOccurrence = firstOfMonth.day() <= dayIdx
+    ? firstOfMonth.day(dayIdx)
+    : firstOfMonth.day(dayIdx + 7);
+  return firstOccurrence.add((weekOfMonth - 1) * 7, 'day').format('YYYY-MM-DD');
+}
+
+// Suggests each leg's date for a Series event's "Suggest dates from schedule" button — only used
+// when the event's ScheduleRule carries weekOfMonth/dayOfWeek/monthStart (see the gating at this
+// function's call site in EventDetailPage.tsx), one leg per consecutive month starting at
+// monthStart, rolling over into the next year once the month counter passes December.
+export function suggestSeriesLegDates(rule: ScheduleRule, year: number, legCount: number): string[] {
+  if (!rule.weekOfMonth || !rule.dayOfWeek || !rule.monthStart) return [];
+  const dates: string[] = [];
+  for (let i = 0; i < legCount; i++) {
+    const month = rule.monthStart + i;
+    const actualYear = month > 12 ? year + 1 : year;
+    const actualMonth = month > 12 ? month - 12 : month;
+    dates.push(nthWeekdayOfMonth(actualYear, actualMonth, rule.weekOfMonth, rule.dayOfWeek));
+  }
+  return dates;
+}
+
+// #1251: a Yearly event scheduled by weekOfMonth+dayOfWeek+month (e.g. "3rd Saturday of August")
+// has an exact date for a given year that's derivable from its ScheduleRule — unlike a Fixed date
+// or a Yearly-by-dayOfMonth one, a plain year-digit swap on its stored date can land on the wrong
+// weekday. Returns the recomputed date only when the rule actually carries all three fields this
+// math needs; every other rule shape (Fixed, Yearly-by-dayOfMonth, Seasonal, Approximate, or no
+// rule at all) returns null so the caller falls back to its existing year-swap behaviour unchanged.
+export function recomputeYearlyWeekdayDate(rule: ScheduleRule | null | undefined, year: number): string | null {
+  if (rule?.type !== 'Yearly' || rule.weekOfMonth == null || !rule.dayOfWeek || rule.month == null) return null;
+  return nthWeekdayOfMonth(year, rule.month, rule.weekOfMonth, rule.dayOfWeek);
 }
 
 export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {
