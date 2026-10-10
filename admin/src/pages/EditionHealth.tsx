@@ -89,9 +89,9 @@ function getEditionChecks(edition: EventEditionDto): HealthCheck[] {
 
 // A Series edition legitimately spans races dated months apart (e.g. a winter leg and a summer
 // leg of the same series "year"), so a fixed year comparison would false-positive constantly.
-// Instead each race is compared against the median date of its dated siblings, and only flagged
-// once it's more than ~13 months away — far enough that it's almost certainly a wrong year, not
-// a normal spread within one edition.
+// Instead each race is compared against the median date of its *other* dated siblings (itself
+// excluded — see getRaceYearCheck below), and only flagged once it's more than ~13 months away —
+// far enough that it's almost certainly a wrong year, not a normal spread within one edition.
 const SERIES_YEAR_TOLERANCE_DAYS = 396;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -127,13 +127,22 @@ function getRaceYearCheck(race: RaceDto, edition: EventEditionDto, isSeries: boo
   // check above) is already flagged there — it's excluded from both sides of this check.
   if (race.dateOfRace == null) return null;
 
-  const datedSiblingTimes = edition.races
-    .filter(r => r.dateOfRace != null)
+  const datedRaces = edition.races.filter(r => r.dateOfRace != null);
+  if (datedRaces.length < 2) return null;
+
+  // The median is computed over the *other* dated races, excluding this one. Including the race
+  // itself pulls the median toward it — at the minimum-data case of exactly two dated races, the
+  // median of the pair sits at their midpoint, so each race is only half its actual separation
+  // from the median. A race dated a full year off its only sibling (#1068's exact bug shape)
+  // would then measure as ~6 months from the "median" — comfortably inside the 13-month
+  // tolerance — and pass undetected. Excluding self fixes this: with one other dated race, the
+  // "median" is just that race's own date, so the full gap is measured.
+  const otherTimes = datedRaces
+    .filter(r => r.id !== race.id)
     .map(r => new Date(r.dateOfRace as string).getTime())
     .sort((a, b) => a - b);
-  if (datedSiblingTimes.length < 2) return null;
 
-  const medianTime = medianOf(datedSiblingTimes);
+  const medianTime = medianOf(otherTimes);
   const raceTime = new Date(race.dateOfRace).getTime();
   const diffDays = Math.round(Math.abs(raceTime - medianTime) / MS_PER_DAY);
   const passed = diffDays <= SERIES_YEAR_TOLERANCE_DAYS;

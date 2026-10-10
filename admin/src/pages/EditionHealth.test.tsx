@@ -173,4 +173,35 @@ describe('getRaceChecks — Year check (Series)', () => {
 
     expect(yearCheck(getRaceChecks(onlyDated, edition, true))).toBeUndefined();
   });
+
+  // #1069 review round 1: with exactly two dated races (the minimum needed to activate this
+  // check), computing the median *including* the race being checked pulls the median toward
+  // itself — the median of a two-value set is their midpoint, so each race measured only half
+  // its actual separation from "the median", and a pair dated a full year apart (#1068's exact
+  // bug shape, ~365 days each way) landed inside the 396-day tolerance and passed undetected on
+  // both races. getRaceYearCheck now excludes the race itself from the sibling set it's compared
+  // against, so with only one other dated race the "median" is simply that race's own date and
+  // the full gap is measured.
+  it('flags both races in the minimum two-dated-race case when they are two years apart (#1068 shape)', () => {
+    const raceA = makeRace({ id: 'r1', dateOfRace: '2023-06-01' });
+    const raceB = makeRace({ id: 'r2', dateOfRace: '2025-06-01' });
+    const edition = makeEdition({ year: null }, [raceA, raceB]);
+
+    const checkA = yearCheck(getRaceChecks(raceA, edition, true));
+    const checkB = yearCheck(getRaceChecks(raceB, edition, true));
+
+    expect(checkA).toBeDefined();
+    expect(checkB).toBeDefined();
+    expect(checkA!.passed).toBe(false);
+    expect(checkB!.passed).toBe(false);
+  });
+
+  it('passes both races in the minimum two-dated-race case when they are close together', () => {
+    const raceA = makeRace({ id: 'r1', dateOfRace: '2024-01-15' });
+    const raceB = makeRace({ id: 'r2', dateOfRace: '2024-02-01' });
+    const edition = makeEdition({ year: null }, [raceA, raceB]);
+
+    expect(yearCheck(getRaceChecks(raceA, edition, true))!.passed).toBe(true);
+    expect(yearCheck(getRaceChecks(raceB, edition, true))!.passed).toBe(true);
+  });
 });
