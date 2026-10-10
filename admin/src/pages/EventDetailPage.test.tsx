@@ -411,20 +411,14 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     return queryClient;
   }
 
-  // Each icon button is the edition header's own — always rendered, expanding the edition is not
-  // required — found via the MUI icon's own data-testid (createSvgIcon sets
-  // data-testid={displayName + 'Icon'} regardless of accessible name, and none of these
-  // IconButtons carry an aria-label). DeleteIcon/EventBusyIcon both also label the event-level
-  // "Delete event"/"Cancel event" buttons higher up the page (EventDetailPage.tsx:1579-1589), so
-  // getByTestId's single-match assumption doesn't hold here — the edition-row instance is the one
-  // rendered last in DOM order (the single fixture edition from buildEventDetailFixture).
-  function getEditionIconButton(testId: string) {
-    const icons = screen.getAllByTestId(testId);
-    const icon = icons[icons.length - 1];
-    if (!icon) throw new Error(`No icon found for ${testId}`);
-    const button = icon.closest('button');
-    if (!button) throw new Error(`No <button> ancestor for icon ${testId}`);
-    return button;
+  // #1238: each edition-row IconButton now carries its own static aria-label (static even for
+  // Complete/Cancel/Delete, whose Tooltip title toggles to a "Click again to confirm…" string
+  // while armed — the label is for selector stability, not for mirroring tooltip confirm-state).
+  // Selecting by accessible name via getByRole is correct regardless of DOM order, unlike the
+  // former getAllByTestId(...)[length - 1] workaround this replaced, which only happened to work
+  // because the single fixture edition from buildEventDetailFixture put the edition-row icon last.
+  function getEditionIconButton(name: string) {
+    return screen.getByRole('button', { name });
   }
 
   it('handleDeleteEdition invalidates EVENTS_QUERY_KEY after a successful delete', async () => {
@@ -437,7 +431,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient);
     await screen.findByText('Active');
 
-    const deleteButton = getEditionIconButton('DeleteIcon');
+    const deleteButton = getEditionIconButton('Delete edition');
     fireEvent.click(deleteButton); // arms deletingEditionId
     fireEvent.click(deleteButton); // fires the DELETE
 
@@ -457,7 +451,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient, onNotify);
     await screen.findByText('Active');
 
-    const deleteButton = getEditionIconButton('DeleteIcon');
+    const deleteButton = getEditionIconButton('Delete edition');
     fireEvent.click(deleteButton);
     fireEvent.click(deleteButton);
 
@@ -480,7 +474,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient);
     await screen.findByText('Active');
 
-    const cancelButton = getEditionIconButton('EventBusyIcon');
+    const cancelButton = getEditionIconButton('Cancel edition');
     fireEvent.click(cancelButton); // arms cancelingEditionId
     fireEvent.click(cancelButton); // fires the POST .../cancel
 
@@ -500,7 +494,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient, onNotify);
     await screen.findByText('Active');
 
-    const cancelButton = getEditionIconButton('EventBusyIcon');
+    const cancelButton = getEditionIconButton('Cancel edition');
     fireEvent.click(cancelButton);
     fireEvent.click(cancelButton);
 
@@ -522,7 +516,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient);
     await screen.findByText('Active');
 
-    const completeButton = getEditionIconButton('TaskAltIcon');
+    const completeButton = getEditionIconButton('Mark edition Completed');
     fireEvent.click(completeButton); // arms completingEditionId
     fireEvent.click(completeButton); // fires the POST .../complete
 
@@ -542,7 +536,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient, onNotify);
     await screen.findByText('Active');
 
-    const completeButton = getEditionIconButton('TaskAltIcon');
+    const completeButton = getEditionIconButton('Mark edition Completed');
     fireEvent.click(completeButton);
     fireEvent.click(completeButton);
 

@@ -1801,12 +1801,12 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Edit edition">
-                  <IconButton size="small" onClick={() => { setEditingEdition(edition); setEditionDialogOpen(true); }}>
+                  <IconButton size="small" aria-label="Edit edition" onClick={() => { setEditingEdition(edition); setEditionDialogOpen(true); }}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Clone edition to next year">
-                  <IconButton size="small" onClick={() => handleCloneEdition(edition)}>
+                  <IconButton size="small" aria-label="Clone edition to next year" onClick={() => handleCloneEdition(edition)}>
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -1816,6 +1816,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     : 'Mark edition Completed (also completes Active races and closes registration)'}>
                     <IconButton
                       size="small"
+                      aria-label="Mark edition Completed"
                       color={completingEditionId === edition.id ? 'info' : 'default'}
                       onClick={() => void handleCompleteEdition(edition)}
                     >
@@ -1829,6 +1830,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     : 'Cancel edition (also cancels its races and closes registration)'}>
                     <IconButton
                       size="small"
+                      aria-label="Cancel edition"
                       color={cancelingEditionId === edition.id ? 'error' : 'default'}
                       onClick={() => void handleCancelEdition(edition)}
                     >
@@ -1839,6 +1841,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                 <Tooltip title={deletingEditionId === edition.id ? 'Click again to confirm — or wait 3 seconds to cancel' : 'Delete edition'}>
                   <IconButton
                     size="small"
+                    aria-label="Delete edition"
                     color={deletingEditionId === edition.id ? 'error' : 'default'}
                     onClick={() => void handleDeleteEdition(edition)}
                   >
