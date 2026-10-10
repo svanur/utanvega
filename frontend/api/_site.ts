@@ -134,17 +134,19 @@ export function resolveLocale(request: Request): Locale {
  * the real app never renders for them).
  *
  * Static JSON can't import a TS constant, so vercel.json's own /trails/:slug
- * and /:path* rewrite rules each carry their own hand-duplicated copy of this
- * exact pattern. middleware.ts also carries its own copy rather than
- * importing this one — a cross-directory relative import from middleware.ts
- * crashed in Vercel's Node.js Routing Middleware runtime in production
- * (ERR_MODULE_NOT_FOUND, see its own comment) — so there are now four
- * hand-kept copies total, all of which must be kept in sync by hand if this
+ * rewrite rule, /:path* rewrite rule, and cache-control headers rule each
+ * carry their own hand-duplicated copy of this exact pattern. middleware.ts
+ * also carries its own copy rather than importing this one — a
+ * cross-directory relative import from middleware.ts crashed in Vercel's
+ * Node.js Routing Middleware runtime in production (ERR_MODULE_NOT_FOUND,
+ * see its own comment) — so there are now five hand-kept copies total (this
+ * one, vercel.json's three, and middleware.ts's), all of which must be kept
+ * in sync by hand — including the case-insensitive `i` flag — if this
  * pattern ever changes. Same "unavoidable duplication, commented" pattern as
  * calendarLinks.ts's PRODID_BRAND_IS/_EN.
  */
 export const BOT_USER_AGENT_PATTERN =
-  /.*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*/;
+  /.*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*/i;
 
 /** Whether `request`'s User-Agent header matches a known crawler/bot. */
 export function isBotRequest(request: Request): boolean {

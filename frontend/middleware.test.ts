@@ -52,14 +52,9 @@ describe('root-path bot-UA rewrite', () => {
       'Googlebot/2.1',
       'bingbot/2.0',
       'Baiduspider/2.0',
-      // The pattern (copied verbatim from vercel.json, no `i` flag) only
-      // matches lowercase "yandex" — a real YandexBot UA capitalizes the Y
-      // and so would not actually match. Pre-existing behavior inherited
-      // from vercel.json's own /:path* and /trails/:slug rules, out of
-      // scope to fix here; this UA is deliberately lowercased to exercise
-      // what the pattern actually does rather than assert something it
-      // doesn't.
-      'yandexbot/3.0',
+      // Real-world YandexBot UAs capitalize the Y. Now that the pattern
+      // carries the `i` flag, this must match without lowercasing it first.
+      'YandexBot/3.0',
       'pinterest/0.2',
       'vkShare; +http://vk.com/dev/Share',
     ];
