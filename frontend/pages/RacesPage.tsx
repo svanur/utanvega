@@ -186,6 +186,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [showSwipeHint, setShowSwipeHint] = useState(false);
     const touchStartY = useRef<number | null>(null);
     const PULL_THRESHOLD = 80;
+    // Ticks every minute so the series-race "days until" chip rolls over at midnight for tabs
+    // left open — day-granularity means sub-minute freshness isn't needed, so this stays cheap.
+    // Mirrors EventTableView's nowMs pattern.
+    const [nowMs, setNowMs] = useState(() => Date.now());
+    useEffect(() => {
+        const interval = setInterval(() => setNowMs(Date.now()), 60_000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handlePullStart = (e: React.TouchEvent) => {
         if (window.scrollY === 0) touchStartY.current = e.touches[0].clientY;
@@ -1202,7 +1210,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 })() : null;
                                 if (row.kind === 'series-race') {
                                     const { event: comp, race } = row;
-                                    const raceDaysUntil = getRowDaysUntil(row);
+                                    const raceDaysUntil = getRowDaysUntil(row, new Date(nowMs));
                                     return (
                                         <Box key={`${comp.id}-${race.raceId}`}>
                                         {yearDivider}
