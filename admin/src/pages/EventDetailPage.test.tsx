@@ -421,6 +421,19 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     return screen.getByRole('button', { name });
   }
 
+  // #1238 follow-up: Complete/Cancel/Delete's aria-label is static (asserted by the tests below),
+  // so unlike an unlabelled button, Tooltip's dynamic "click again to confirm" title no longer
+  // gets merged into the accessible name when the button arms — the button instead carries an
+  // aria-describedby pointing at a visually-hidden aria-live="polite" status element, which is
+  // what this helper reads to prove that arm-state text is still reachable by assistive tech.
+  function getDescribedByText(button: HTMLElement) {
+    const describedById = button.getAttribute('aria-describedby');
+    if (!describedById) throw new Error('Button has no aria-describedby');
+    const el = document.getElementById(describedById);
+    if (!el) throw new Error(`No element found with id ${describedById}`);
+    return el.textContent;
+  }
+
   it('handleDeleteEdition invalidates EVENTS_QUERY_KEY after a successful delete', async () => {
     mockState.eventDetail = buildEventDetailFixture();
     mockState.editionDeleteShouldFail = false;
@@ -544,5 +557,57 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
       expect(onNotify).toHaveBeenCalledWith('Failed to complete edition', 'error');
     });
     expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+
+  // #1238 follow-up: a static aria-label on Delete/Cancel/Complete (added so getEditionIconButton
+  // above can select by accessible name instead of DOM order) stops Tooltip's dynamic "click again
+  // to confirm" title from reaching the accessible name the way it would for an unlabelled button
+  // — these three tests prove the arm-state text is still exposed to assistive tech via each
+  // button's aria-describedby-linked aria-live region, not just sighted-only in the Tooltip.
+  it('exposes Delete edition\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const deleteButton = getEditionIconButton('Delete edition');
+    expect(getDescribedByText(deleteButton)).toBe('');
+
+    fireEvent.click(deleteButton); // arms deletingEditionId
+
+    // Same element, same accessible name — getByRole must still resolve it post-arm.
+    expect(screen.getByRole('button', { name: 'Delete edition' })).toBe(deleteButton);
+    expect(getDescribedByText(deleteButton)).toBe('Click again to confirm — or wait 3 seconds to cancel');
+  });
+
+  it('exposes Cancel edition\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const cancelButton = getEditionIconButton('Cancel edition');
+    expect(getDescribedByText(cancelButton)).toBe('');
+
+    fireEvent.click(cancelButton); // arms cancelingEditionId
+
+    expect(screen.getByRole('button', { name: 'Cancel edition' })).toBe(cancelButton);
+    // Default fixture edition has no races, so the race-count placeholder reads "0 races".
+    expect(getDescribedByText(cancelButton)).toBe('Click again to confirm — cancels 0 races and closes registration too (or wait 3 seconds to cancel)');
+  });
+
+  it('exposes Mark edition Completed\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('Mark edition Completed');
+    expect(getDescribedByText(completeButton)).toBe('');
+
+    fireEvent.click(completeButton); // arms completingEditionId
+
+    expect(screen.getByRole('button', { name: 'Mark edition Completed' })).toBe(completeButton);
+    expect(getDescribedByText(completeButton)).toBe('Click again to confirm — sets 0 Active races to Completed and closes registration (or wait 3 s to cancel)');
   });
 });

@@ -118,6 +118,24 @@ import {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
+// #1238 follow-up: visually hidden but screen-reader-readable status text, paired with
+// aria-live="polite" on the element it's applied to. Used by the edition-row Complete/Cancel/
+// Delete IconButtons below — their aria-label is static (for selector stability), so unlike an
+// unlabelled button, MUI Tooltip's dynamic "click again to confirm" title is no longer merged
+// into the accessible name when the button arms. This region, referenced via aria-describedby,
+// is what still exposes that arm-state change to assistive tech.
+const VISUALLY_HIDDEN_SX = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+} as const;
+
 function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.name.localeCompare(b.name);
@@ -1698,6 +1716,22 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         const isPast = edition.date ? edition.date < new Date().toISOString().slice(0, 10) : false;
         const isEditionFocused = focusedId === `edition:${edition.id}`;
 
+        // Complete/Cancel/Delete's armed/confirm text, shared between the Tooltip title (sighted)
+        // and the hidden aria-live status region below (assistive tech) — see VISUALLY_HIDDEN_SX.
+        const activeRaceCount = edition.races.filter(r => r.status === 'Active').length;
+        const completeArmed = completingEditionId === edition.id;
+        const completeConfirmText = `Click again to confirm — sets ${activeRaceCount} Active race${activeRaceCount !== 1 ? 's' : ''} to Completed and closes registration (or wait 3 s to cancel)`;
+        const completeStatusId = `edition-${edition.id}-complete-status`;
+
+        const uncancelledRaceCount = edition.races.filter(r => r.status !== 'Cancelled').length;
+        const cancelArmed = cancelingEditionId === edition.id;
+        const cancelConfirmText = `Click again to confirm — cancels ${uncancelledRaceCount} race${uncancelledRaceCount !== 1 ? 's' : ''} and closes registration too (or wait 3 seconds to cancel)`;
+        const cancelStatusId = `edition-${edition.id}-cancel-status`;
+
+        const deleteArmed = deletingEditionId === edition.id;
+        const deleteConfirmText = 'Click again to confirm — or wait 3 seconds to cancel';
+        const deleteStatusId = `edition-${edition.id}-delete-status`;
+
         return (
           <Box
             key={edition.id}
@@ -1811,43 +1845,55 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                   </IconButton>
                 </Tooltip>
                 {isPast && edition.status !== 'Completed' && edition.status !== 'Cancelled' && (
-                  <Tooltip title={completingEditionId === edition.id
-                    ? `Click again to confirm — sets ${edition.races.filter(r => r.status === 'Active').length} Active race${edition.races.filter(r => r.status === 'Active').length !== 1 ? 's' : ''} to Completed and closes registration (or wait 3 s to cancel)`
-                    : 'Mark edition Completed (also completes Active races and closes registration)'}>
-                    <IconButton
-                      size="small"
-                      aria-label="Mark edition Completed"
-                      color={completingEditionId === edition.id ? 'info' : 'default'}
-                      onClick={() => void handleCompleteEdition(edition)}
-                    >
-                      <TaskAltIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <>
+                    <Tooltip title={completeArmed ? completeConfirmText : 'Mark edition Completed (also completes Active races and closes registration)'}>
+                      <IconButton
+                        size="small"
+                        aria-label="Mark edition Completed"
+                        aria-describedby={completeStatusId}
+                        color={completeArmed ? 'info' : 'default'}
+                        onClick={() => void handleCompleteEdition(edition)}
+                      >
+                        <TaskAltIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Box id={completeStatusId} role="status" aria-live="polite" sx={VISUALLY_HIDDEN_SX}>
+                      {completeArmed ? completeConfirmText : ''}
+                    </Box>
+                  </>
                 )}
                 {edition.status !== 'Cancelled' && (
-                  <Tooltip title={cancelingEditionId === edition.id
-                    ? `Click again to confirm — cancels ${edition.races.filter(r => r.status !== 'Cancelled').length} race${edition.races.filter(r => r.status !== 'Cancelled').length !== 1 ? 's' : ''} and closes registration too (or wait 3 seconds to cancel)`
-                    : 'Cancel edition (also cancels its races and closes registration)'}>
-                    <IconButton
-                      size="small"
-                      aria-label="Cancel edition"
-                      color={cancelingEditionId === edition.id ? 'error' : 'default'}
-                      onClick={() => void handleCancelEdition(edition)}
-                    >
-                      <EventBusyIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <>
+                    <Tooltip title={cancelArmed ? cancelConfirmText : 'Cancel edition (also cancels its races and closes registration)'}>
+                      <IconButton
+                        size="small"
+                        aria-label="Cancel edition"
+                        aria-describedby={cancelStatusId}
+                        color={cancelArmed ? 'error' : 'default'}
+                        onClick={() => void handleCancelEdition(edition)}
+                      >
+                        <EventBusyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Box id={cancelStatusId} role="status" aria-live="polite" sx={VISUALLY_HIDDEN_SX}>
+                      {cancelArmed ? cancelConfirmText : ''}
+                    </Box>
+                  </>
                 )}
-                <Tooltip title={deletingEditionId === edition.id ? 'Click again to confirm — or wait 3 seconds to cancel' : 'Delete edition'}>
+                <Tooltip title={deleteArmed ? deleteConfirmText : 'Delete edition'}>
                   <IconButton
                     size="small"
                     aria-label="Delete edition"
-                    color={deletingEditionId === edition.id ? 'error' : 'default'}
+                    aria-describedby={deleteStatusId}
+                    color={deleteArmed ? 'error' : 'default'}
                     onClick={() => void handleDeleteEdition(edition)}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                <Box id={deleteStatusId} role="status" aria-live="polite" sx={VISUALLY_HIDDEN_SX}>
+                  {deleteArmed ? deleteConfirmText : ''}
+                </Box>
               </Stack>
             </Stack>
 
