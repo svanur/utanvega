@@ -1,25 +1,47 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Trails.Queries.GetDuplicateTrails;
 
 public record DuplicatePair(Guid TrailAId, string TrailAName, Guid TrailBId, string TrailBName, double MatchPercentage);
 
+// Not ICacheable — uses manual versioned caching (mirrors GetEventCalendarQuery) so InvalidateTrail
+// can bust every cached threshold variant without needing key enumeration.
 public record GetDuplicateTrailsQuery(double Threshold = 95) : IRequest<List<DuplicatePair>>;
 
 public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrailsQuery, List<DuplicatePair>>
 {
     private readonly UtanvegaDbContext _context;
     private readonly ILogger<GetDuplicateTrailsQueryHandler> _logger;
+    private readonly IMemoryCache _cache;
 
-    public GetDuplicateTrailsQueryHandler(UtanvegaDbContext context, ILogger<GetDuplicateTrailsQueryHandler> logger)
+    public GetDuplicateTrailsQueryHandler(UtanvegaDbContext context, ILogger<GetDuplicateTrailsQueryHandler> logger, IMemoryCache cache)
     {
         _context = context;
         _logger = logger;
+        _cache = cache;
     }
 
     public async Task<List<DuplicatePair>> Handle(GetDuplicateTrailsQuery request, CancellationToken cancellationToken)
+    {
+        var version = _cache.GetOrCreate(CacheKeys.TrailDuplicatesVersion, e =>
+        {
+            e.Priority = CacheItemPriority.NeverRemove;
+            return 0;
+        });
+        var cacheKey = CacheKeys.TrailDuplicates(version, request.Threshold);
+
+        return await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
+            return await ComputeAsync(request, cancellationToken);
+        }) ?? [];
+    }
+
+    private async Task<List<DuplicatePair>> ComputeAsync(GetDuplicateTrailsQuery request, CancellationToken cancellationToken)
     {
         var lengthFloor = request.Threshold - 20;
 
