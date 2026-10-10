@@ -1398,8 +1398,21 @@ app.MapGet("/api/v1/admin/history", [Authorize(Policy = "AdminOnly")] async (str
 .WithName("GetHistory");
 
 // Duplicate Detection
-app.MapGet("/api/v1/admin/trails/duplicates", [Authorize(Policy = "AdminOnly")] async (double? threshold, IMediator mediator) =>
+app.MapGet("/api/v1/admin/trails/duplicates", [Authorize(Policy = "AdminOnly")] async (double? threshold, bool? force, IMemoryCache cache, IMediator mediator) =>
 {
+    if (force == true)
+    {
+        // Bump the version token so the GetOrCreateAsync below is a guaranteed miss and the
+        // fresh result becomes the new shared cached value for this threshold.
+        var currentVersion = cache.GetOrCreate(CacheKeys.TrailDuplicatesVersion, e =>
+        {
+            e.Priority = CacheItemPriority.NeverRemove;
+            return 0;
+        });
+        cache.Set(CacheKeys.TrailDuplicatesVersion, currentVersion + 1,
+            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
+    }
+
     var duplicates = await mediator.Send(new GetDuplicateTrailsQuery(threshold ?? 95));
     return Results.Ok(duplicates);
 })

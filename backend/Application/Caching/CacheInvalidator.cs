@@ -20,6 +20,15 @@ public class CacheInvalidator : ICacheInvalidator
         _cache.Remove(CacheKeys.GeometriesAll);
         _cache.Remove(CacheKeys.LocationTree);
 
+        // Bump the version token so all cached duplicate-scan responses are effectively invalidated.
+        var currentDuplicatesVersion = _cache.GetOrCreate(CacheKeys.TrailDuplicatesVersion, e =>
+        {
+            e.Priority = CacheItemPriority.NeverRemove;
+            return 0;
+        });
+        _cache.Set(CacheKeys.TrailDuplicatesVersion, currentDuplicatesVersion + 1,
+            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
+
         if (slug is not null)
         {
             _cache.Remove(CacheKeys.Trail(slug));
