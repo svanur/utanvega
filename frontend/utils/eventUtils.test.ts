@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, daysBetween, flattenEventRows, formatYearRanges, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import { addDays, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -407,5 +407,42 @@ describe('getWeekRange', () => {
         const now = new Date('2026-03-16T09:00:00'); // Monday
         expect(getWeekRange('this', now)).toEqual({ start: '2026-03-16', end: '2026-03-22' });
         expect(getWeekRange('next', now)).toEqual({ start: '2026-03-23', end: '2026-03-29' });
+    });
+});
+
+// #1252: extracted from CompetitionDetailPage's eventTrailSlugs memo, which collects every distinct
+// trail backing the event-detail map's polylines. Round 1 of #1250 silently dropped the edition-level
+// trailSlug tier — a single-trail event linked only at edition level (no per-race trailSlug) rendered
+// zero polylines — caught only by manual trace against GetEventQuery, not a test. These cases pin
+// down exactly that tier alongside the race-level one.
+function makeRace(trailSlug: string | null): { trailSlug: string | null } {
+    return { trailSlug };
+}
+
+describe('deriveEventTrailSlugs', () => {
+    it('resolves the edition-level trailSlug when no race has one', () => {
+        const primaryEdition = { trailSlug: 'edition-trail', visibleRaces: [makeRace(null), makeRace(null)] };
+        expect(deriveEventTrailSlugs(primaryEdition, [])).toEqual(new Set(['edition-trail']));
+    });
+
+    it('resolves the union of race-level trailSlugs when the edition itself has none', () => {
+        const primaryEdition = { trailSlug: null, visibleRaces: [makeRace('race-a'), makeRace('race-b')] };
+        expect(deriveEventTrailSlugs(primaryEdition, [])).toEqual(new Set(['race-a', 'race-b']));
+    });
+
+    it('resolves the union of the edition-level slug and race-level slugs when both are present', () => {
+        const primaryEdition = { trailSlug: 'edition-trail', visibleRaces: [makeRace('race-a'), makeRace('race-b')] };
+        expect(deriveEventTrailSlugs(primaryEdition, [])).toEqual(new Set(['edition-trail', 'race-a', 'race-b']));
+    });
+
+    it('falls back to the broader visibleRaces when primaryEdition has no races with a trailSlug', () => {
+        const primaryEdition = { trailSlug: null, visibleRaces: [makeRace(null)] };
+        const visibleRaces = [makeRace('fallback-race')];
+        expect(deriveEventTrailSlugs(primaryEdition, visibleRaces)).toEqual(new Set(['fallback-race']));
+    });
+
+    it('returns an empty set when primaryEdition is null/undefined and visibleRaces has no trailSlugs', () => {
+        expect(deriveEventTrailSlugs(null, [makeRace(null)])).toEqual(new Set());
+        expect(deriveEventTrailSlugs(undefined, [])).toEqual(new Set());
     });
 });

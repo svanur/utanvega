@@ -93,7 +93,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus } from '../utils/eventUtils';
 import { getTicketStatusColor, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -520,18 +520,12 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // fallback tiers above (edition-level trailSlug, then primaryEdition's races, then the broader
     // visibleRaces) but gathering all distinct slugs across those tiers instead of stopping at the
     // first match, since a single edition can legitimately link a race-level trail per distance on
-    // top of (or instead of) its own edition-level one.
-    const eventTrailSlugs = useMemo(() => {
-        const primaryRaces = primaryEdition?.visibleRaces ?? [];
-        const racesWithTrails = primaryRaces.some(race => race.trailSlug) ? primaryRaces : visibleRaces;
-        const slugs = new Set(
-            racesWithTrails
-                .map(race => race.trailSlug)
-                .filter((trailSlug): trailSlug is string => !!trailSlug),
-        );
-        if (primaryEdition?.trailSlug) slugs.add(primaryEdition.trailSlug);
-        return slugs;
-    }, [primaryEdition, visibleRaces]);
+    // top of (or instead of) its own edition-level one. Logic lives in deriveEventTrailSlugs (#1252)
+    // so it's unit-testable independent of this component's heavy hook tree.
+    const eventTrailSlugs = useMemo(
+        () => deriveEventTrailSlugs(primaryEdition, visibleRaces),
+        [primaryEdition, visibleRaces],
+    );
 
     const { trails: allTrails } = useTrails(true);
     const eventTrails = useMemo(

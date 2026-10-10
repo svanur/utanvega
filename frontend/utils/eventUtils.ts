@@ -273,6 +273,29 @@ export function getRowDaysUntil(row: FlattenedEventRow, now: Date = new Date()):
     return row.event.daysUntil;
 }
 
+// #1252: extracted from CompetitionDetailPage's eventTrailSlugs memo so the fallback-tier logic is
+// unit-testable without rendering the page. Mirrors weatherTrailSlug's fallback tiers (edition-level
+// trailSlug, then primaryEdition's own races, then the broader visibleRaces) but collects every
+// distinct slug across those tiers instead of stopping at the first match — a single edition can
+// legitimately link a race-level trail per distance on top of (or instead of) its own edition-level
+// one. Round 1 of #1250 dropped the edition-level trailSlug tier entirely (only reachable via the
+// final `if` below), which silently rendered zero polylines for a single-trail event linked only at
+// edition level — caught by manual trace, not a test, hence this extraction.
+export function deriveEventTrailSlugs(
+    primaryEdition: { trailSlug: string | null; visibleRaces: { trailSlug: string | null }[] } | null | undefined,
+    visibleRaces: { trailSlug: string | null }[],
+): Set<string> {
+    const primaryRaces = primaryEdition?.visibleRaces ?? [];
+    const racesWithTrails = primaryRaces.some(race => race.trailSlug) ? primaryRaces : visibleRaces;
+    const slugs = new Set(
+        racesWithTrails
+            .map(race => race.trailSlug)
+            .filter((trailSlug): trailSlug is string => !!trailSlug),
+    );
+    if (primaryEdition?.trailSlug) slugs.add(primaryEdition.trailSlug);
+    return slugs;
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,
