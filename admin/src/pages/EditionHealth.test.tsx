@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getRaceChecks } from './EditionHealth';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 
@@ -7,6 +7,14 @@ import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 // exercises the pure check-generation logic directly (construct RaceDto/EventEditionDto fixtures,
 // assert on the returned HealthCheck[]) rather than rendering the component, since the new logic
 // is entirely pure functions with no DOM/query dependency of its own.
+
+// Importing from './EditionHealth' pulls in the whole page module, which imports '../hooks/api'
+// and transitively '../hooks/supabase' — that module throws at import time if VITE_SUPABASE_URL
+// isn't set, which it isn't in CI. Mock it the same way EventHealth.test.tsx does, even though
+// these tests never call apiFetch themselves.
+vi.mock('../hooks/api', () => ({
+    apiFetch: vi.fn().mockResolvedValue([]),
+}));
 
 function makeRace(overrides: Partial<RaceDto> = {}): RaceDto {
   return {
