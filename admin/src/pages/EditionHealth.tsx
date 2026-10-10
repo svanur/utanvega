@@ -87,8 +87,77 @@ function getEditionChecks(edition: EventEditionDto): HealthCheck[] {
   ];
 }
 
-function getRaceChecks(race: RaceDto): HealthCheck[] {
-  return [
+// A Series edition legitimately spans races dated months apart (e.g. a winter leg and a summer
+// leg of the same series "year"), so a fixed year comparison would false-positive constantly.
+// Instead each race is compared against the median date of its *other* dated siblings (itself
+// excluded — see getRaceYearCheck below), and only flagged once it's more than ~13 months away —
+// far enough that it's almost certainly a wrong year, not a normal spread within one edition.
+const SERIES_YEAR_TOLERANCE_DAYS = 396;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function medianOf(sortedNumbers: number[]): number {
+  const mid = Math.floor(sortedNumbers.length / 2);
+  return sortedNumbers.length % 2 !== 0
+    ? sortedNumbers[mid]
+    : (sortedNumbers[mid - 1] + sortedNumbers[mid]) / 2;
+}
+
+// Returns null (check omitted, not force-passed/failed — mirrors the Results URL
+// future-edition omission above) when there isn't enough data to judge: no edition.year for
+// Non-Series, or fewer than two dated sibling races for Series.
+function getRaceYearCheck(race: RaceDto, edition: EventEditionDto, isSeries: boolean): HealthCheck | null {
+  if (!isSeries) {
+    if (edition.year == null) return null;
+    const editionYear = String(edition.year);
+    // A race with no date of its own has nothing to compare — already flagged by the Date
+    // check above, so it's excluded here by passing rather than by omitting the check.
+    const passed = !race.dateOfRace || race.dateOfRace.slice(0, 4) === editionYear;
+    return {
+      label: 'Year',
+      passed,
+      tooltip: passed
+        ? (race.dateOfRace
+            ? `Race year (${race.dateOfRace.slice(0, 4)}) matches edition year (${editionYear})`
+            : 'No race date set — nothing to compare against the edition year')
+        : `Race is dated ${race.dateOfRace!.slice(0, 4)} but edition is ${editionYear}`,
+    };
+  }
+
+  // Series: a race with no date of its own can't be compared to its siblings, and (per the Date
+  // check above) is already flagged there — it's excluded from both sides of this check.
+  if (race.dateOfRace == null) return null;
+
+  const datedRaces = edition.races.filter(r => r.dateOfRace != null);
+  if (datedRaces.length < 2) return null;
+
+  // The median is computed over the *other* dated races, excluding this one. Including the race
+  // itself pulls the median toward it — at the minimum-data case of exactly two dated races, the
+  // median of the pair sits at their midpoint, so each race is only half its actual separation
+  // from the median. A race dated a full year off its only sibling (#1068's exact bug shape)
+  // would then measure as ~6 months from the "median" — comfortably inside the 13-month
+  // tolerance — and pass undetected. Excluding self fixes this: with one other dated race, the
+  // "median" is just that race's own date, so the full gap is measured.
+  const otherTimes = datedRaces
+    .filter(r => r.id !== race.id)
+    .map(r => new Date(r.dateOfRace as string).getTime())
+    .sort((a, b) => a - b);
+
+  const medianTime = medianOf(otherTimes);
+  const raceTime = new Date(race.dateOfRace).getTime();
+  const diffDays = Math.round(Math.abs(raceTime - medianTime) / MS_PER_DAY);
+  const passed = diffDays <= SERIES_YEAR_TOLERANCE_DAYS;
+  return {
+    label: 'Year',
+    passed,
+    tooltip: passed
+      ? `Race date (${race.dateOfRace}) is close to the series' typical date for this edition`
+      : `Race is dated ${race.dateOfRace}, ${diffDays} days from the series' typical date — likely a year mismatch`,
+  };
+}
+
+// eslint-disable-next-line react-refresh/only-export-components -- exported for EditionHealth.test.tsx
+export function getRaceChecks(race: RaceDto, edition: EventEditionDto, isSeries: boolean): HealthCheck[] {
+  const checks: HealthCheck[] = [
     {
       label: 'Date',
       passed: race.dateOfRace != null,
@@ -110,6 +179,11 @@ function getRaceChecks(race: RaceDto): HealthCheck[] {
       tooltip: race.startTime != null ? String(race.startTime) : 'No start time',
     },
   ];
+
+  const yearCheck = getRaceYearCheck(race, edition, isSeries);
+  if (yearCheck) checks.push(yearCheck);
+
+  return checks;
 }
 
 function scoreFromChecks(checks: HealthCheck[]): number {
@@ -134,10 +208,11 @@ interface ScoredEdition {
   hasResults: boolean;
   hasGoodStatus: boolean;
   notCompleted: boolean;
+  yearMismatch: boolean;
 }
 
 type SortField = 'event' | 'year' | 'score';
-type QuickFilter = 'critical' | 'no-date' | 'no-races' | 'no-trail' | 'no-results' | 'bad-status' | 'cancelled' | 'not-completed';
+type QuickFilter = 'critical' | 'no-date' | 'no-races' | 'no-trail' | 'no-results' | 'bad-status' | 'cancelled' | 'not-completed' | 'year-mismatch';
 
 interface EditionHealthProps {
   onViewEvent?: (eventSlug: string) => void;
@@ -164,7 +239,7 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
       for (const edition of event.editions) {
         const editionChecks = getEditionChecks(edition);
         const raceRows = edition.races.map(r => {
-          const checks = getRaceChecks(r);
+          const checks = getRaceChecks(r, edition, event.type === 'Series');
           return { race: r, checks, score: scoreFromChecks(checks) };
         });
         const allChecks = [
@@ -178,6 +253,7 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
           isPast(edition.endDate ?? edition.date) &&
           edition.status !== 'Completed' &&
           edition.status !== 'Cancelled';
+        const yearMismatch = raceRows.some(rr => rr.checks.some(c => c.label === 'Year' && !c.passed));
         result.push({
           event,
           edition,
@@ -188,6 +264,7 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
           hasResults,
           hasGoodStatus,
           notCompleted,
+          yearMismatch,
         });
       }
     }
@@ -218,6 +295,7 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
       case 'bad-status':      result = result.filter(s => !s.hasGoodStatus); break;
       case 'cancelled':       result = result.filter(s => s.edition.status === 'Cancelled'); break;
       case 'not-completed':   result = result.filter(s => s.notCompleted); break;
+      case 'year-mismatch':   result = result.filter(s => s.yearMismatch); break;
     }
     return [...result].sort((a, b) => {
       let cmp = 0;
@@ -245,6 +323,7 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
   const noResultsCount = nonCancelled.filter(s => !s.hasResults).length;
   const badStatusCount = nonCancelled.filter(s => !s.hasGoodStatus).length;
   const notCompletedCount = scored.filter(s => s.notCompleted).length;
+  const yearMismatchCount = nonCancelled.filter(s => s.yearMismatch).length;
   const avgScore = nonCancelled.length > 0 ? Math.round(nonCancelled.reduce((s, e) => s + e.score, 0) / nonCancelled.length) : 0;
 
   const handleSort = (field: SortField) => {
@@ -288,6 +367,9 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
           filter="no-trail" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="No Results URL" value={noResultsCount} color={noResultsCount > 0 ? '#ed6c02' : '#2e7d32'}
           filter="no-results" activeFilter={activeFilter} onFilter={setActiveFilter} />
+        <SummaryCard title="Year Mismatch" value={yearMismatchCount} color={yearMismatchCount > 0 ? '#d32f2f' : '#2e7d32'}
+          filter="year-mismatch" activeFilter={activeFilter} onFilter={setActiveFilter}
+          tooltip="A race's own date falls in a different year than its edition (Non-Series), or is far from its series siblings' typical date (Series)" />
         <SummaryCard title="Open (past)" value={badStatusCount} color={badStatusCount > 0 ? '#d32f2f' : '#2e7d32'}
           filter="bad-status" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="Not Completed" value={notCompletedCount} color={notCompletedCount > 0 ? '#ed6c02' : '#2e7d32'}
