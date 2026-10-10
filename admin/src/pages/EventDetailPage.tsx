@@ -61,6 +61,7 @@ import {
   type EventDetailDto,
   type EventEditionDto,
   type EditionStatus,
+  type EventType,
   type RaceDto,
   type RaceStatus,
   type RegistrationStatus,
@@ -277,12 +278,20 @@ interface EditionDialogProps {
   // warning below — never for validation, since Title has no uniqueness constraint by design
   // (same-year reruns/reschedules are legitimate).
   siblingEditions: EventEditionDto[];
+  // #1070: the parent event's type — needed to tell whether Start/End date below should be
+  // disabled in favour of a live-derived value (see isDateDerivedFromRaces below). EventEditionDto
+  // itself carries no eventType/type field (an edition doesn't know its parent's type), so this
+  // follows the same prop-passed-down-from-the-call-site pattern as isApproximateScheduleClone
+  // above, sourced there from detail.type (detail being the parent EventDetailDto). Optional
+  // because EventDetailPage.test.tsx mounts EditionDialogInner directly without a parent event
+  // around it — undefined behaves the same as non-Series, i.e. stays editable.
+  eventType?: EventType;
 }
 
 // #977: exported (unlike previously) so EventDetailPage.test.tsx can mount this dialog directly
 // and cover its Status/Registration status Selects via getByLabelText, mirroring EventWizardPage's
 // own EditionDetailsStep/RacesStep exports, which exist for the same reason.
-export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
+export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions, eventType }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -338,6 +347,23 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
         return siblingTitle.trim().toLowerCase() === trimmedTitle.toLowerCase();
       })
     : undefined;
+
+  // #1070: a Series edition's Date/EndDate are derived live from its races' DateOfRace by the
+  // backend (EditionStatusHelpers.ComputeEffectiveEditionDates) rather than trusted from the
+  // stored columns, so once an existing Series edition has at least one dated race, Start/End date
+  // here must show that derived value and stop accepting admin edits the backend would just
+  // overrule on the next read. A brand-new Series edition with no races yet has nothing to derive
+  // from, and every non-Series edition is unaffected — both stay editable.
+  const seriesDatedRaceDates = eventType === 'Series' && !isNew
+    ? (edition?.races ?? [])
+        .map(r => r.dateOfRace)
+        .filter((d): d is string => d != null)
+        .sort()
+    : [];
+  const isDateDerivedFromRaces = seriesDatedRaceDates.length > 0;
+  const derivedStartDate = isDateDerivedFromRaces ? seriesDatedRaceDates[0] : null;
+  const derivedEndDate = isDateDerivedFromRaces ? seriesDatedRaceDates[seriesDatedRaceDates.length - 1] : null;
+  const derivedDateTooltip = 'Derived from race dates — edit races to change this';
 
   const handleSave = async () => {
     const input = {
@@ -475,19 +501,33 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
                   return { ...prev, ...updates };
                 });
               }} />
-            <DatePicker label="Start date"
-              value={form.date ? dayjs(form.date) : null}
-              onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
-              referenceDate={referenceDate}
-              slotProps={{ textField: {
-                size: 'small', fullWidth: true,
-                'aria-describedby': isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined,
-              } }} />
-            <DatePicker label="End date (multi-day)"
-              value={form.endDate ? dayjs(form.endDate) : null}
-              onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
-              referenceDate={referenceDate}
-              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+            <Tooltip title={isDateDerivedFromRaces ? derivedDateTooltip : ''} disableHoverListener={!isDateDerivedFromRaces}>
+              {/* display: contents keeps this wrapper out of the Stack's flex layout entirely —
+                  the DatePicker below lays out exactly as if it were still a direct child, while
+                  still giving Tooltip a DOM node to attach its hover handlers to (a disabled
+                  MUI input does not reliably forward its own). */}
+              <Box sx={{ display: 'contents' }}>
+                <DatePicker label="Start date"
+                  value={isDateDerivedFromRaces ? dayjs(derivedStartDate) : (form.date ? dayjs(form.date) : null)}
+                  onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
+                  referenceDate={referenceDate}
+                  disabled={isDateDerivedFromRaces}
+                  slotProps={{ textField: {
+                    size: 'small', fullWidth: true,
+                    'aria-describedby': isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined,
+                  } }} />
+              </Box>
+            </Tooltip>
+            <Tooltip title={isDateDerivedFromRaces ? derivedDateTooltip : ''} disableHoverListener={!isDateDerivedFromRaces}>
+              <Box sx={{ display: 'contents' }}>
+                <DatePicker label="End date (multi-day)"
+                  value={isDateDerivedFromRaces ? dayjs(derivedEndDate) : (form.endDate ? dayjs(form.endDate) : null)}
+                  onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
+                  referenceDate={referenceDate}
+                  disabled={isDateDerivedFromRaces}
+                  slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+              </Box>
+            </Tooltip>
           </Stack>
           {isApproximateScheduleCloneRef.current && !form.date && (
             <FormHelperText id={startDateHelperId} sx={{ mt: -1.5 }}>
@@ -2007,6 +2047,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         isClone={cloneFromEditionId !== null}
         isApproximateScheduleClone={cloneFromEditionId !== null && detail.scheduleRule?.type === 'Approximate'}
         siblingEditions={detail.editions}
+        eventType={detail.type}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
         onSaved={async (newEditionId, savedDate) => {

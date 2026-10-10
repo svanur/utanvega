@@ -9,7 +9,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import EventDetailPage, { EditionDialogInner } from './EventDetailPage';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { EDITION_STATUS_LABELS } from '../utils/eventForms';
-import { EVENTS_QUERY_KEY, type EventDetailDto, type EventEditionDto } from '../hooks/useEvents';
+import { EVENTS_QUERY_KEY, type EventDetailDto, type EventEditionDto, type EventType, type RaceDto } from '../hooks/useEvents';
 
 // #977: PR #976 (closing #970) gave EditionDialogInner's Status/Registration status Selects
 // explicit labelId/id wiring so each has an accessible name reachable via getByLabelText — mirrors
@@ -77,7 +77,10 @@ vi.mock('../hooks/api', () => ({
 // simplest way to mount the dialog, since it needs no EventEditionDto fixture and none of the
 // Status MenuItems are conditionally disabled (that only happens `!isNew`, see EditionDialogInner's
 // own Status Select above).
-function renderEditionDialog() {
+//
+// #1070: accepts an optional edition/eventType override so the Start/End date derived-and-disabled
+// tests below can mount the same dialog against an *existing* Series edition instead.
+function renderEditionDialog(overrides: { edition?: EventEditionDto; eventType?: EventType } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -85,7 +88,8 @@ function renderEditionDialog() {
         <BilingualLangProvider>
           <EditionDialogInner
             open
-            edition={null}
+            edition={overrides.edition ?? null}
+            eventType={overrides.eventType}
             eventId="event-1"
             onClose={() => {}}
             onSaved={() => {}}
@@ -135,6 +139,101 @@ describe('EditionDialogInner — Status/Registration status Selects are reachabl
 
     chooseMenuOption(getRegistrationStatusCombobox(), 'Open');
     expect(getRegistrationStatusCombobox().textContent).toBe('Open');
+  });
+});
+
+// #1070: a Series edition's Start/End date must stop being independently editable once it has at
+// least one dated race — the backend (EditionStatusHelpers.ComputeEffectiveEditionDates) derives
+// Date/EndDate live from those races on every read, so an admin-entered value here would just be
+// silently overruled. Covers the dialog-level half of #1070; ComputeEffectiveEditionDates itself
+// has its own xUnit coverage in backend.Tests/Services/EditionStatusHelpersTests.cs.
+function buildRaceFixture(overrides: Partial<RaceDto> = {}): RaceDto {
+  return {
+    id: 'race-1',
+    eventEditionId: 'edition-1',
+    trailId: null,
+    trailName: null,
+    trailSlug: null,
+    name: 'Leg 1',
+    nameEn: null,
+    distanceLabel: '10K',
+    distanceLabelEn: null,
+    cutoffMinutes: null,
+    description: null,
+    descriptionEn: null,
+    status: 'Active',
+    sortOrder: 0,
+    ticketStatus: 'Available',
+    resultType: 'Time',
+    maxParticipants: null,
+    itraPoints: null,
+    certifiedBy: null,
+    certifiedByEn: null,
+    prizeMoney: 0,
+    championshipCategory: null,
+    championshipCategoryEn: null,
+    dateOfRace: '2026-04-01',
+    startTime: null,
+    trailDistanceMeters: null,
+    trailElevationGain: null,
+    activityType: null,
+    ...overrides,
+  };
+}
+
+function getStartDateInput() {
+  return screen.getByLabelText('Start date') as HTMLInputElement;
+}
+function getEndDateInput() {
+  return screen.getByLabelText('End date (multi-day)') as HTMLInputElement;
+}
+
+describe('EditionDialogInner — Start/End date disabled and derived for a Series edition with dated races (#1070)', () => {
+  afterEach(cleanup);
+
+  it('stays editable for a brand-new Series edition with no races yet', () => {
+    renderEditionDialog({ eventType: 'Series' });
+
+    expect(getStartDateInput().disabled).toBe(false);
+    expect(getEndDateInput().disabled).toBe(false);
+  });
+
+  it('stays editable for a non-Series edition even with races, as a regression guard', () => {
+    const edition = buildEditionFixture({
+      races: [buildRaceFixture({ dateOfRace: '2026-04-01' }), buildRaceFixture({ id: 'race-2', dateOfRace: '2026-08-20' })],
+    });
+    renderEditionDialog({ edition, eventType: 'Race' });
+
+    expect(getStartDateInput().disabled).toBe(false);
+    expect(getEndDateInput().disabled).toBe(false);
+  });
+
+  it('falls back to editable for an existing Series edition with zero dated races (chicken-and-egg case)', () => {
+    const edition = buildEditionFixture({ races: [] });
+    renderEditionDialog({ edition, eventType: 'Series' });
+
+    expect(getStartDateInput().disabled).toBe(false);
+    expect(getEndDateInput().disabled).toBe(false);
+  });
+
+  it('disables Start/End date and shows the min/max of the races as the derived value', () => {
+    const edition = buildEditionFixture({
+      date: '2026-01-01',
+      endDate: '2026-01-02',
+      races: [
+        buildRaceFixture({ id: 'race-1', dateOfRace: '2026-06-15' }),
+        buildRaceFixture({ id: 'race-2', dateOfRace: '2026-04-01' }),
+        buildRaceFixture({ id: 'race-3', dateOfRace: '2026-08-20' }),
+      ],
+    });
+    renderEditionDialog({ edition, eventType: 'Series' });
+
+    expect(getStartDateInput().disabled).toBe(true);
+    expect(getEndDateInput().disabled).toBe(true);
+    // Derived min/max of the three races' dateOfRace above (2026-06-15/2026-04-01/2026-08-20),
+    // not the edition's stale stored date/endDate (2026-01-01/2026-01-02) seeded above.
+    expect(getStartDateInput().value).toBe('04/01/2026');
+    expect(getEndDateInput().value).toBe('08/20/2026');
   });
 });
 

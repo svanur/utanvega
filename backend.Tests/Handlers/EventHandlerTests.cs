@@ -751,6 +751,118 @@ public class EventHandlerTests : IDisposable
         }
     }
 
+    // #1070 round 1 review: a Series edition with at least one dated race has Date/EndDate derived
+    // live at read time (EditionStatusHelpers.ComputeEffectiveEditionDates), so every DTO it's ever
+    // read through — including the one the admin "Edit edition" dialog pre-seeds its own disabled
+    // Start/End date fields from — already reflects that derived value, not the raw stored one.
+    // Without a write-side guard, saving any other field on that same dialog re-submits the form's
+    // date/endDate (still carrying the derived snapshot) through this same PUT, silently persisting
+    // it back into the stored columns and destroying the "fall back to stored values" ground truth
+    // the whole feature's chicken-and-egg fallback relies on the next time the race set changes.
+    // This proves the guard (UpdateEditionCommandHandler's IsEditionDateDerivedFromRaces check)
+    // actually stops that write, rather than relying on manual reasoning alone.
+    [Fact]
+    public async Task Update_SeriesEditionWithDatedRaces_IgnoresSubmittedDateEndDate()
+    {
+        var ev = CreateTestEvent();
+        ev.Type = EventType.Series;
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = new DateOnly(2026, 1, 1);
+        edition.EndDate = new DateOnly(2026, 1, 2);
+        var raceA = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Leg 1", SortOrder = 0, DateOfRace = new DateOnly(2026, 4, 1) };
+        var raceB = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Leg 2", SortOrder = 1, DateOfRace = new DateOnly(2026, 8, 20) };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(raceA, raceB);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            // Simulates the admin dialog resaving some unrelated field (Notes) while Start/End date
+            // sit disabled — the submitted Date/EndDate below are the already-derived min/max the
+            // dialog received on read (2026-04-01/2026-08-20), deliberately not the stale stored
+            // values seeded above (2026-01-01/2026-01-02), the same shape a real client payload
+            // would take.
+            var result = await handler.Handle(new UpdateEditionCommand(
+                Id: edition.Id,
+                Year: 2026,
+                Date: new DateOnly(2026, 4, 1),
+                EndDate: new DateOnly(2026, 8, 20),
+                Title: edition.Title,
+                RegistrationUrl: null,
+                ResultsUrl: null,
+                Notes: "Updated notes",
+                RegistrationStatus: "Open",
+                TrailId: null
+            ), CancellationToken.None);
+
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updated = ctx.EventEditions.Find(edition.Id);
+            // The stored columns must stay exactly as originally seeded — untouched by the
+            // already-derived values the client submitted.
+            Assert.Equal(new DateOnly(2026, 1, 1), updated!.Date);
+            Assert.Equal(new DateOnly(2026, 1, 2), updated.EndDate);
+            // Confirms the rest of the payload still saved normally — this is a targeted guard on
+            // Date/EndDate only, not a wholesale "ignore this request" bug.
+            Assert.Equal("Updated notes", updated.Notes);
+        }
+    }
+
+    // Regression guard for the fix above: a non-Series edition (even with dated races) must keep
+    // writing Date/EndDate through unconditionally, exactly as Update_ExistingEdition_Succeeds
+    // already covers for a raceless edition — IsEditionDateDerivedFromRaces must gate on EventType
+    // too, not just "has dated races".
+    [Fact]
+    public async Task Update_NonSeriesEditionWithDatedRaces_StillWritesSubmittedDateEndDate()
+    {
+        var ev = CreateTestEvent(); // EventType.Race by default
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = new DateOnly(2026, 1, 1);
+        edition.EndDate = null;
+        var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, DateOfRace = new DateOnly(2026, 4, 1) };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new UpdateEditionCommand(
+                Id: edition.Id,
+                Year: 2026,
+                Date: new DateOnly(2026, 7, 11),
+                EndDate: new DateOnly(2026, 7, 12),
+                Title: edition.Title,
+                RegistrationUrl: null,
+                ResultsUrl: null,
+                Notes: null,
+                RegistrationStatus: "Open",
+                TrailId: null
+            ), CancellationToken.None);
+
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updated = ctx.EventEditions.Find(edition.Id);
+            Assert.Equal(new DateOnly(2026, 7, 11), updated!.Date);
+            Assert.Equal(new DateOnly(2026, 7, 12), updated.EndDate);
+        }
+    }
+
     // ─── DeleteEditionCommand ───
 
     [Fact]
