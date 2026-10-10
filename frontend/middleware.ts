@@ -25,9 +25,8 @@ import { rewrite, next } from '@vercel/functions';
 // crashing every request to "/" on both domains, bot and human alike, since
 // the import itself fails before any handler code runs). This is now a
 // fifth hand-kept copy alongside vercel.json's three rules and _site.ts's own
-// BOT_USER_AGENT_PATTERN/isBotRequest — all five (including the
-// case-insensitive `i` flag) must be kept in sync by hand if this pattern
-// ever changes.
+// BOT_USER_AGENT_PATTERN — all five (including the case-insensitive `i`
+// flag) must be kept in sync by hand if this pattern ever changes.
 const BOT_USER_AGENT_PATTERN =
   /.*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*/i;
 
