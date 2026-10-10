@@ -411,20 +411,27 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     return queryClient;
   }
 
-  // Each icon button is the edition header's own — always rendered, expanding the edition is not
-  // required — found via the MUI icon's own data-testid (createSvgIcon sets
-  // data-testid={displayName + 'Icon'} regardless of accessible name, and none of these
-  // IconButtons carry an aria-label). DeleteIcon/EventBusyIcon both also label the event-level
-  // "Delete event"/"Cancel event" buttons higher up the page (EventDetailPage.tsx:1579-1589), so
-  // getByTestId's single-match assumption doesn't hold here — the edition-row instance is the one
-  // rendered last in DOM order (the single fixture edition from buildEventDetailFixture).
-  function getEditionIconButton(testId: string) {
-    const icons = screen.getAllByTestId(testId);
-    const icon = icons[icons.length - 1];
-    if (!icon) throw new Error(`No icon found for ${testId}`);
-    const button = icon.closest('button');
-    if (!button) throw new Error(`No <button> ancestor for icon ${testId}`);
-    return button;
+  // #1238: each edition-row IconButton now carries its own static aria-label (static even for
+  // Complete/Cancel/Delete, whose Tooltip title toggles to a "Click again to confirm…" string
+  // while armed — the label is for selector stability, not for mirroring tooltip confirm-state).
+  // Selecting by accessible name via getByRole is correct regardless of DOM order, unlike the
+  // former getAllByTestId(...)[length - 1] workaround this replaced, which only happened to work
+  // because the single fixture edition from buildEventDetailFixture put the edition-row icon last.
+  function getEditionIconButton(name: string) {
+    return screen.getByRole('button', { name });
+  }
+
+  // #1238 follow-up: Complete/Cancel/Delete's aria-label is static (asserted by the tests below),
+  // so unlike an unlabelled button, Tooltip's dynamic "click again to confirm" title no longer
+  // gets merged into the accessible name when the button arms — the button instead carries an
+  // aria-describedby pointing at a visually-hidden aria-live="polite" status element, which is
+  // what this helper reads to prove that arm-state text is still reachable by assistive tech.
+  function getDescribedByText(button: HTMLElement) {
+    const describedById = button.getAttribute('aria-describedby');
+    if (!describedById) throw new Error('Button has no aria-describedby');
+    const el = document.getElementById(describedById);
+    if (!el) throw new Error(`No element found with id ${describedById}`);
+    return el.textContent;
   }
 
   it('handleDeleteEdition invalidates EVENTS_QUERY_KEY after a successful delete', async () => {
@@ -437,7 +444,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient);
     await screen.findByText('Active');
 
-    const deleteButton = getEditionIconButton('DeleteIcon');
+    const deleteButton = getEditionIconButton('Delete edition');
     fireEvent.click(deleteButton); // arms deletingEditionId
     fireEvent.click(deleteButton); // fires the DELETE
 
@@ -457,7 +464,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient, onNotify);
     await screen.findByText('Active');
 
-    const deleteButton = getEditionIconButton('DeleteIcon');
+    const deleteButton = getEditionIconButton('Delete edition');
     fireEvent.click(deleteButton);
     fireEvent.click(deleteButton);
 
@@ -480,7 +487,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient);
     await screen.findByText('Active');
 
-    const cancelButton = getEditionIconButton('EventBusyIcon');
+    const cancelButton = getEditionIconButton('Cancel edition');
     fireEvent.click(cancelButton); // arms cancelingEditionId
     fireEvent.click(cancelButton); // fires the POST .../cancel
 
@@ -500,7 +507,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient, onNotify);
     await screen.findByText('Active');
 
-    const cancelButton = getEditionIconButton('EventBusyIcon');
+    const cancelButton = getEditionIconButton('Cancel edition');
     fireEvent.click(cancelButton);
     fireEvent.click(cancelButton);
 
@@ -522,7 +529,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient);
     await screen.findByText('Active');
 
-    const completeButton = getEditionIconButton('TaskAltIcon');
+    const completeButton = getEditionIconButton('Mark edition Completed');
     fireEvent.click(completeButton); // arms completingEditionId
     fireEvent.click(completeButton); // fires the POST .../complete
 
@@ -542,7 +549,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     renderEventDetailPage(queryClient, onNotify);
     await screen.findByText('Active');
 
-    const completeButton = getEditionIconButton('TaskAltIcon');
+    const completeButton = getEditionIconButton('Mark edition Completed');
     fireEvent.click(completeButton);
     fireEvent.click(completeButton);
 
@@ -550,5 +557,57 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
       expect(onNotify).toHaveBeenCalledWith('Failed to complete edition', 'error');
     });
     expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+
+  // #1238 follow-up: a static aria-label on Delete/Cancel/Complete (added so getEditionIconButton
+  // above can select by accessible name instead of DOM order) stops Tooltip's dynamic "click again
+  // to confirm" title from reaching the accessible name the way it would for an unlabelled button
+  // — these three tests prove the arm-state text is still exposed to assistive tech via each
+  // button's aria-describedby-linked aria-live region, not just sighted-only in the Tooltip.
+  it('exposes Delete edition\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const deleteButton = getEditionIconButton('Delete edition');
+    expect(getDescribedByText(deleteButton)).toBe('');
+
+    fireEvent.click(deleteButton); // arms deletingEditionId
+
+    // Same element, same accessible name — getByRole must still resolve it post-arm.
+    expect(screen.getByRole('button', { name: 'Delete edition' })).toBe(deleteButton);
+    expect(getDescribedByText(deleteButton)).toBe('Click again to confirm — or wait 3 seconds to cancel');
+  });
+
+  it('exposes Cancel edition\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const cancelButton = getEditionIconButton('Cancel edition');
+    expect(getDescribedByText(cancelButton)).toBe('');
+
+    fireEvent.click(cancelButton); // arms cancelingEditionId
+
+    expect(screen.getByRole('button', { name: 'Cancel edition' })).toBe(cancelButton);
+    // Default fixture edition has no races, so the race-count placeholder reads "0 races".
+    expect(getDescribedByText(cancelButton)).toBe('Click again to confirm — cancels 0 races and closes registration too (or wait 3 seconds to cancel)');
+  });
+
+  it('exposes Mark edition Completed\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('Mark edition Completed');
+    expect(getDescribedByText(completeButton)).toBe('');
+
+    fireEvent.click(completeButton); // arms completingEditionId
+
+    expect(screen.getByRole('button', { name: 'Mark edition Completed' })).toBe(completeButton);
+    expect(getDescribedByText(completeButton)).toBe('Click again to confirm — sets 0 Active races to Completed and closes registration (or wait 3 s to cancel)');
   });
 });
