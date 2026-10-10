@@ -91,12 +91,19 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
                         ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
 
+                    // Series editions derive Date/EndDate live from their races' DateOfRace rather
+                    // than trusting the stored columns, which nothing keeps in sync — same
+                    // "derive live, don't store" precedent as edEffectiveRegStatus above.
+                    var (edEffDate, edEffEndDate) = EditionStatusHelpers.ComputeEffectiveEditionDates(
+                        ev.Type, ed.Date, ed.EndDate,
+                        ed.Races.Where(r => r.DateOfRace.HasValue).Select(r => r.DateOfRace!.Value).ToList());
+
                     return new EventEditionDto(
                     ed.Id,
                     ed.EventId,
                     ed.Year,
-                    ed.Date,
-                    ed.EndDate,
+                    edEffDate,
+                    edEffEndDate,
                     ed.Title,
                     ed.TitleEn,
                     ed.RegistrationUrl,

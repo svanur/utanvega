@@ -97,6 +97,25 @@ public static class EditionStatusHelpers
         };
     }
 
+    // A Series edition's Date/EndDate are stored columns with nothing keeping them in sync with its
+    // races' DateOfRace values as races are added/edited/removed. Rather than recompute-and-persist
+    // on every race write (same tradeoff ComputeEffectiveRegistrationStatus already made in favour
+    // of deriving live from RegistrationOpens/Closes), derive the edition's display range live from
+    // its dated races: min becomes Date, max becomes EndDate. Only applies to Series editions that
+    // actually have at least one dated race — a brand-new Series edition with no races yet, and
+    // every non-Series edition, fall back to the raw stored values unchanged.
+    public static (DateOnly? Date, DateOnly? EndDate) ComputeEffectiveEditionDates(
+        EventType eventType,
+        DateOnly? storedDate,
+        DateOnly? storedEndDate,
+        IReadOnlyCollection<DateOnly> raceDates)
+    {
+        if (eventType != EventType.Series || raceDates.Count == 0)
+            return (storedDate, storedEndDate);
+
+        return (raceDates.Min(), raceDates.Max());
+    }
+
     // Npgsql requires Kind=Utc for a "timestamp with time zone" column. Admin-submitted
     // RegistrationOpens/Closes values arrive via System.Text.Json with Kind=Unspecified (no
     // offset in the payload) — relabel rather than convert, since the admin's date picker has

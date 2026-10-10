@@ -345,6 +345,83 @@ public class EditionStatusHelpersTests
     }
 
     [Fact]
+    public void ComputeEffectiveEditionDates_SeriesWithRaces_ReturnsMinMaxOfRaceDates()
+    {
+        var storedDate = new DateOnly(2026, 1, 1);
+        var storedEndDate = new DateOnly(2026, 1, 2);
+        var raceDates = new List<DateOnly>
+        {
+            new(2026, 6, 15),
+            new(2026, 4, 1),
+            new(2026, 8, 20),
+        };
+
+        var result = EditionStatusHelpers.ComputeEffectiveEditionDates(
+            EventType.Series, storedDate, storedEndDate, raceDates);
+
+        Assert.Equal(new DateOnly(2026, 4, 1), result.Date);
+        Assert.Equal(new DateOnly(2026, 8, 20), result.EndDate);
+    }
+
+    [Fact]
+    public void ComputeEffectiveEditionDates_SeriesWithSingleRace_ReturnsThatDateForBothDateAndEndDate()
+    {
+        var raceDate = new DateOnly(2026, 5, 10);
+
+        var result = EditionStatusHelpers.ComputeEffectiveEditionDates(
+            EventType.Series, null, null, [raceDate]);
+
+        Assert.Equal(raceDate, result.Date);
+        Assert.Equal(raceDate, result.EndDate);
+    }
+
+    [Fact]
+    public void ComputeEffectiveEditionDates_SeriesWithNoDatedRaces_FallsBackToStoredDates()
+    {
+        // Chicken-and-egg case: a brand-new Series edition with no races yet has nothing to
+        // derive from, so the raw stored values must pass through unchanged.
+        var storedDate = new DateOnly(2026, 1, 1);
+        var storedEndDate = new DateOnly(2026, 1, 2);
+
+        var result = EditionStatusHelpers.ComputeEffectiveEditionDates(
+            EventType.Series, storedDate, storedEndDate, []);
+
+        Assert.Equal(storedDate, result.Date);
+        Assert.Equal(storedEndDate, result.EndDate);
+    }
+
+    [Theory]
+    [InlineData(EventType.Race)]
+    [InlineData(EventType.Social)]
+    [InlineData(EventType.Advertisement)]
+    [InlineData(EventType.Festival)]
+    [InlineData(EventType.Other)]
+    public void ComputeEffectiveEditionDates_NonSeriesEventType_ReturnsStoredDatesEvenWithRaces(EventType eventType)
+    {
+        // Non-Series editions are unaffected by this helper regardless of how many dated races
+        // they have — the stored Date/EndDate remain the source of truth.
+        var storedDate = new DateOnly(2026, 1, 1);
+        var storedEndDate = new DateOnly(2026, 1, 2);
+        var raceDates = new List<DateOnly> { new(2026, 6, 15), new(2026, 8, 20) };
+
+        var result = EditionStatusHelpers.ComputeEffectiveEditionDates(
+            eventType, storedDate, storedEndDate, raceDates);
+
+        Assert.Equal(storedDate, result.Date);
+        Assert.Equal(storedEndDate, result.EndDate);
+    }
+
+    [Fact]
+    public void ComputeEffectiveEditionDates_SeriesWithNoRacesAndNoStoredDates_ReturnsNullForBoth()
+    {
+        var result = EditionStatusHelpers.ComputeEffectiveEditionDates(
+            EventType.Series, null, null, []);
+
+        Assert.Null(result.Date);
+        Assert.Null(result.EndDate);
+    }
+
+    [Fact]
     public void AsUtc_NullValue_ReturnsNull()
     {
         var result = EditionStatusHelpers.AsUtc(null);
