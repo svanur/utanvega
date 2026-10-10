@@ -148,11 +148,6 @@ export function resolveLocale(request: Request): Locale {
 export const BOT_USER_AGENT_PATTERN =
   /.*(facebookexternalhit|Twitterbot|WhatsApp|LinkedInBot|Slackbot|TelegramBot|Discordbot|Googlebot|bingbot|Baiduspider|yandex|pinterest|vkShare).*/i;
 
-/** Whether `request`'s User-Agent header matches a known crawler/bot. */
-export function isBotRequest(request: Request): boolean {
-  return BOT_USER_AGENT_PATTERN.test(request.headers.get('user-agent') || '');
-}
-
 export function esc(str: string): string {
   return str
     .replace(/&/g, '&amp;')
