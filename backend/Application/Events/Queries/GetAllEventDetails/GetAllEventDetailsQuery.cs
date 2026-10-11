@@ -93,10 +93,16 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
 
                     // Series editions derive Date/EndDate live from their races' DateOfRace rather
                     // than trusting the stored columns, which nothing keeps in sync — same
-                    // "derive live, don't store" precedent as edEffectiveRegStatus above.
+                    // "derive live, don't store" precedent as edEffectiveRegStatus above. A
+                    // Cancelled race's date must not skew the derived min/max (#1261) — excluded
+                    // here same as the other race-date consumers in GetEventsQuery. If every dated
+                    // race ends up excluded (all Cancelled), the filtered list is empty, so
+                    // IsEditionDateDerivedFromRaces naturally falls back to the stored Date/EndDate
+                    // rather than deriving from the cancelled set — a deliberate choice, not an
+                    // accident of the empty-list path.
                     var (edEffDate, edEffEndDate) = EditionStatusHelpers.ComputeEffectiveEditionDates(
                         ev.Type, ed.Date, ed.EndDate,
-                        ed.Races.Where(r => r.DateOfRace.HasValue).Select(r => r.DateOfRace!.Value).ToList());
+                        ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != Core.Entities.RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList());
 
                     return new EventEditionDto(
                     ed.Id,
