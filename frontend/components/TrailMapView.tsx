@@ -8,6 +8,7 @@ import MyLocationIcon from '@mui/icons-material/MyLocation';
 import RouteIcon from '@mui/icons-material/Route';
 import { Trail } from '../hooks/useTrails';
 import { useTrailGeometries } from '../hooks/useTrailGeometries';
+import { computeMapBounds } from './trailMapBounds';
 import { Link as RouterLink } from 'react-router-dom';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -130,13 +131,9 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     }, [trails, geometries, showTracks]);
 
     const bounds = useMemo(() => {
-        if (trailsWithLocation.length === 0) return null;
-        const latLngs = trailsWithLocation.map(t => [t.startLatitude!, t.startLongitude!] as [number, number]);
-        if (userLocation) {
-            latLngs.push([userLocation.lat, userLocation.lng]);
-        }
-        return L.latLngBounds(latLngs);
-    }, [trailsWithLocation, userLocation]);
+        const corners = computeMapBounds(trailsWithLocation, visibleGeometries, userLocation);
+        return corners ? L.latLngBounds(corners[0], corners[1]) : null;
+    }, [trailsWithLocation, visibleGeometries, userLocation]);
 
     const userLocationIcon = useMemo(() => new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
