@@ -84,7 +84,6 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
             null,
             [],
             ev.Editions
-                .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
                 .Select(ed => {
                     // Computed once per edition and reused for every race drawn from it below —
                     // do not re-derive from raw dates a second time.
@@ -103,6 +102,16 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     var (edEffDate, edEffEndDate) = EditionStatusHelpers.ComputeEffectiveEditionDates(
                         ev.Type, ed.Date, ed.EndDate,
                         ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != Core.Entities.RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList());
+
+                    // Projected alongside ed so the ordering below can sort on the derived date
+                    // without re-running ComputeEffectiveEditionDates a second time (#1262) — the
+                    // stored ed.Date is exactly what drifts out of sync for Series editions, so
+                    // ordering by it instead of edEffDate would disagree with the displayed date.
+                    return (ed, edEffectiveRegStatus, edEffDate, edEffEndDate);
+                })
+                .OrderByDescending(x => x.edEffDate ?? DateOnly.MinValue)
+                .Select(x => {
+                    var (ed, edEffectiveRegStatus, edEffDate, edEffEndDate) = x;
 
                     return new EventEditionDto(
                     ed.Id,
