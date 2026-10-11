@@ -268,14 +268,35 @@ describe('flattenEventRows', () => {
         expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
     });
 
-    it('appends a series-race row for recentlyCompletedSeriesRace when includeRecentlyCompleted is true', () => {
+    // #1248: with seriesRaces empty/null, the season-level "event" fallback row and the
+    // recentlyCompletedSeriesRace "series-race" row both described this same event in the same
+    // render pass — EventTableView's includeRecentlyCompleted:true rendered it twice. The
+    // series-race row alone represents the event here, so the fallback must be suppressed.
+    it('renders exactly one series-race row (no duplicate event row) when seriesRaces is empty and recentlyCompletedSeriesRace is set', () => {
         const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
         const event = makeEvent({ type: 'Series', seriesRaces: null, recentlyCompletedSeriesRace: recentRace });
         const rows = flattenEventRows([event], true);
         expect(rows).toEqual([
-            { kind: 'event', event, rowDate: event.displayDate },
             { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
         ]);
+    });
+
+    it('renders exactly one series-race row when seriesRaces is an explicit empty array and recentlyCompletedSeriesRace is set', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [], recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([
+            { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
+        ]);
+    });
+
+    // recentlyCompletedSeriesRace is a Series-only concept in practice, but guard the non-Series
+    // path explicitly so a stray value there can never suppress the plain "event" fallback row.
+    it('keeps the plain event row for a non-Series event even if recentlyCompletedSeriesRace is set', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Race', recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
     });
 
     it('appends the recently-completed row alongside the future seriesRaces rows, not instead of them', () => {
