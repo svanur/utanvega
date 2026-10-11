@@ -123,17 +123,25 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
         return map;
     }, [trails]);
 
-    // Filter geometries to only trails in the current view
-    const visibleGeometries = useMemo(() => {
-        if (!showTracks || geometries.length === 0) return [];
+    // Geometries for trails in the current view, independent of showTracks — this feeds the
+    // bounds calculation below so toggling the hide/show-tracks button never re-fits the map
+    // (#1303). Only `visibleGeometries` (derived from this) is gated by showTracks, and that
+    // gating affects rendered <Polyline>s only.
+    const geometriesForTrails = useMemo(() => {
+        if (geometries.length === 0) return [];
         const slugSet = new Set(trails.map(t => t.slug));
         return geometries.filter(g => slugSet.has(g.slug));
-    }, [trails, geometries, showTracks]);
+    }, [trails, geometries]);
+
+    const visibleGeometries = useMemo(() => {
+        if (!showTracks) return [];
+        return geometriesForTrails;
+    }, [geometriesForTrails, showTracks]);
 
     const bounds = useMemo(() => {
-        const corners = computeMapBounds(trailsWithLocation, visibleGeometries, userLocation);
+        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation);
         return corners ? L.latLngBounds(corners[0], corners[1]) : null;
-    }, [trailsWithLocation, visibleGeometries, userLocation]);
+    }, [trailsWithLocation, geometriesForTrails, userLocation]);
 
     const userLocationIcon = useMemo(() => new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
