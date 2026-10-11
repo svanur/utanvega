@@ -282,7 +282,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                             label={
                                                                 raceDaysUntil === 0 ? t('races.today')
                                                                 : raceDaysUntil === 1 ? t('races.tomorrow')
-                                                                : raceDaysUntil < 0 ? t('races.daysAgo', { count: Math.abs(raceDaysUntil) })
+                                                                : raceDaysUntil === -1 ? t('races.yesterday')
+                                                                : raceDaysUntil < -1 ? t('races.daysAgo', { count: Math.abs(raceDaysUntil) })
                                                                 : t('races.daysUntil', { count: raceDaysUntil })
                                                             }
                                                             size="small"
