@@ -288,7 +288,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const { locations } = useLocations();
     const { toggleFavoriteEvent, isFavoriteEvent } = useFavoriteEvents();
 
-    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [eventQROpen, setEventQROpen] = useState(false);
     const [eventQRCopied, setEventQRCopied] = useState(false);
 
@@ -522,19 +521,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         () => allTrails.filter(trail => eventTrailSlugs.has(trail.slug)),
         [allTrails, eventTrailSlugs],
     );
-
-    // One-shot geolocation fetch to feed TrailMapView's userLocation prop — mirrors
-    // LocationDetailsPage.tsx's pattern. TrailMapView owns its own follow-me toggle internally.
-    // Gated on the same condition that renders the map section below (#1253) so visitors
-    // landing on an event with no map section never see a geolocation permission prompt.
-    useEffect(() => {
-        if (!(mapPin || eventTrails.length > 0)) return;
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition(
-            (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            (err) => console.warn('Geolocation error:', err),
-        );
-    }, [mapPin, eventTrails]);
 
     const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
         bib: false,
@@ -808,7 +794,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 borderColor: 'divider',
                             }}
                         >
-                            <TrailMapView trails={eventTrails} userLocation={userLocation} />
+                            <TrailMapView trails={eventTrails} userLocation={null} />
                         </Box>
                     )}
 
