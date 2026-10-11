@@ -479,7 +479,19 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         // its next race, and also gets a "Nýlokið" card for the one that just raced.
         const seriesJustRaced = sortedFiltered.filter(c => c.recentlyCompletedSeriesRace != null && !isRecentlyCompleted(c));
         const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
-        return { justRaced: [...jr, ...seriesJustRaced], upcoming: up };
+        // #1305: jr/seriesJustRaced both inherit sortedFiltered's *upcoming* order (date/distance/
+        // name), which has nothing to do with how recently each actually finished — re-sort the
+        // combined list oldest-of-the-recently-completed first, by actual completion date.
+        const recentlyCompletedDate = (c: EventSummary) => c.recentlyCompletedSeriesRace?.dateOfRace ?? c.displayDate;
+        const combinedJustRaced = [...jr, ...seriesJustRaced].sort((a, b) => {
+            const da = recentlyCompletedDate(a);
+            const db = recentlyCompletedDate(b);
+            if (!da && !db) return 0;
+            if (!da) return 1;
+            if (!db) return -1;
+            return da < db ? -1 : da > db ? 1 : 0;
+        });
+        return { justRaced: combinedJustRaced, upcoming: up };
     }, [sortedFiltered]);
     const flattenedUpcoming = useMemo((): FlattenedEventRow[] => {
         // Unlike EventTableView.tsx's equivalent call site, no defensive spread is needed here —
@@ -1064,6 +1076,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             // use that race's own days-until, not the edition-level one — the
                                             // edition itself hasn't finished.
                                             const effectiveDaysUntil = recentRace ? recentRaceDaysUntil : comp.daysUntil;
+                                            // #1305: this section's cards fold a single distance into the date
+                                            // line instead of a separate chip row — only fall back to the chip
+                                            // row (as the upcoming list does) when there's more than one distance
+                                            // to show, so no information is silently lost.
+                                            const groupedDistances = !recentRace && comp.distances ? groupDistances(comp.distances) : [];
+                                            const singleDistanceLabel = recentRace
+                                                ? recentRace.distanceLabel
+                                                : groupedDistances.length === 1
+                                                    ? groupedDistances[0].label
+                                                    : null;
                                             return (
                                             <SwipeableCard
                                                 key={comp.id}
@@ -1098,21 +1120,16 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Typography>
                                                                 {recentRace?.dateOfRace ? (
                                                                     <Typography variant="body2" color="text.secondary">
-                                                                        {formatNextDate(recentRace.dateOfRace, t)}
+                                                                        {formatNextDate(recentRace.dateOfRace, t)}{singleDistanceLabel ? ` · ${singleDistanceLabel}` : ''}
                                                                     </Typography>
                                                                 ) : (comp.displayDate ?? comp.nextEditionDate) && (
                                                                     <Typography variant="body2" color="text.secondary">
-                                                                        {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
+                                                                        {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}{singleDistanceLabel ? ` · ${singleDistanceLabel}` : ''}
                                                                     </Typography>
                                                                 )}
-                                                                {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
-                                                                    <Tooltip title={t('races.nearMe.distanceToStart')}>
-                                                                        <Chip icon={<NearMeIcon />} label={formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))} size="small" variant="outlined" color="primary" sx={{ mt: 0.5 }} />
-                                                                    </Tooltip>
-                                                                )}
-                                                                {comp.distances && comp.distances.length > 0 && (
+                                                                {groupedDistances.length > 1 && (
                                                                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
-                                                                        {groupDistances(comp.distances).map((d, i) => (
+                                                                        {groupedDistances.map((d, i) => (
                                                                             <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" color={getTicketStatusColor(d.ticketStatus)} />
                                                                         ))}
                                                                     </Stack>
