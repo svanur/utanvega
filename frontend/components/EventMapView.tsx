@@ -9,7 +9,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import type { EventSummary } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
-import { getCountdownColor, isOngoingPastDayTwo } from '../utils/eventUtils';
+import { getCountdownColor, getCountdownLabel, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
 import MapFollowController from './MapFollowController';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -106,11 +106,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                                     icon={<CalendarTodayIcon sx={{ fontSize: 12 }} />}
                                     label={
                                         isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate) ? t('races.ongoing')
-                                        : event.daysUntil === 0 ? t('races.today')
-                                        : event.daysUntil === 1 ? t('races.tomorrow')
-                                        : event.daysUntil === -1 ? t('races.yesterday')
-                                        : event.daysUntil < -1 ? t('races.daysAgo', { count: Math.abs(event.daysUntil) })
-                                        : t('races.daysUntil', { count: event.daysUntil })
+                                        : getCountdownLabel(event.daysUntil, t)
                                     }
                                     size="small"
                                     color={getCountdownColor(event.daysUntil)}

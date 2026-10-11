@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import { addDays, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -199,6 +199,39 @@ describe('daysBetween', () => {
     it('returns 1 for tomorrow checked late in the day', () => {
         const now = new Date('2026-03-15T23:00:00');
         expect(daysBetween('2026-03-16', now)).toBe(1);
+    });
+});
+
+// #1308: EventTableView's series-race-row and plain-event-row chips, plus EventMapView's popup
+// chip, each hand-rolled this exact daysUntil ternary rather than calling getCountdownLabel
+// (already used by RacesPage, CompetitionDetailPage, AssociatedEventBanner) — the drift already
+// caused a real bug once (#1307, a missing "yesterday" branch in one of the copies). These cases
+// pin the key/interpolation for every branch so a future edit can't silently drop one again.
+describe('getCountdownLabel', () => {
+    const t = (key: string, opts?: Record<string, unknown>) => opts ? `${key}:${JSON.stringify(opts)}` : key;
+
+    it('returns races.noDate for null', () => {
+        expect(getCountdownLabel(null, t)).toBe('races.noDate');
+    });
+
+    it('returns races.today for 0', () => {
+        expect(getCountdownLabel(0, t)).toBe('races.today');
+    });
+
+    it('returns races.tomorrow for 1', () => {
+        expect(getCountdownLabel(1, t)).toBe('races.tomorrow');
+    });
+
+    it('returns races.yesterday for -1', () => {
+        expect(getCountdownLabel(-1, t)).toBe('races.yesterday');
+    });
+
+    it('returns races.daysAgo with the absolute count for -2', () => {
+        expect(getCountdownLabel(-2, t)).toBe('races.daysAgo:{"count":2}');
+    });
+
+    it('returns races.daysUntil with the count for 5', () => {
+        expect(getCountdownLabel(5, t)).toBe('races.daysUntil:{"count":5}');
     });
 });
 
