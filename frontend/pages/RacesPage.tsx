@@ -1059,6 +1059,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             // and date must point at that specific race, not the event/season).
                                             const recentRace = comp.recentlyCompletedSeriesRace;
                                             const recentRaceDaysUntil = recentRace?.dateOfRace ? daysBetween(recentRace.dateOfRace) : null;
+                                            // #1249: when a single race within a still-ongoing season just
+                                            // finished, the Results button gate (and the countdown chip) must
+                                            // use that race's own days-until, not the edition-level one — the
+                                            // edition itself hasn't finished.
+                                            const effectiveDaysUntil = recentRace ? recentRaceDaysUntil : comp.daysUntil;
                                             return (
                                             <SwipeableCard
                                                 key={comp.id}
@@ -1112,7 +1117,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         ))}
                                                                     </Stack>
                                                                 )}
-                                                                {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
+                                                                {comp.resultsUrl && (effectiveDaysUntil == null || effectiveDaysUntil < 0) && (
                                                                     <Button
                                                                         size="small"
                                                                         variant="outlined"
@@ -1129,7 +1134,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 )}
                                                             </Box>
                                                                 <Chip
-                                                                label={getCountdownLabel(recentRace ? recentRaceDaysUntil : comp.daysUntil, t)}
+                                                                label={getCountdownLabel(effectiveDaysUntil, t)}
                                                                 color="success"
                                                                 size="small"
                                                                 sx={{ fontWeight: 700 }}
