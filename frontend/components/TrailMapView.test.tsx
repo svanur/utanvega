@@ -50,7 +50,14 @@ vi.mock('../hooks/useTrailGeometries', () => ({
 vi.mock('react-leaflet', () => ({
     MapContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     TileLayer: () => null,
-    Marker: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    // #1309: position/icon are surfaced as data-* attributes (rather than dropped, as the bare
+    // `{children}` pass-through elsewhere in this mock would do) so the fallback-marker tests below
+    // can assert *which* marker rendered, not just that some <div> did.
+    Marker: ({ position, icon, children }: { position: [number, number]; icon?: { options?: { className?: string } }; children?: React.ReactNode }) => (
+        <div data-testid="marker" data-lat={position[0]} data-lng={position[1]} data-icon-class={icon?.options?.className ?? ''}>
+            {children}
+        </div>
+    ),
     Popup: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     Polyline: () => null,
     useMap: () => mockMap,
@@ -145,5 +152,49 @@ describe('TrailMapView hide/show-tracks toggle does not re-fit the map (#1303)',
         // The `bounds` memo (and therefore ChangeView's fitBounds effect) must not react to
         // showTracks — only `visibleGeometries` (which gates rendered <Polyline>s) should.
         expect(mockFitBounds.mock.calls.length).toBe(callsBeforeToggle);
+    });
+});
+
+describe('TrailMapView fallbackCenter marker (#1309)', () => {
+    const fallbackCenter = { lat: 64.118779, lng: -21.837029 };
+
+    it('renders a marker at fallbackCenter when trails is empty', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={noTrails} userLocation={null} fallbackCenter={fallbackCenter} />
+            </MemoryRouter>
+        );
+
+        const markers = screen.getAllByTestId('marker');
+        expect(markers).toHaveLength(1);
+        expect(markers[0].getAttribute('data-lat')).toBe(String(fallbackCenter.lat));
+        expect(markers[0].getAttribute('data-lng')).toBe(String(fallbackCenter.lng));
+        // Must reuse the distinct trailIcon (className 'trail-marker'), not silently fall back to
+        // userLocationIcon — which means something different to the user (#1309 acceptance).
+        expect(markers[0].getAttribute('data-icon-class')).toBe('trail-marker');
+    });
+
+    it('does not render a fallback marker when trails is non-empty', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrail()]} userLocation={null} fallbackCenter={fallbackCenter} />
+            </MemoryRouter>
+        );
+
+        const markers = screen.getAllByTestId('marker');
+        // Only the real trail's own marker should render — none at fallbackCenter.
+        expect(markers).toHaveLength(1);
+        expect(markers[0].getAttribute('data-lat')).toBe(String(makeTrail().startLatitude));
+        expect(markers[0].getAttribute('data-lng')).toBe(String(makeTrail().startLongitude));
+    });
+
+    it('does not render a fallback marker when fallbackCenter is not provided', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={noTrails} userLocation={null} />
+            </MemoryRouter>
+        );
+
+        expect(screen.queryAllByTestId('marker')).toHaveLength(0);
     });
 });

@@ -29,6 +29,10 @@ L.Icon.Default.mergeOptions({
 interface TrailMapViewProps {
     trails: Trail[];
     userLocation: { lat: number; lng: number } | null;
+    // #1309: shown as a marker (and used to center/zoom the map) only when `trails` resolves to
+    // zero markers of its own — e.g. an event with no linked trail but a known gpxPointLat/Lng.
+    // Optional and unused by existing call sites (LocationDetailsPage), which keep today's behavior.
+    fallbackCenter?: { lat: number; lng: number } | null;
 }
 
 function ChangeView({ bounds, followMe, userLocation }: { 
@@ -96,7 +100,7 @@ function MapDragHandler({ onDrag, onMapClick, ignoreClickRef }: {
     return null;
 }
 
-export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation }) => {
+export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation, fallbackCenter = null }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -139,9 +143,9 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     }, [geometriesForTrails, showTracks]);
 
     const bounds = useMemo(() => {
-        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation);
+        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter);
         return corners ? L.latLngBounds(corners[0], corners[1]) : null;
-    }, [trailsWithLocation, geometriesForTrails, userLocation]);
+    }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter]);
 
     const userLocationIcon = useMemo(() => new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -340,6 +344,13 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                             <Typography variant="body2">{t('map.youAreHere')}</Typography>
                         </Popup>
                     </Marker>
+                )}
+
+                {/* #1309: when no trail has a plottable location, fall back to the caller-supplied
+                    center (e.g. an event's own gpxPointLat/Lng) so the map still shows a marker and
+                    zooms somewhere meaningful instead of sitting at its hardcoded default view. */}
+                {trailsWithLocation.length === 0 && fallbackCenter && (
+                    <Marker position={[fallbackCenter.lat, fallbackCenter.lng]} icon={trailIcon} />
                 )}
 
                 {visibleGeometries.map(geo => {
