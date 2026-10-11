@@ -357,29 +357,29 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
       </Box>
 
       <Stack direction="row" spacing={2} sx={{ mb: activeFilter ? 1.5 : 3 }} flexWrap="wrap" useFlexGap>
-        <SummaryCard title="Total Editions" value={totalEditions} color="#1976d2" />
-        <SummaryCard title="Avg Health" value={`${avgScore}%`} color={avgScore >= 80 ? '#2e7d32' : avgScore >= 50 ? '#ed6c02' : '#d32f2f'} />
-        <SummaryCard title="Perfect (100%)" value={perfectCount} color="#2e7d32" />
-        <SummaryCard title="Critical (<50%)" value={criticalCount} color="#d32f2f"
+        <SummaryCard title="Total Editions" value={totalEditions} color={theme.palette.info.main} />
+        <SummaryCard title="Avg Health" value={`${avgScore}%`} color={avgScore >= 80 ? theme.palette.success.main : avgScore >= 50 ? theme.palette.warning.main : theme.palette.error.main} />
+        <SummaryCard title="Perfect (100%)" value={perfectCount} color={theme.palette.success.main} />
+        <SummaryCard title="Critical (<50%)" value={criticalCount} color={theme.palette.error.main}
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
         {/* Neutral color, unlike the red/orange tiles below — a cancelled edition isn't a data-quality
             problem to fix, just a state worth surfacing. */}
-        <SummaryCard title="Cancelled" value={cancelledEditionCount} color="#1976d2"
+        <SummaryCard title="Cancelled" value={cancelledEditionCount} color={theme.palette.info.main}
           filter="cancelled" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? '#ed6c02' : '#2e7d32'}
+        <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
           filter="no-date" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Races" value={noRacesCount} color={noRacesCount > 0 ? '#ed6c02' : '#2e7d32'}
+        <SummaryCard title="No Races" value={noRacesCount} color={noRacesCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
           filter="no-races" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Trail" value={noTrailCount} color={noTrailCount > 0 ? '#ed6c02' : '#2e7d32'}
+        <SummaryCard title="No Trail" value={noTrailCount} color={noTrailCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
           filter="no-trail" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Results URL" value={noResultsCount} color={noResultsCount > 0 ? '#ed6c02' : '#2e7d32'}
+        <SummaryCard title="No Results URL" value={noResultsCount} color={noResultsCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
           filter="no-results" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Year Mismatch" value={yearMismatchCount} color={yearMismatchCount > 0 ? '#d32f2f' : '#2e7d32'}
+        <SummaryCard title="Year Mismatch" value={yearMismatchCount} color={yearMismatchCount > 0 ? theme.palette.error.main : theme.palette.success.main}
           filter="year-mismatch" activeFilter={activeFilter} onFilter={setActiveFilter}
           tooltip="A race's own date falls in a different year than its edition (Non-Series), or is far from its series siblings' typical date (Series)" />
-        <SummaryCard title="Open (past)" value={badStatusCount} color={badStatusCount > 0 ? '#d32f2f' : '#2e7d32'}
+        <SummaryCard title="Open (past)" value={badStatusCount} color={badStatusCount > 0 ? theme.palette.error.main : theme.palette.success.main}
           filter="bad-status" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Not Completed" value={notCompletedCount} color={notCompletedCount > 0 ? '#ed6c02' : '#2e7d32'}
+        <SummaryCard title="Not Completed" value={notCompletedCount} color={notCompletedCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
           filter="not-completed" activeFilter={activeFilter} onFilter={setActiveFilter}
           tooltip="Past editions whose status is not Completed or Cancelled — click to review and wrap them up" />
       </Stack>
