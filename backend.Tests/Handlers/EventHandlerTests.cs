@@ -4677,6 +4677,105 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(new DateOnly(2026, 1, 2), editionDto.EndDate);
     }
 
+    // ─── GetAllEventDetailsQuery — editions ordered by derived date, not stored Date (#1262) ───
+
+    [Fact]
+    public async Task GetAllEventDetails_SeriesEvent_OrdersEditionsByDerivedDate_NotStoredDate()
+    {
+        // #1262: ordering previously used the raw ed.Date, which drifts out of sync with a Series
+        // edition's actual race dates — the same drift #1260 already fixed for the Date/EndDate
+        // *values* themselves, just not for the ordering that was computed from the stale column
+        // a few lines earlier in the same LINQ chain.
+        var ev = CreateTestEvent("Drifted Series Order Event");
+        ev.Slug = "drifted-series-order-event";
+        ev.Type = EventType.Series;
+
+        // Stale/stored Date is earlier than the other edition's, but its actual race happened
+        // later — so once ordering uses the derived date, this edition must sort first.
+        var editionWithLaterRace = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = 2026,
+            Date = new DateOnly(2026, 1, 1),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var raceForLaterEdition = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = editionWithLaterRace.Id, Name = "Leg 1", SortOrder = 0,
+            DateOfRace = new DateOnly(2026, 8, 20), Status = RaceStatus.Active,
+        };
+
+        // Stale/stored Date is later than the edition above, but its actual race happened
+        // earlier — so once ordering uses the derived date, this edition must sort second.
+        var editionWithEarlierRace = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = 2025,
+            Date = new DateOnly(2026, 6, 1),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var raceForEarlierEdition = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = editionWithEarlierRace.Id, Name = "Leg 1", SortOrder = 0,
+            DateOfRace = new DateOnly(2025, 7, 12), Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.AddRange(editionWithLaterRace, editionWithEarlierRace);
+            ctx.Races.AddRange(raceForLaterEdition, raceForEarlierEdition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetAllEventDetailsQueryHandler(queryCtx);
+        var result = await handler.Handle(new GetAllEventDetailsQuery(), CancellationToken.None);
+
+        var editions = Assert.Single(result).Editions;
+        Assert.Equal(2, editions.Count);
+        // Derived dates sort 2026-08-20 then 2025-07-12 — the opposite of the stored-Date order
+        // (2026-06-01 then 2026-01-01) — proving the ordering key is the derived date.
+        Assert.Equal(editionWithLaterRace.Id, editions[0].Id);
+        Assert.Equal(new DateOnly(2026, 8, 20), editions[0].Date);
+        Assert.Equal(editionWithEarlierRace.Id, editions[1].Id);
+        Assert.Equal(new DateOnly(2025, 7, 12), editions[1].Date);
+    }
+
+    [Fact]
+    public async Task GetAllEventDetails_NonSeriesEvent_OrdersEditionsByStoredDate_WhenNoDrift()
+    {
+        // Regression guard: for a non-Series event (or any edition with no stored/derived
+        // disagreement), ComputeEffectiveEditionDates falls back to the stored Date unchanged, so
+        // the ordering produced by the restructured LINQ chain must match today's behaviour.
+        var ev = CreateTestEvent("Undrifted Order Event");
+        ev.Slug = "undrifted-order-event";
+        ev.Type = EventType.Race;
+
+        var newerEdition = CreateTestEdition(ev.Id, 2026);
+        newerEdition.Date = new DateOnly(2026, 7, 11);
+        var olderEdition = CreateTestEdition(ev.Id, 2025);
+        olderEdition.Date = new DateOnly(2025, 7, 12);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.AddRange(newerEdition, olderEdition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetAllEventDetailsQueryHandler(queryCtx);
+        var result = await handler.Handle(new GetAllEventDetailsQuery(), CancellationToken.None);
+
+        var editions = Assert.Single(result).Editions;
+        Assert.Equal(2, editions.Count);
+        Assert.Equal(newerEdition.Id, editions[0].Id);
+        Assert.Equal(olderEdition.Id, editions[1].Id);
+    }
+
     // ─── Race trail links vs trail visibility ───
     //
     // Archiving or hiding a trail does not unlink the races that use it, but the public trail
