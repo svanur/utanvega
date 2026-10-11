@@ -264,22 +264,24 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         p: 0.5,
                     }}
                 >
-                    <Tooltip title={followMe ? t('map.stopFollowing') : t('map.followLocation')} placement="left">
-                        <IconButton 
-                            onClick={handleFollowMeClick}
-                            color={followMe ? "primary" : "default"}
-                            size="small"
-                            sx={{ 
-                                backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
-                                '&:hover': {
-                                    backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
-                                }
-                            }}
-                            aria-label="follow my location"
-                        >
-                            <MyLocationIcon />
-                        </IconButton>
-                    </Tooltip>
+                    {userLocation !== null && (
+                        <Tooltip title={followMe ? t('map.stopFollowing') : t('map.followLocation')} placement="left">
+                            <IconButton
+                                onClick={handleFollowMeClick}
+                                color={followMe ? "primary" : "default"}
+                                size="small"
+                                sx={{
+                                    backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                                    '&:hover': {
+                                        backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
+                                    }
+                                }}
+                                aria-label="follow my location"
+                            >
+                                <MyLocationIcon />
+                            </IconButton>
+                        </Tooltip>
+                    )}
                     <Tooltip title={showTracks ? t('map.hideTracks') : t('map.showTracks')} placement="left">
                         <IconButton
                             onClick={() => setShowTracks(prev => !prev)}
