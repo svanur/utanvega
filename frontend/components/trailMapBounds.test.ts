@@ -71,4 +71,33 @@ describe('computeMapBounds', () => {
 
         expect(computeMapBounds([trail], [], null)).toBeNull();
     });
+
+    // #1309: an event with no linked trail (and so no trailsWithLocation) still has its own known
+    // location — the fallbackCenter point — which should anchor the bounds instead of leaving them
+    // null (and the map sitting at its hardcoded default view).
+    describe('fallbackCenter (#1309)', () => {
+        it('uses fallbackCenter as the bounds when there are no trails and no userLocation', () => {
+            const result = computeMapBounds([], [], null, { lat: 64.118779, lng: -21.837029 });
+
+            expect(result).toEqual([[64.118779, -21.837029], [64.118779, -21.837029]]);
+        });
+
+        it('is ignored when at least one trail already has a location', () => {
+            const trail = makeTrail({ slug: 'test-trail', startLatitude: 64.0, startLongitude: -20.0 });
+
+            const result = computeMapBounds([trail], [], null, { lat: 10, lng: 10 });
+
+            expect(result).toEqual([[64.0, -20.0], [64.0, -20.0]]);
+        });
+
+        it('is ignored when userLocation is already present, even with no trails', () => {
+            const result = computeMapBounds([], [], { lat: 64.5, lng: -19.5 }, { lat: 10, lng: 10 });
+
+            expect(result).toEqual([[64.5, -19.5], [64.5, -19.5]]);
+        });
+
+        it('returns null when there are no trails, no userLocation, and no fallbackCenter', () => {
+            expect(computeMapBounds([], [], null, null)).toBeNull();
+        });
+    });
 });

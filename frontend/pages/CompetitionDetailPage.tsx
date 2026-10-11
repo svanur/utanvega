@@ -794,7 +794,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 borderColor: 'divider',
                             }}
                         >
-                            <TrailMapView trails={eventTrails} userLocation={null} />
+                            <TrailMapView trails={eventTrails} userLocation={null} fallbackCenter={mapPin} />
                         </Box>
                     )}
 
