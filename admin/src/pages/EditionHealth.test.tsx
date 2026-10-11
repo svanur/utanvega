@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getRaceChecks } from './EditionHealth';
+import { getEditionChecks, getRaceChecks } from './EditionHealth';
 import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 
 // #1069: getRaceChecks's new 'Year' check is the gap that let #1068's bug (a race landing two
@@ -211,5 +211,81 @@ describe('getRaceChecks — Year check (Series)', () => {
 
     expect(yearCheck(getRaceChecks(raceA, edition, true))!.passed).toBe(true);
     expect(yearCheck(getRaceChecks(raceB, edition, true))!.passed).toBe(true);
+  });
+});
+
+// #1256: an Invitational edition (added by #1245) has no registration URL by design — it's
+// invite-only, not self-serve — and a past-dated Invitational edition is correctly "done", the
+// same way Closed/NotRequired are. Without this, both checks false-positive on an edition that's
+// actually fine, the same false-unhealthy signal #1245 already fixed on the public-facing pages.
+function regUrlCheck(checks: ReturnType<typeof getEditionChecks>) {
+  return checks.find(c => c.label === 'Reg. URL');
+}
+
+function regStatusCheck(checks: ReturnType<typeof getEditionChecks>) {
+  return checks.find(c => c.label === 'Reg. Status');
+}
+
+describe('getEditionChecks — Reg. URL check', () => {
+  it('passes an Invitational edition with no registration URL', () => {
+    const edition = makeEdition({ registrationStatus: 'Invitational', registrationUrl: null });
+
+    const check = regUrlCheck(getEditionChecks(edition));
+
+    expect(check!.passed).toBe(true);
+    expect(check!.tooltip).toContain('invitation-only');
+  });
+
+  it('still passes a NotRequired edition with no registration URL (no regression)', () => {
+    const edition = makeEdition({ registrationStatus: 'NotRequired', registrationUrl: null });
+
+    expect(regUrlCheck(getEditionChecks(edition))!.passed).toBe(true);
+  });
+
+  it('still fails an Open edition with no registration URL (no regression)', () => {
+    const edition = makeEdition({ registrationStatus: 'Open', registrationUrl: null });
+
+    expect(regUrlCheck(getEditionChecks(edition))!.passed).toBe(false);
+  });
+
+  it('still passes an Open edition that does have a registration URL (no regression)', () => {
+    const edition = makeEdition({ registrationStatus: 'Open', registrationUrl: 'https://example.com/register' });
+
+    expect(regUrlCheck(getEditionChecks(edition))!.passed).toBe(true);
+  });
+});
+
+describe('getEditionChecks — Reg. Status check', () => {
+  it('passes a past-dated Invitational edition', () => {
+    const edition = makeEdition({ date: '2020-01-01', endDate: null, registrationStatus: 'Invitational' });
+
+    const check = regStatusCheck(getEditionChecks(edition));
+
+    expect(check!.passed).toBe(true);
+    expect(check!.tooltip).toContain('Invitational');
+  });
+
+  it('still passes a past-dated Closed edition (no regression)', () => {
+    const edition = makeEdition({ date: '2020-01-01', endDate: null, registrationStatus: 'Closed' });
+
+    expect(regStatusCheck(getEditionChecks(edition))!.passed).toBe(true);
+  });
+
+  it('still passes a past-dated NotRequired edition (no regression)', () => {
+    const edition = makeEdition({ date: '2020-01-01', endDate: null, registrationStatus: 'NotRequired' });
+
+    expect(regStatusCheck(getEditionChecks(edition))!.passed).toBe(true);
+  });
+
+  it('still fails a past-dated Open edition (no regression)', () => {
+    const edition = makeEdition({ date: '2020-01-01', endDate: null, registrationStatus: 'Open' });
+
+    expect(regStatusCheck(getEditionChecks(edition))!.passed).toBe(false);
+  });
+
+  it('does not force-fail a future-dated Invitational edition — status check is not required yet', () => {
+    const edition = makeEdition({ date: '2099-01-01', endDate: null, registrationStatus: 'Invitational' });
+
+    expect(regStatusCheck(getEditionChecks(edition))!.passed).toBe(true);
   });
 });

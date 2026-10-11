@@ -30,7 +30,8 @@ function isPast(dateStr: string | null): boolean {
   return new Date(dateStr) < today;
 }
 
-function getEditionChecks(edition: EventEditionDto): HealthCheck[] {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for EditionHealth.test.tsx
+export function getEditionChecks(edition: EventEditionDto): HealthCheck[] {
   const hasPastDate = isPast(edition.endDate ?? edition.date);
   const allRacesHaveTrail = edition.races.length > 0 && edition.races.every(r => r.trailId != null);
 
@@ -61,10 +62,12 @@ function getEditionChecks(edition: EventEditionDto): HealthCheck[] {
     },
     {
       label: 'Reg. URL',
-      passed: edition.registrationStatus === 'NotRequired' || !!edition.registrationUrl,
+      passed: edition.registrationStatus === 'NotRequired' || edition.registrationStatus === 'Invitational' || !!edition.registrationUrl,
       tooltip: edition.registrationStatus === 'NotRequired'
         ? 'Not required — walk-in edition'
-        : (edition.registrationUrl ?? 'No registration URL'),
+        : edition.registrationStatus === 'Invitational'
+          ? 'Not required — invitation-only edition'
+          : (edition.registrationUrl ?? 'No registration URL'),
     },
     {
       label: 'Results URL',
@@ -75,13 +78,17 @@ function getEditionChecks(edition: EventEditionDto): HealthCheck[] {
     },
     {
       label: 'Reg. Status',
-      passed: hasPastDate ? (edition.registrationStatus === 'Closed' || edition.registrationStatus === 'NotRequired') : true,
+      passed: hasPastDate
+        ? (edition.registrationStatus === 'Closed' || edition.registrationStatus === 'NotRequired' || edition.registrationStatus === 'Invitational')
+        : true,
       tooltip: hasPastDate
         ? (edition.registrationStatus === 'Closed'
             ? 'Closed (correct for past edition)'
             : edition.registrationStatus === 'NotRequired'
               ? 'Not Required (correct for past walk-in edition)'
-              : `Registration is "${edition.registrationStatus}" but edition is in the past`)
+              : edition.registrationStatus === 'Invitational'
+                ? 'Invitational (correct for past invite-only edition)'
+                : `Registration is "${edition.registrationStatus}" but edition is in the past`)
         : `Status: ${edition.registrationStatus}`,
     },
   ];
