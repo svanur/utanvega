@@ -23,7 +23,7 @@ import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor, formatNextDate, isEffectivelyCancelled, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate, getCountdownLabel, isEffectivelyCancelled, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
 import { ActivityIcons } from '../utils/activityIcon';
 import { getActivityIcon } from '../utils/getActivityIcon';
 import { useLocalize } from '../utils/localize';
@@ -279,12 +279,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                     <EventDateBadge dateStr={race.dateOfRace} />
                                                     {raceDaysUntil !== null && (
                                                         <Chip
-                                                            label={
-                                                                raceDaysUntil === 0 ? t('races.today')
-                                                                : raceDaysUntil === 1 ? t('races.tomorrow')
-                                                                : raceDaysUntil < 0 ? t('races.daysAgo', { count: Math.abs(raceDaysUntil) })
-                                                                : t('races.daysUntil', { count: raceDaysUntil })
-                                                            }
+                                                            label={getCountdownLabel(raceDaysUntil, t)}
                                                             size="small"
                                                             color={getCountdownColor(raceDaysUntil)}
                                                             variant="outlined"
@@ -415,11 +410,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                         <Chip
                                                             label={
                                                                 isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate) ? t('races.ongoing')
-                                                                : event.daysUntil === 0 ? t('races.today')
-                                                                : event.daysUntil === 1 ? t('races.tomorrow')
-                                                                : event.daysUntil === -1 ? t('races.yesterday')
-                                                                : event.daysUntil < -1 ? t('races.daysAgo', { count: Math.abs(event.daysUntil) })
-                                                                : t('races.daysUntil', { count: event.daysUntil })
+                                                                : getCountdownLabel(event.daysUntil, t)
                                                             }
                                                             size="small"
                                                             color={getCountdownColor(event.daysUntil)}

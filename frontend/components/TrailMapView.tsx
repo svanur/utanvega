@@ -8,6 +8,7 @@ import MyLocationIcon from '@mui/icons-material/MyLocation';
 import RouteIcon from '@mui/icons-material/Route';
 import { Trail } from '../hooks/useTrails';
 import { useTrailGeometries } from '../hooks/useTrailGeometries';
+import { computeMapBounds } from './trailMapBounds';
 import { Link as RouterLink } from 'react-router-dom';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -28,6 +29,10 @@ L.Icon.Default.mergeOptions({
 interface TrailMapViewProps {
     trails: Trail[];
     userLocation: { lat: number; lng: number } | null;
+    // #1309: shown as a marker (and used to center/zoom the map) only when `trails` resolves to
+    // zero markers of its own — e.g. an event with no linked trail but a known gpxPointLat/Lng.
+    // Optional and unused by existing call sites (LocationDetailsPage), which keep today's behavior.
+    fallbackCenter?: { lat: number; lng: number } | null;
 }
 
 function ChangeView({ bounds, followMe, userLocation }: { 
@@ -95,7 +100,7 @@ function MapDragHandler({ onDrag, onMapClick, ignoreClickRef }: {
     return null;
 }
 
-export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation }) => {
+export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation, fallbackCenter = null }) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -122,21 +127,25 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
         return map;
     }, [trails]);
 
-    // Filter geometries to only trails in the current view
-    const visibleGeometries = useMemo(() => {
-        if (!showTracks || geometries.length === 0) return [];
+    // Geometries for trails in the current view, independent of showTracks — this feeds the
+    // bounds calculation below so toggling the hide/show-tracks button never re-fits the map
+    // (#1303). Only `visibleGeometries` (derived from this) is gated by showTracks, and that
+    // gating affects rendered <Polyline>s only.
+    const geometriesForTrails = useMemo(() => {
+        if (geometries.length === 0) return [];
         const slugSet = new Set(trails.map(t => t.slug));
         return geometries.filter(g => slugSet.has(g.slug));
-    }, [trails, geometries, showTracks]);
+    }, [trails, geometries]);
+
+    const visibleGeometries = useMemo(() => {
+        if (!showTracks) return [];
+        return geometriesForTrails;
+    }, [geometriesForTrails, showTracks]);
 
     const bounds = useMemo(() => {
-        if (trailsWithLocation.length === 0) return null;
-        const latLngs = trailsWithLocation.map(t => [t.startLatitude!, t.startLongitude!] as [number, number]);
-        if (userLocation) {
-            latLngs.push([userLocation.lat, userLocation.lng]);
-        }
-        return L.latLngBounds(latLngs);
-    }, [trailsWithLocation, userLocation]);
+        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter);
+        return corners ? L.latLngBounds(corners[0], corners[1]) : null;
+    }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter]);
 
     const userLocationIcon = useMemo(() => new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -264,22 +273,24 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                         p: 0.5,
                     }}
                 >
-                    <Tooltip title={followMe ? t('map.stopFollowing') : t('map.followLocation')} placement="left">
-                        <IconButton 
-                            onClick={handleFollowMeClick}
-                            color={followMe ? "primary" : "default"}
-                            size="small"
-                            sx={{ 
-                                backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
-                                '&:hover': {
-                                    backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
-                                }
-                            }}
-                            aria-label="follow my location"
-                        >
-                            <MyLocationIcon />
-                        </IconButton>
-                    </Tooltip>
+                    {userLocation !== null && (
+                        <Tooltip title={followMe ? t('map.stopFollowing') : t('map.followLocation')} placement="left">
+                            <IconButton
+                                onClick={handleFollowMeClick}
+                                color={followMe ? "primary" : "default"}
+                                size="small"
+                                sx={{
+                                    backgroundColor: followMe ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                                    '&:hover': {
+                                        backgroundColor: followMe ? 'rgba(25, 118, 210, 0.2)' : '#f5f5f5',
+                                    }
+                                }}
+                                aria-label="follow my location"
+                            >
+                                <MyLocationIcon />
+                            </IconButton>
+                        </Tooltip>
+                    )}
                     <Tooltip title={showTracks ? t('map.hideTracks') : t('map.showTracks')} placement="left">
                         <IconButton
                             onClick={() => setShowTracks(prev => !prev)}
@@ -333,6 +344,13 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                             <Typography variant="body2">{t('map.youAreHere')}</Typography>
                         </Popup>
                     </Marker>
+                )}
+
+                {/* #1309: when no trail has a plottable location, fall back to the caller-supplied
+                    center (e.g. an event's own gpxPointLat/Lng) so the map still shows a marker and
+                    zooms somewhere meaningful instead of sitting at its hardcoded default view. */}
+                {trailsWithLocation.length === 0 && fallbackCenter && (
+                    <Marker position={[fallbackCenter.lat, fallbackCenter.lng]} icon={trailIcon} />
                 )}
 
                 {visibleGeometries.map(geo => {
