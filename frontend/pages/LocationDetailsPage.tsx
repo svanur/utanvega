@@ -181,7 +181,10 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         return findPath(locationTree, slug) || [];
     }, [slug, locationTree]);
 
+    // Gated on the same condition that renders the map section below (#1253) so visitors
+    // landing on a location with no trails never see a geolocation permission prompt.
     useEffect(() => {
+        if (!(trails && trails.length > 0)) return;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -195,7 +198,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 }
             );
         }
-    }, []);
+    }, [trails]);
 
     if (loading) {
         return (
