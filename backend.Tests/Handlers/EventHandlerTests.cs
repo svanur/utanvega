@@ -863,6 +863,112 @@ public class EventHandlerTests : IDisposable
         }
     }
 
+    // #1261: the write-side guard above must agree with the read-side derivation
+    // (GetEventsQuery/GetAllEventDetailsQuery) on which races count — both now exclude Cancelled
+    // races from the gate's raceDates input, so a Cancelled race's date never keeps this guard
+    // active (or inactive) when the read side would disagree.
+    [Fact]
+    public async Task Update_SeriesEditionWithCancelledAndActiveDatedRaces_StillIgnoresSubmittedDateEndDate()
+    {
+        var ev = CreateTestEvent();
+        ev.Type = EventType.Series;
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = new DateOnly(2026, 1, 1);
+        edition.EndDate = new DateOnly(2026, 1, 2);
+        // Cancelled, dated earlier than the only real race — must not count toward "has dated
+        // races" on its own, but there is still a non-cancelled dated race here too, so the gate
+        // stays active either way. (The actually discriminating case — every dated race Cancelled
+        // — is covered separately below.)
+        var cancelledRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Cancelled Heat", SortOrder = 0, DateOfRace = new DateOnly(2025, 12, 1), Status = RaceStatus.Cancelled };
+        var activeRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Leg 1", SortOrder = 1, DateOfRace = new DateOnly(2026, 4, 1), Status = RaceStatus.Active };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(cancelledRace, activeRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            // Submitted Date/EndDate mirror the derived single-race value the admin dialog would
+            // have shown (2026-04-01) — must still be rejected in favour of the stored columns.
+            var result = await handler.Handle(new UpdateEditionCommand(
+                Id: edition.Id,
+                Year: 2026,
+                Date: new DateOnly(2026, 4, 1),
+                EndDate: new DateOnly(2026, 4, 1),
+                Title: edition.Title,
+                RegistrationUrl: null,
+                ResultsUrl: null,
+                Notes: "Updated notes",
+                RegistrationStatus: "Open",
+                TrailId: null
+            ), CancellationToken.None);
+
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updated = ctx.EventEditions.Find(edition.Id);
+            Assert.Equal(new DateOnly(2026, 1, 1), updated!.Date);
+            Assert.Equal(new DateOnly(2026, 1, 2), updated.EndDate);
+        }
+    }
+
+    // #1261 edge case: this is the case that actually discriminates the fix — before excluding
+    // Cancelled races from this gate's input, a Series edition whose only dated race was Cancelled
+    // still read as "derived" (raceDates.Count > 0 counted the cancelled race), silently dropping
+    // whatever Date/EndDate the admin dialog submitted even though the dialog itself now shows
+    // those fields as editable (its own isDateDerivedFromRaces excludes Cancelled races too, see
+    // EventDetailPage.tsx's seriesDatedRaceDates). Excluding Cancelled here makes the gate agree:
+    // the filtered list is empty, so the guard steps aside and the submitted values are written.
+    [Fact]
+    public async Task Update_SeriesEditionWithOnlyCancelledDatedRaces_WritesSubmittedDateEndDate()
+    {
+        var ev = CreateTestEvent();
+        ev.Type = EventType.Series;
+        var edition = CreateTestEdition(ev.Id);
+        edition.Date = new DateOnly(2025, 1, 1);
+        edition.EndDate = new DateOnly(2025, 1, 2);
+        var cancelledRace = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Cancelled Heat", SortOrder = 0, DateOfRace = new DateOnly(2026, 4, 1), Status = RaceStatus.Cancelled };
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(cancelledRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
+            var result = await handler.Handle(new UpdateEditionCommand(
+                Id: edition.Id,
+                Year: 2027,
+                Date: new DateOnly(2027, 5, 5),
+                EndDate: new DateOnly(2027, 5, 6),
+                Title: edition.Title,
+                RegistrationUrl: null,
+                ResultsUrl: null,
+                Notes: null,
+                RegistrationStatus: "Open",
+                TrailId: null
+            ), CancellationToken.None);
+
+            Assert.True(result);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var updated = ctx.EventEditions.Find(edition.Id);
+            Assert.Equal(new DateOnly(2027, 5, 5), updated!.Date);
+            Assert.Equal(new DateOnly(2027, 5, 6), updated.EndDate);
+        }
+    }
+
     // ─── DeleteEditionCommand ───
 
     [Fact]
@@ -2704,6 +2810,118 @@ public class EventHandlerTests : IDisposable
         Assert.Null(dto.RecentlyCompletedSeriesRace);
     }
 
+    // ─── GetEventsQuery — Series derived Date/EndDate excludes cancelled races (#1261) ───
+    //
+    // #1070's live derivation (EditionStatusHelpers.ComputeEffectiveEditionDates) takes the min/max
+    // of a Series edition's dated races. Without excluding Cancelled races from that input, a single
+    // cancelled race with an outlier date skews the whole derived range, since relevantEdition/
+    // nextDate/ongoingEdition selection above all key off EffDate/EffEndDate.
+
+    [Fact]
+    public async Task GetEvents_SeriesEdition_CancelledOutlierRace_DoesNotSkewDerivedDisplayDates()
+    {
+        var ev = CreateTestEvent("Skewed Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            // No stored Date/EndDate — Series editions with dated races derive live from races.
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        // Cancelled, dated 30 days before today — if counted, this would wrongly become the
+        // derived start date and make the edition read as already "ongoing".
+        var cancelledOutlier = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Cancelled Heat",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-30),
+            Status = RaceStatus.Cancelled,
+        };
+        // The only real (non-cancelled) dated race — 30 days out.
+        var activeRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Hlaup 1",
+            SortOrder = 1,
+            DateOfRace = today.AddDays(30),
+            Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(cancelledOutlier, activeRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        // With the cancelled race excluded, the only dated race left is activeRace — Min == Max ==
+        // its date, 30 days out, not the cancelled race's -30-day outlier.
+        Assert.Equal(today.AddDays(30), dto.DisplayDate);
+        Assert.Equal(today.AddDays(30), dto.EndDisplayDate);
+        Assert.Equal(30, dto.DaysUntil);
+    }
+
+    [Fact]
+    public async Task GetEvents_SeriesEdition_EveryDatedRaceCancelled_FallsBackToStoredDates()
+    {
+        // #1261 edge case: when every dated race is Cancelled, the filtered race-date list is empty,
+        // so IsEditionDateDerivedFromRaces (correctly) reads as "not derived" and the edition falls
+        // back to its stored Date/EndDate — deliberately chosen over deriving from the cancelled set,
+        // matching ComputeEffectiveEditionDates_SeriesWithNoDatedRaces_FallsBackToStoredDates's
+        // existing "nothing to derive from" precedent in EditionStatusHelpersTests.
+        var ev = CreateTestEvent("All Cancelled Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddDays(100),
+            EndDate = today.AddDays(101),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var cancelledRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Cancelled Heat",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(5),
+            Status = RaceStatus.Cancelled,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(cancelledRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(today.AddDays(100), dto.DisplayDate);
+        Assert.Equal(today.AddDays(101), dto.EndDisplayDate);
+    }
+
     [Fact]
     public async Task GetEvents_NonSeriesEvent_RecentlyCompletedSeriesRace_AlwaysNull()
     {
@@ -4362,6 +4580,101 @@ public class EventHandlerTests : IDisposable
         var eventDetail = Assert.Single(result);
         var raceDto = Assert.Single(Assert.Single(eventDetail.Editions).Races);
         Assert.Equal("Distance", raceDto.ResultType);
+    }
+
+    // ─── GetAllEventDetailsQuery — Series derived Date/EndDate excludes cancelled races (#1261) ───
+
+    [Fact]
+    public async Task GetAllEventDetails_SeriesEdition_CancelledOutlierRace_DoesNotSkewDerivedDateRange()
+    {
+        var ev = CreateTestEvent("Admin Skewed Series");
+        ev.Slug = "admin-skewed-series";
+        ev.Type = EventType.Series;
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = 2026,
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        // Cancelled, dated before both real races — if counted, this would wrongly become the
+        // derived start date (edEffDate).
+        var cancelledOutlier = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Cancelled Heat", SortOrder = 0,
+            DateOfRace = new DateOnly(2026, 1, 1), Status = RaceStatus.Cancelled,
+        };
+        var raceA = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Leg 1", SortOrder = 1,
+            DateOfRace = new DateOnly(2026, 4, 1), Status = RaceStatus.Active,
+        };
+        var raceB = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Leg 2", SortOrder = 2,
+            DateOfRace = new DateOnly(2026, 8, 20), Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(cancelledOutlier, raceA, raceB);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetAllEventDetailsQueryHandler(queryCtx);
+        var result = await handler.Handle(new GetAllEventDetailsQuery(), CancellationToken.None);
+
+        var editionDto = Assert.Single(Assert.Single(result).Editions);
+        // Min/max of the two non-cancelled races only — the cancelled race's 2026-01-01 outlier
+        // must not become the derived start date.
+        Assert.Equal(new DateOnly(2026, 4, 1), editionDto.Date);
+        Assert.Equal(new DateOnly(2026, 8, 20), editionDto.EndDate);
+    }
+
+    [Fact]
+    public async Task GetAllEventDetails_SeriesEdition_EveryDatedRaceCancelled_FallsBackToStoredDates()
+    {
+        // #1261 edge case: with every dated race Cancelled, the filtered race-date list passed to
+        // ComputeEffectiveEditionDates is empty, so IsEditionDateDerivedFromRaces reads as "not
+        // derived" and the stored Date/EndDate pass through unchanged — deliberately chosen over
+        // deriving a range from the cancelled set, which would otherwise show a range for a race
+        // day that isn't actually happening.
+        var ev = CreateTestEvent("Admin All Cancelled Series");
+        ev.Slug = "admin-all-cancelled-series";
+        ev.Type = EventType.Series;
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = 2026,
+            Date = new DateOnly(2026, 1, 1),
+            EndDate = new DateOnly(2026, 1, 2),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var cancelledRace = new Race
+        {
+            Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Cancelled Heat", SortOrder = 0,
+            DateOfRace = new DateOnly(2026, 4, 1), Status = RaceStatus.Cancelled,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(cancelledRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetAllEventDetailsQueryHandler(queryCtx);
+        var result = await handler.Handle(new GetAllEventDetailsQuery(), CancellationToken.None);
+
+        var editionDto = Assert.Single(Assert.Single(result).Editions);
+        Assert.Equal(new DateOnly(2026, 1, 1), editionDto.Date);
+        Assert.Equal(new DateOnly(2026, 1, 2), editionDto.EndDate);
     }
 
     // ─── Race trail links vs trail visibility ───

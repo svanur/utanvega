@@ -59,9 +59,14 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         // "fall back to stored values" ground truth this whole feature relies on the moment the
         // race set next changes. Same IsEditionDateDerivedFromRaces gate the read side uses, so the
         // two conditions can never drift apart — leave the stored columns untouched in that case.
+        // #1261: a Cancelled race's date must not count toward that gate either — excluded here
+        // with the same filter the read-side queries (GetEventsQuery/GetAllEventDetailsQuery) apply,
+        // so this write-side guard agrees with what was just read. If every dated race is Cancelled,
+        // the filtered list is empty and the gate falls through to "not derived", i.e. the stored
+        // columns stay editable/writable — same fallback the read side picks for that case.
         if (!EditionStatusHelpers.IsEditionDateDerivedFromRaces(
                 edition.Event.Type,
-                edition.Races.Where(r => r.DateOfRace.HasValue).Select(r => r.DateOfRace!.Value).ToList()))
+                edition.Races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList()))
         {
             edition.Date = request.Date;
             edition.EndDate = request.EndDate;

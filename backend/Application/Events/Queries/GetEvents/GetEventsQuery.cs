@@ -85,14 +85,20 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         // store" precedent as ComputeEffectiveRegistrationStatus. Computed once per edition here
         // and reused via EffDate/EffEndDate everywhere below that would otherwise read ed.Date/
         // ed.EndDate raw (ResolveNextDate, hasFutureEdition, ongoingEdition, mostRecentPast,
-        // relevantEdition, EndDisplayDate).
+        // relevantEdition, EndDisplayDate). A Cancelled race's date must not skew the derived
+        // min/max (#1261) — excluded here same as every other race-date consumer in this file
+        // (relevantRaces, seriesRaces, mostRecentPastRace, activityTypes below). If every dated
+        // race ends up excluded (all Cancelled), the filtered list is empty, so
+        // IsEditionDateDerivedFromRaces naturally falls back to the stored Date/EndDate rather
+        // than deriving from the cancelled set — a deliberate choice, not an accident of the
+        // empty-list path.
         var effectiveEditionDates = events
             .SelectMany(e => e.Editions, (e, ed) => (e, ed))
             .ToDictionary(
                 x => x.ed.Id,
                 x => EditionStatusHelpers.ComputeEffectiveEditionDates(
                     x.e.Type, x.ed.Date, x.ed.EndDate,
-                    x.ed.Races.Where(r => r.DateOfRace.HasValue).Select(r => r.DateOfRace!.Value).ToList()));
+                    x.ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList()));
 
         DateOnly? EffDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].Date : null;
         DateOnly? EffEndDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].EndDate : null;

@@ -360,6 +360,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
   // from, and every non-Series edition is unaffected — both stay editable.
   const seriesDatedRaceDates = eventType === 'Series' && !isNew
     ? (edition?.races ?? [])
+        .filter(r => r.status !== 'Cancelled')
         .map(r => r.dateOfRace)
         .filter((d): d is string => d != null)
         .sort()
