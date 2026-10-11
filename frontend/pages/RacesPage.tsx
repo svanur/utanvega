@@ -1080,12 +1080,28 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             // line instead of a separate chip row — only fall back to the chip
                                             // row (as the upcoming list does) when there's more than one distance
                                             // to show, so no information is silently lost.
-                                            const groupedDistances = !recentRace && comp.distances ? groupDistances(comp.distances) : [];
+                                            // #1312: recentRace's own distanceLabel can legitimately be null (no
+                                            // length on the race or its linked trail — GetEventsQuery.cs). In that
+                                            // case there's nothing to fold into the date line, so fall back to the
+                                            // season's other races (comp.distances) for the chip row instead of
+                                            // showing no distance info at all. The inline label itself must stay
+                                            // sourced from recentRace.distanceLabel only — never substituted.
+                                            const recentRaceHasDistanceLabel = !!recentRace?.distanceLabel;
+                                            const groupedDistances = (!recentRace || !recentRaceHasDistanceLabel) && comp.distances
+                                                ? groupDistances(comp.distances)
+                                                : [];
                                             const singleDistanceLabel = recentRace
                                                 ? recentRace.distanceLabel
                                                 : groupedDistances.length === 1
                                                     ? groupedDistances[0].label
                                                     : null;
+                                            // Non-recentRace single distance is already shown inline above (via
+                                            // singleDistanceLabel), so the chip row there only fires above 1. The
+                                            // recentRace-with-no-distanceLabel fallback has shown nothing inline,
+                                            // so even a single grouped distance needs the chip row to surface it.
+                                            const showDistanceChips = recentRace
+                                                ? groupedDistances.length > 0
+                                                : groupedDistances.length > 1;
                                             return (
                                             <SwipeableCard
                                                 key={comp.id}
@@ -1127,7 +1143,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}{singleDistanceLabel ? ` · ${singleDistanceLabel}` : ''}
                                                                     </Typography>
                                                                 )}
-                                                                {groupedDistances.length > 1 && (
+                                                                {showDistanceChips && (
                                                                     <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.5 }}>
                                                                         {groupedDistances.map((d, i) => (
                                                                             <Chip key={i} label={d.count > 1 ? `${d.count} × ${d.label}` : d.label} size="small" variant="outlined" color={getTicketStatusColor(d.ticketStatus)} />
