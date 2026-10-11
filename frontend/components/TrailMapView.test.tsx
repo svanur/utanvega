@@ -7,16 +7,40 @@
 // button" assertion can use @testing-library/react, without adding a DOM dependency to every other
 // test file.
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { Trail } from '../hooks/useTrails';
+
+// vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
+// afterEach(cleanup) registration (which relies on a global test-framework hook) never fires —
+// without this, a later test's screen.getByRole(...) query can match leftover DOM nodes still
+// mounted from an earlier test in this same file.
+afterEach(cleanup);
+
+// #1303: mockFitBounds and mockGeometries are read by the react-leaflet/useTrailGeometries mocks
+// below. vi.hoisted is required because vi.mock(...) factories are hoisted above imports/consts —
+// referencing an un-hoisted outer variable from inside them throws a ReferenceError.
+const { mockFitBounds, mockGeometries, mockMap } = vi.hoisted(() => {
+    const fitBounds = vi.fn();
+    return {
+        mockFitBounds: fitBounds,
+        mockGeometries: { current: [] as Array<{ slug: string; activityType: string; coordinates: [number, number][] }> },
+        // A stable object, not a fresh literal per useMap() call — real Leaflet's useMap() always
+        // returns the same map instance, so ChangeView's `useEffect([bounds, map, followMe], ...)`
+        // (TrailMapView.tsx:48-52) only re-fires on an actual bounds/followMe change. A new literal
+        // per call would make `map` look like a changed dependency on every re-render, masking
+        // #1303's showTracks-triggered-refit bug behind an unrelated false positive.
+        mockMap: { fitBounds, setView: vi.fn(), getZoom: () => 10, invalidateSize: vi.fn() },
+    };
+});
 
 // TrailMapView calls useTrailGeometries(), which uses @tanstack/react-query's useQuery and throws
 // without a QueryClientProvider ancestor — mocked rather than standing up a real QueryClient,
 // following the vi.mock() convention in frontend/api/og-image.test.ts.
 vi.mock('../hooks/useTrailGeometries', () => ({
-    useTrailGeometries: () => ({ geometries: [], loading: false }),
+    useTrailGeometries: () => ({ geometries: mockGeometries.current, loading: false }),
 }));
 
 // The follow-me button under test (TrailMapView.tsx:250-301) is a sibling of <MapContainer>, not
@@ -29,7 +53,7 @@ vi.mock('react-leaflet', () => ({
     Marker: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     Popup: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     Polyline: () => null,
-    useMap: () => ({ fitBounds: vi.fn(), setView: vi.fn(), getZoom: () => 10, invalidateSize: vi.fn() }),
+    useMap: () => mockMap,
     useMapEvents: () => null,
     LayersControl: Object.assign(
         ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
@@ -68,5 +92,58 @@ describe('TrailMapView follow-me button (#1299)', () => {
         fireEvent.click(button);
 
         expect(button.className).toMatch(/MuiIconButton-colorPrimary/);
+    });
+});
+
+function makeTrail(overrides: Partial<Trail> = {}): Trail {
+    return {
+        id: 'trail-1',
+        name: 'Laugavegur',
+        slug: 'laugavegur',
+        length: 55000,
+        elevationGain: 1200,
+        elevationLoss: 1400,
+        status: 'Published',
+        activityType: 'Hiking',
+        trailType: 'PointToPoint',
+        difficulty: 'Hard',
+        startLatitude: 64.0,
+        startLongitude: -19.0,
+        locations: [],
+        ...overrides,
+    };
+}
+
+describe('TrailMapView hide/show-tracks toggle does not re-fit the map (#1303)', () => {
+    beforeEach(() => {
+        mockFitBounds.mockClear();
+        // Full route geometry, well beyond the start point alone — mirrors the trailMapBounds.test.ts
+        // "folds in the full route geometry" fixture so the bounds the toggle must leave untouched
+        // actually depend on the geometry, not just the start point.
+        mockGeometries.current = [
+            { slug: 'laugavegur', activityType: 'Hiking', coordinates: [[64.0, -19.0], [63.8, -19.3], [63.5, -19.6]] },
+        ];
+    });
+
+    it('does not call fitBounds again when showTracks is toggled off and back on', () => {
+        // Wrapped in MemoryRouter: unlike the follow-me tests above (noTrails), this trail has a
+        // start location, so the real (unmocked) MarkerClusterGroup renders a Popup containing a
+        // RouterLink, which throws without a router context ancestor.
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrail()]} userLocation={null} />
+            </MemoryRouter>
+        );
+
+        const callsBeforeToggle = mockFitBounds.mock.calls.length;
+        expect(callsBeforeToggle).toBeGreaterThan(0);
+
+        const toggleButton = screen.getByRole('button', { name: 'toggle tracks' });
+        fireEvent.click(toggleButton); // hide tracks
+        fireEvent.click(toggleButton); // show tracks again
+
+        // The `bounds` memo (and therefore ChangeView's fitBounds effect) must not react to
+        // showTracks — only `visibleGeometries` (which gates rendered <Polyline>s) should.
+        expect(mockFitBounds.mock.calls.length).toBe(callsBeforeToggle);
     });
 });
