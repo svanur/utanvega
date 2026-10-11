@@ -5,14 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Layout from '../components/Layout';
 import type { PaletteMode } from '@mui/material';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { localeForHostname } from '../api/_site';
-
-// Split to avoid plain-text harvesting
-const USER = 'oskar';
-const DOMAIN = 'hlaupadagskra';
-const TLD = 'is';
-const EN_DOMAIN = '360runs';
-const EN_TLD = 'com';
+import { emailForHostname } from '../utils/contactEmail';
 
 interface ContactPageProps {
     mode: PaletteMode;
@@ -23,9 +16,7 @@ export default function ContactPage({ mode, onToggleMode }: ContactPageProps) {
     const { t } = useTranslation();
     usePageTitle(t('nav.contact'));
     const [revealed, setRevealed] = useState(false);
-    const email = localeForHostname(window.location.hostname) === 'en'
-        ? `${USER}@${EN_DOMAIN}.${EN_TLD}`
-        : `${USER}@${DOMAIN}.${TLD}`;
+    const email = emailForHostname(window.location.hostname);
 
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.contact') }]}>

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +9,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import EventDetailPage, { EditionDialogInner } from './EventDetailPage';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { EDITION_STATUS_LABELS } from '../utils/eventForms';
-import { EVENTS_QUERY_KEY, type EventDetailDto, type EventEditionDto } from '../hooks/useEvents';
+import { EVENTS_QUERY_KEY, type EventDetailDto, type EventEditionDto, type EventType, type RaceDto } from '../hooks/useEvents';
 
 // #977: PR #976 (closing #970) gave EditionDialogInner's Status/Registration status Selects
 // explicit labelId/id wiring so each has an accessible name reachable via getByLabelText — mirrors
@@ -34,6 +35,9 @@ import { EVENTS_QUERY_KEY, type EventDetailDto, type EventEditionDto } from '../
 const mockState = vi.hoisted(() => ({
   eventDetail: null as EventDetailDto | null,
   editionPutShouldFail: false,
+  editionDeleteShouldFail: false,
+  editionCancelShouldFail: false,
+  editionCompleteShouldFail: false,
 }));
 
 vi.mock('../hooks/api', () => ({
@@ -47,6 +51,24 @@ vi.mock('../hooks/api', () => ({
         ? Promise.reject(new Error('Failed to update edition status'))
         : Promise.resolve({});
     }
+    // #1028: handleDeleteEdition/handleCancelEdition/handleCompleteEdition each hit their own
+    // DELETE/POST endpoint — mirrors the PUT branch above's success-vs-failure toggle so each
+    // handler's success and failure paths can be exercised independently.
+    if (method === 'DELETE' && /^\/api\/v1\/admin\/editions\/[^/]+$/.test(endpoint)) {
+      return mockState.editionDeleteShouldFail
+        ? Promise.reject(new Error('Failed to delete edition'))
+        : Promise.resolve({});
+    }
+    if (method === 'POST' && /^\/api\/v1\/admin\/editions\/[^/]+\/cancel$/.test(endpoint)) {
+      return mockState.editionCancelShouldFail
+        ? Promise.reject(new Error('Failed to cancel edition'))
+        : Promise.resolve({});
+    }
+    if (method === 'POST' && /^\/api\/v1\/admin\/editions\/[^/]+\/complete$/.test(endpoint)) {
+      return mockState.editionCompleteShouldFail
+        ? Promise.reject(new Error('Failed to complete edition'))
+        : Promise.resolve({});
+    }
     return Promise.resolve([]);
   }),
 }));
@@ -55,7 +77,10 @@ vi.mock('../hooks/api', () => ({
 // simplest way to mount the dialog, since it needs no EventEditionDto fixture and none of the
 // Status MenuItems are conditionally disabled (that only happens `!isNew`, see EditionDialogInner's
 // own Status Select above).
-function renderEditionDialog() {
+//
+// #1070: accepts an optional edition/eventType override so the Start/End date derived-and-disabled
+// tests below can mount the same dialog against an *existing* Series edition instead.
+function renderEditionDialog(overrides: { edition?: EventEditionDto; eventType?: EventType } = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -63,7 +88,8 @@ function renderEditionDialog() {
         <BilingualLangProvider>
           <EditionDialogInner
             open
-            edition={null}
+            edition={overrides.edition ?? null}
+            eventType={overrides.eventType}
             eventId="event-1"
             onClose={() => {}}
             onSaved={() => {}}
@@ -113,6 +139,101 @@ describe('EditionDialogInner — Status/Registration status Selects are reachabl
 
     chooseMenuOption(getRegistrationStatusCombobox(), 'Open');
     expect(getRegistrationStatusCombobox().textContent).toBe('Open');
+  });
+});
+
+// #1070: a Series edition's Start/End date must stop being independently editable once it has at
+// least one dated race — the backend (EditionStatusHelpers.ComputeEffectiveEditionDates) derives
+// Date/EndDate live from those races on every read, so an admin-entered value here would just be
+// silently overruled. Covers the dialog-level half of #1070; ComputeEffectiveEditionDates itself
+// has its own xUnit coverage in backend.Tests/Services/EditionStatusHelpersTests.cs.
+function buildRaceFixture(overrides: Partial<RaceDto> = {}): RaceDto {
+  return {
+    id: 'race-1',
+    eventEditionId: 'edition-1',
+    trailId: null,
+    trailName: null,
+    trailSlug: null,
+    name: 'Leg 1',
+    nameEn: null,
+    distanceLabel: '10K',
+    distanceLabelEn: null,
+    cutoffMinutes: null,
+    description: null,
+    descriptionEn: null,
+    status: 'Active',
+    sortOrder: 0,
+    ticketStatus: 'Available',
+    resultType: 'Time',
+    maxParticipants: null,
+    itraPoints: null,
+    certifiedBy: null,
+    certifiedByEn: null,
+    prizeMoney: 0,
+    championshipCategory: null,
+    championshipCategoryEn: null,
+    dateOfRace: '2026-04-01',
+    startTime: null,
+    trailDistanceMeters: null,
+    trailElevationGain: null,
+    activityType: null,
+    ...overrides,
+  };
+}
+
+function getStartDateInput() {
+  return screen.getByLabelText('Start date') as HTMLInputElement;
+}
+function getEndDateInput() {
+  return screen.getByLabelText('End date (multi-day)') as HTMLInputElement;
+}
+
+describe('EditionDialogInner — Start/End date disabled and derived for a Series edition with dated races (#1070)', () => {
+  afterEach(cleanup);
+
+  it('stays editable for a brand-new Series edition with no races yet', () => {
+    renderEditionDialog({ eventType: 'Series' });
+
+    expect(getStartDateInput().disabled).toBe(false);
+    expect(getEndDateInput().disabled).toBe(false);
+  });
+
+  it('stays editable for a non-Series edition even with races, as a regression guard', () => {
+    const edition = buildEditionFixture({
+      races: [buildRaceFixture({ dateOfRace: '2026-04-01' }), buildRaceFixture({ id: 'race-2', dateOfRace: '2026-08-20' })],
+    });
+    renderEditionDialog({ edition, eventType: 'Race' });
+
+    expect(getStartDateInput().disabled).toBe(false);
+    expect(getEndDateInput().disabled).toBe(false);
+  });
+
+  it('falls back to editable for an existing Series edition with zero dated races (chicken-and-egg case)', () => {
+    const edition = buildEditionFixture({ races: [] });
+    renderEditionDialog({ edition, eventType: 'Series' });
+
+    expect(getStartDateInput().disabled).toBe(false);
+    expect(getEndDateInput().disabled).toBe(false);
+  });
+
+  it('disables Start/End date and shows the min/max of the races as the derived value', () => {
+    const edition = buildEditionFixture({
+      date: '2026-01-01',
+      endDate: '2026-01-02',
+      races: [
+        buildRaceFixture({ id: 'race-1', dateOfRace: '2026-06-15' }),
+        buildRaceFixture({ id: 'race-2', dateOfRace: '2026-04-01' }),
+        buildRaceFixture({ id: 'race-3', dateOfRace: '2026-08-20' }),
+      ],
+    });
+    renderEditionDialog({ edition, eventType: 'Series' });
+
+    expect(getStartDateInput().disabled).toBe(true);
+    expect(getEndDateInput().disabled).toBe(true);
+    // Derived min/max of the three races' dateOfRace above (2026-06-15/2026-04-01/2026-08-20),
+    // not the edition's stale stored date/endDate (2026-01-01/2026-01-02) seeded above.
+    expect(getStartDateInput().value).toBe('04/01/2026');
+    expect(getEndDateInput().value).toBe('08/20/2026');
   });
 });
 
@@ -203,12 +324,12 @@ function buildEventDetailFixture(): EventDetailDto {
   };
 }
 
-function renderEventDetailPage(queryClient: QueryClient) {
+function renderEventDetailPage(queryClient: QueryClient, onNotify: (msg: ReactNode, severity?: 'success' | 'error') => void = () => {}) {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[`/events/${EVENT_SLUG}`]}>
         <Routes>
-          <Route path="/events/:slug" element={<EventDetailPage onNotify={() => {}} />} />
+          <Route path="/events/:slug" element={<EventDetailPage onNotify={onNotify} />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -263,5 +384,230 @@ describe('EventDetailPage — handleCycleEditionStatus invalidates the events li
     // rollback ran, not just that invalidateEventsList wasn't called.
     await screen.findByText('Active');
     expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+});
+
+// #1028: handleDeleteEdition/handleCancelEdition/handleCompleteEdition each only called
+// `await refresh()` on success, never invalidateEventsList() — unlike their sibling
+// handleToggleEditionNeedsReview (#923) and handleCycleEditionStatus (#1024) above, both of which
+// already invalidate EVENTS_QUERY_KEY. EventsListPage derives hasFutureEdition/
+// anyEditionUnconfirmed chips from that same cached list, so deleting, cancelling or completing an
+// edition left those chips stale for up to the list's 30s staleTime. Each button is a
+// confirm-then-click control (first click arms deletingEditionId/cancelingEditionId/
+// completingEditionId, second click actually fires the request — see the `if (xId !== edition.id)`
+// guards at the top of each handler), so every test here clicks its icon button twice.
+describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleCompleteEdition invalidate the events list cache (#1028)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  function seedQueryClient() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // Seed the events list cache the same way useEvents' own useQuery would populate it — an
+    // absent cache entry can't demonstrate invalidation, since invalidateQueries would have
+    // nothing to mark stale.
+    queryClient.setQueryData(EVENTS_QUERY_KEY, []);
+    return queryClient;
+  }
+
+  // #1238: each edition-row IconButton now carries its own static aria-label (static even for
+  // Complete/Cancel/Delete, whose Tooltip title toggles to a "Click again to confirm…" string
+  // while armed — the label is for selector stability, not for mirroring tooltip confirm-state).
+  // Selecting by accessible name via getByRole is correct regardless of DOM order, unlike the
+  // former getAllByTestId(...)[length - 1] workaround this replaced, which only happened to work
+  // because the single fixture edition from buildEventDetailFixture put the edition-row icon last.
+  function getEditionIconButton(name: string) {
+    return screen.getByRole('button', { name });
+  }
+
+  // #1238 follow-up: Complete/Cancel/Delete's aria-label is static (asserted by the tests below),
+  // so unlike an unlabelled button, Tooltip's dynamic "click again to confirm" title no longer
+  // gets merged into the accessible name when the button arms — the button instead carries an
+  // aria-describedby pointing at a visually-hidden aria-live="polite" status element, which is
+  // what this helper reads to prove that arm-state text is still reachable by assistive tech.
+  function getDescribedByText(button: HTMLElement) {
+    const describedById = button.getAttribute('aria-describedby');
+    if (!describedById) throw new Error('Button has no aria-describedby');
+    const el = document.getElementById(describedById);
+    if (!el) throw new Error(`No element found with id ${describedById}`);
+    return el.textContent;
+  }
+
+  it('handleDeleteEdition invalidates EVENTS_QUERY_KEY after a successful delete', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionDeleteShouldFail = false;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    renderEventDetailPage(queryClient);
+    await screen.findByText('Active');
+
+    const deleteButton = getEditionIconButton('Delete edition');
+    fireEvent.click(deleteButton); // arms deletingEditionId
+    fireEvent.click(deleteButton); // fires the DELETE
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+    });
+  });
+
+  it('handleDeleteEdition does not invalidate EVENTS_QUERY_KEY when the DELETE fails', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionDeleteShouldFail = true;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onNotify = vi.fn();
+
+    renderEventDetailPage(queryClient, onNotify);
+    await screen.findByText('Active');
+
+    const deleteButton = getEditionIconButton('Delete edition');
+    fireEvent.click(deleteButton);
+    fireEvent.click(deleteButton);
+
+    // Waiting for the catch block's onNotify call is the deterministic signal that the rejected
+    // DELETE has settled — the MUI Tooltip's own text isn't in the DOM without a hover/focus, so
+    // it can't stand in for that like the chip-rollback check in the #1024 tests above does.
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Failed to delete edition', 'error');
+    });
+    expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+
+  it('handleCancelEdition invalidates EVENTS_QUERY_KEY after a successful cancel', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCancelShouldFail = false;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    renderEventDetailPage(queryClient);
+    await screen.findByText('Active');
+
+    const cancelButton = getEditionIconButton('Cancel edition');
+    fireEvent.click(cancelButton); // arms cancelingEditionId
+    fireEvent.click(cancelButton); // fires the POST .../cancel
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+    });
+  });
+
+  it('handleCancelEdition does not invalidate EVENTS_QUERY_KEY when the cancel POST fails', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCancelShouldFail = true;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onNotify = vi.fn();
+
+    renderEventDetailPage(queryClient, onNotify);
+    await screen.findByText('Active');
+
+    const cancelButton = getEditionIconButton('Cancel edition');
+    fireEvent.click(cancelButton);
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Failed to cancel edition', 'error');
+    });
+    expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+
+  it('handleCompleteEdition invalidates EVENTS_QUERY_KEY after a successful complete', async () => {
+    // isPast (and the Complete button it gates) is derived from edition.date vs today — the
+    // default fixture's '2026-06-01' is already in the past relative to this suite's fixed clock.
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCompleteShouldFail = false;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    renderEventDetailPage(queryClient);
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('Mark edition Completed');
+    fireEvent.click(completeButton); // arms completingEditionId
+    fireEvent.click(completeButton); // fires the POST .../complete
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+    });
+  });
+
+  it('handleCompleteEdition does not invalidate EVENTS_QUERY_KEY when the complete POST fails', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+    mockState.editionCompleteShouldFail = true;
+
+    const queryClient = seedQueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    const onNotify = vi.fn();
+
+    renderEventDetailPage(queryClient, onNotify);
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('Mark edition Completed');
+    fireEvent.click(completeButton);
+    fireEvent.click(completeButton);
+
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith('Failed to complete edition', 'error');
+    });
+    expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+
+  // #1238 follow-up: a static aria-label on Delete/Cancel/Complete (added so getEditionIconButton
+  // above can select by accessible name instead of DOM order) stops Tooltip's dynamic "click again
+  // to confirm" title from reaching the accessible name the way it would for an unlabelled button
+  // — these three tests prove the arm-state text is still exposed to assistive tech via each
+  // button's aria-describedby-linked aria-live region, not just sighted-only in the Tooltip.
+  it('exposes Delete edition\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const deleteButton = getEditionIconButton('Delete edition');
+    expect(getDescribedByText(deleteButton)).toBe('');
+
+    fireEvent.click(deleteButton); // arms deletingEditionId
+
+    // Same element, same accessible name — getByRole must still resolve it post-arm.
+    expect(screen.getByRole('button', { name: 'Delete edition' })).toBe(deleteButton);
+    expect(getDescribedByText(deleteButton)).toBe('Click again to confirm — or wait 3 seconds to cancel');
+  });
+
+  it('exposes Cancel edition\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const cancelButton = getEditionIconButton('Cancel edition');
+    expect(getDescribedByText(cancelButton)).toBe('');
+
+    fireEvent.click(cancelButton); // arms cancelingEditionId
+
+    expect(screen.getByRole('button', { name: 'Cancel edition' })).toBe(cancelButton);
+    // Default fixture edition has no races, so the race-count placeholder reads "0 races".
+    expect(getDescribedByText(cancelButton)).toBe('Click again to confirm — cancels 0 races and closes registration too (or wait 3 seconds to cancel)');
+  });
+
+  it('exposes Mark edition Completed\'s armed/confirm state via its aria-live status region, while its aria-label stays static', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('Mark edition Completed');
+    expect(getDescribedByText(completeButton)).toBe('');
+
+    fireEvent.click(completeButton); // arms completingEditionId
+
+    expect(screen.getByRole('button', { name: 'Mark edition Completed' })).toBe(completeButton);
+    expect(getDescribedByText(completeButton)).toBe('Click again to confirm — sets 0 Active races to Completed and closes registration (or wait 3 s to cancel)');
   });
 });

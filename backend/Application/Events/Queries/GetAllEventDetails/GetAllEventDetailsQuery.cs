@@ -84,19 +84,41 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
             null,
             [],
             ev.Editions
-                .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
                 .Select(ed => {
                     // Computed once per edition and reused for every race drawn from it below —
                     // do not re-derive from raw dates a second time.
                     var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
                         ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
 
+                    // Series editions derive Date/EndDate live from their races' DateOfRace rather
+                    // than trusting the stored columns, which nothing keeps in sync — same
+                    // "derive live, don't store" precedent as edEffectiveRegStatus above. A
+                    // Cancelled race's date must not skew the derived min/max (#1261) — excluded
+                    // here same as the other race-date consumers in GetEventsQuery. If every dated
+                    // race ends up excluded (all Cancelled), the filtered list is empty, so
+                    // IsEditionDateDerivedFromRaces naturally falls back to the stored Date/EndDate
+                    // rather than deriving from the cancelled set — a deliberate choice, not an
+                    // accident of the empty-list path.
+                    var (edEffDate, edEffEndDate) = EditionStatusHelpers.ComputeEffectiveEditionDates(
+                        ev.Type, ed.Date, ed.EndDate,
+                        ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != Core.Entities.RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList());
+
+                    // Projected alongside ed so the ordering below can sort on the derived date
+                    // without re-running ComputeEffectiveEditionDates a second time (#1262) — the
+                    // stored ed.Date is exactly what drifts out of sync for Series editions, so
+                    // ordering by it instead of edEffDate would disagree with the displayed date.
+                    return (ed, edEffectiveRegStatus, edEffDate, edEffEndDate);
+                })
+                .OrderByDescending(x => x.edEffDate ?? DateOnly.MinValue)
+                .Select(x => {
+                    var (ed, edEffectiveRegStatus, edEffDate, edEffEndDate) = x;
+
                     return new EventEditionDto(
                     ed.Id,
                     ed.EventId,
                     ed.Year,
-                    ed.Date,
-                    ed.EndDate,
+                    edEffDate,
+                    edEffEndDate,
                     ed.Title,
                     ed.TitleEn,
                     ed.RegistrationUrl,

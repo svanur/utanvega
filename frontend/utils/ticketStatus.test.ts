@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupDistances, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, type DistanceEntry } from './ticketStatus';
+import { groupDistances, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, getTicketStatusColor, type DistanceEntry } from './ticketStatus';
 
 describe('groupDistances', () => {
     it('keeps elevationGain/terrainType when two entries sharing a label agree', () => {
@@ -141,6 +141,10 @@ describe('isRegistrationRequired', () => {
         expect(isRegistrationRequired('NotRequired')).toBe(false);
     });
 
+    it('returns false for Invitational (entry by selection, e.g. Backyard Ultra World Championship)', () => {
+        expect(isRegistrationRequired('Invitational')).toBe(false);
+    });
+
     it('returns true for every other registrationStatus value, including null/undefined', () => {
         expect(isRegistrationRequired('Open')).toBe(true);
         expect(isRegistrationRequired('Closed')).toBe(true);
@@ -155,6 +159,10 @@ describe('isRegistrationRequiredForRace', () => {
         expect(isRegistrationRequiredForRace('Free')).toBe(false);
     });
 
+    it('returns false for Invitational (the ticketStatus an Invitational-registration race resolves to)', () => {
+        expect(isRegistrationRequiredForRace('Invitational')).toBe(false);
+    });
+
     it('returns true for every other ticketStatus value, including null/undefined', () => {
         expect(isRegistrationRequiredForRace('Available')).toBe(true);
         expect(isRegistrationRequiredForRace('AlmostSoldOut')).toBe(true);
@@ -163,5 +171,11 @@ describe('isRegistrationRequiredForRace', () => {
         expect(isRegistrationRequiredForRace('NotStarted')).toBe(true);
         expect(isRegistrationRequiredForRace(null)).toBe(true);
         expect(isRegistrationRequiredForRace(undefined)).toBe(true);
+    });
+});
+
+describe('getTicketStatusColor', () => {
+    it('returns default for Invitational', () => {
+        expect(getTicketStatusColor('Invitational')).toBe('default');
     });
 });

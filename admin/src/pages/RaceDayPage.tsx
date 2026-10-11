@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Box, Typography, Paper, Stack, Button, Chip, Checkbox,
     TextField, CircularProgress, Tooltip, IconButton,
@@ -24,7 +24,7 @@ import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, norm
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
-const TICKET_STATUSES: TicketStatus[] = ['Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'NotStarted', 'Free'];
+const TICKET_STATUSES: TicketStatus[] = ['Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'NotStarted', 'Free', 'Invitational'];
 const REGISTRATION_STATUSES = ['NotStarted', 'Open', 'Closed'] as const;
 
 type Mode = 'setup' | 'wrapup';
@@ -74,13 +74,37 @@ function defaultMode(d: Dayjs): Mode {
 
 interface RaceDayPageProps {
     onNotify: (message: string, severity?: 'success' | 'error') => void;
-    initialDate?: string;
 }
 
-export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps) {
+// Parses the `date` query param, falling back to today when it's absent or not a valid date —
+// keeps a bad/missing param from crashing the page instead of just losing the bookmark.
+// eslint-disable-next-line react-refresh/only-export-components -- exported for RaceDayPage.test.tsx
+export function parseDateParam(param: string | null): Dayjs {
+    if (param) {
+        const parsed = dayjs(param);
+        if (parsed.isValid()) return parsed;
+    }
+    return dayjs();
+}
+
+export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
     const navigate = useNavigate();
-    const [date, setDate] = useState<Dayjs>(() => initialDate ? dayjs(initialDate) : dayjs());
-    const [mode, setMode] = useState<Mode>(() => defaultMode(initialDate ? dayjs(initialDate) : dayjs()));
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [date, setDateState] = useState<Dayjs>(() => parseDateParam(searchParams.get('date')));
+    const [mode, setMode] = useState<Mode>(() => defaultMode(parseDateParam(searchParams.get('date'))));
+
+    // Updates local state and the URL's `date` param together so the page stays bookmarkable/
+    // refreshable (#1056). `replace: true` keeps prev/next day stepping from spamming browser
+    // history — see acceptance criteria: three "next day" clicks then one back should leave
+    // /race-day entirely, not step back one day.
+    const setDate = useCallback((d: Dayjs) => {
+        setDateState(d);
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('date', d.format('YYYY-MM-DD'));
+            return next;
+        }, { replace: true });
+    }, [setSearchParams]);
     const [editions, setEditions] = useState<RaceDayEdition[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedRaceIds, setSelectedRaceIds] = useState<Set<string>>(new Set());
@@ -107,6 +131,20 @@ export default function RaceDayPage({ onNotify, initialDate }: RaceDayPageProps)
     useEffect(() => {
         setMode(defaultMode(date));
     }, [dateStr]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Syncs local state from the URL's `date` param whenever it changes without this component's
+    // own `setDate` having caused it — e.g. re-clicking the "Race Manager" sidebar item (which
+    // navigates to the bare /race-day path, dropping the param) or a direct navigation to a new
+    // ?date= link (e.g. from an edition's "jump to Race Manager") without a full page reload.
+    // Closes the URL→state direction that the mount-time lazy initializers above only cover once.
+    // Must not call setSearchParams itself — setDate remains the single writer to the URL, so this
+    // can't ping-pong with it.
+    useEffect(() => {
+        const paramDate = parseDateParam(searchParams.get('date'));
+        if (paramDate.format('YYYY-MM-DD') !== dateStr) {
+            setDateState(paramDate);
+        }
+    }, [searchParams, dateStr]);
 
     // Page-local shortcuts: s = Setup, w = Wrap-up
     useEffect(() => {

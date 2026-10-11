@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import dayjs from 'dayjs';
-import { matchesYearMonthFilter, nextWeekMondayOffset, thisWeekMondayOffset, formatAgendaHeader, type YearMonthFilterable } from './eventHelpers';
+import { matchesYearMonthFilter, nextWeekMondayOffset, thisWeekMondayOffset, formatAgendaHeader, computeClonedRaceDate, type YearMonthFilterable } from './eventHelpers';
 
 // #734: the Month <Select> on the events list is disabled whenever yearFilter === 'all', and
 // the Year <Select>'s onChange resets monthFilter back to 'all' the moment Year changes — so
@@ -90,6 +90,48 @@ describe('thisWeekMondayOffset', () => {
     const monday = sunday.add(1, 'day');
     expect(monday.day()).toBe(1);
     expect(thisWeekMondayOffset(monday)).toBe(0);
+  });
+});
+
+// #1068: a cloned race's date is derived by preserving its day-offset from the source edition's
+// own date, then re-applying that offset to the new edition's date — whatever that new edition
+// date turns out to be. EventDetailPage's onSaved caller must feed this the edition's actually
+// *saved* date (which may have been corrected by the admin before Save), not the originally
+// suggested one from handleCloneEdition — but that caller-side plumbing isn't reachable from this
+// pure function, so these tests cover the offset math itself, which is what the bug fix depends on
+// being correct once fed the right newEditionDate.
+describe('computeClonedRaceDate', () => {
+  it('preserves the race\'s day-offset from the source edition when applied to the suggested (unedited) new edition date', () => {
+    // Source edition on day 1, race 2 days later (day 3) — regression guard for the
+    // "unedited clone" path, where newEditionDate is still the originally suggested one.
+    expect(computeClonedRaceDate('2026-09-01', '2026-09-03', '2027-09-01')).toBe('2027-09-03');
+  });
+
+  it('re-applies the same offset to a corrected new edition date, not the originally suggested one (#1068)', () => {
+    // Same source/race pair as above (+2 days), but the admin corrected the new edition's date
+    // (e.g. fixing the suggested Year/Start date) before Save — the race must land 2 days after
+    // whatever was actually saved, not 2 days after the stale suggestion.
+    expect(computeClonedRaceDate('2026-09-01', '2026-09-03', '2027-09-08')).toBe('2027-09-10');
+  });
+
+  it('preserves a negative offset (race scheduled before the edition date)', () => {
+    expect(computeClonedRaceDate('2026-09-10', '2026-09-08', '2027-09-15')).toBe('2027-09-13');
+  });
+
+  it('preserves a zero offset (race on the same day as the edition)', () => {
+    expect(computeClonedRaceDate('2026-09-01', '2026-09-01', '2027-09-08')).toBe('2027-09-08');
+  });
+
+  it('returns null when the source edition date is missing', () => {
+    expect(computeClonedRaceDate(null, '2026-09-03', '2027-09-01')).toBeNull();
+  });
+
+  it('returns null when the race has no date of its own', () => {
+    expect(computeClonedRaceDate('2026-09-01', null, '2027-09-01')).toBeNull();
+  });
+
+  it('returns null when the new edition has no date (e.g. an Approximate-schedule clone left it blank, #912)', () => {
+    expect(computeClonedRaceDate('2026-09-01', '2026-09-03', null)).toBeNull();
   });
 });
 

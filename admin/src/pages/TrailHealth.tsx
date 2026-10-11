@@ -17,6 +17,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CalculateIcon from '@mui/icons-material/Calculate';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../hooks/api';
 import { useTrails, trailsQueryKey, type Trail } from '../hooks/useTrails';
@@ -128,6 +129,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
   const [typesDialogOpen, setTypesDialogOpen] = useState(false);
   const [elevationDialogOpen, setElevationDialogOpen] = useState(false);
   const [recalcDialogOpen, setRecalcDialogOpen] = useState(false);
+  const [scanningDuplicates, setScanningDuplicates] = useState(false);
 
   const invalidateTrails = () => queryClient.invalidateQueries({ queryKey: trailsQueryKey(false) });
 
@@ -208,6 +210,18 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
     }
   };
 
+  const handleScanDuplicatesAgain = async () => {
+    setScanningDuplicates(true);
+    try {
+      const result = await apiFetch<DuplicatePair[]>('/api/v1/admin/trails/duplicates?threshold=90&force=true');
+      queryClient.setQueryData(['admin', 'trail-duplicates'], result);
+    } catch (_err) {
+      onNotify('Failed to scan for duplicates', 'error');
+    } finally {
+      setScanningDuplicates(false);
+    }
+  };
+
   const handleDetectLocations = async () => {
     setDetectingLocations(true);
     try {
@@ -273,7 +287,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={detectingLocations ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detectingLocations || detecting || detectingTerrain || backfillingProfiles || recalculating}
+            disabled={detectingLocations || detecting || detectingTerrain || backfillingProfiles || recalculating || scanningDuplicates}
             onClick={() => setLocationsDialogOpen(true)}
           >
             {detectingLocations ? 'Detecting...' : 'Re-detect Locations'}
@@ -282,7 +296,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={detectingTerrain ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating || scanningDuplicates}
             onClick={() => setTerrainDialogOpen(true)}
           >
             {detectingTerrain ? 'Detecting...' : 'Re-detect Terrain (Flat / Hilly / Mountainous)'}
@@ -291,7 +305,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={backfillingProfiles ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating || scanningDuplicates}
             onClick={() => setElevationDialogOpen(true)}
           >
             {backfillingProfiles ? 'Backfilling...' : 'Backfill Elevation Profiles'}
@@ -301,7 +315,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={detecting ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
-            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating || scanningDuplicates}
             onClick={() => setTypesDialogOpen(true)}
           >
             {detecting ? 'Detecting...' : 'Re-detect Route Shape (Loop / Out-and-back / Point-to-point)'}
@@ -310,7 +324,7 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
             variant="outlined"
             size="small"
             startIcon={recalculating ? <CircularProgress size={16} /> : <CalculateIcon />}
-            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+            disabled={detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating || scanningDuplicates}
             onClick={() => setRecalcDialogOpen(true)}
           >
             {recalculating ? 'Recalculating...' : 'Recalculate Difficulties'}
@@ -426,6 +440,17 @@ export default function TrailHealth({ onEditTrail, onNotify }: TrailHealthProps)
       </Stack>
 
       {/* Duplicates Section */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={scanningDuplicates ? <CircularProgress size={16} /> : <RefreshIcon />}
+          disabled={scanningDuplicates || detecting || detectingLocations || detectingTerrain || backfillingProfiles || recalculating}
+          onClick={handleScanDuplicatesAgain}
+        >
+          {scanningDuplicates ? 'Scanning...' : 'Scan again'}
+        </Button>
+      </Box>
       {dupsLoading && (
         <Alert severity="info" sx={{ mb: 2 }} icon={<ContentCopyIcon />}>
           <AlertTitle>Scanning for duplicates...</AlertTitle>

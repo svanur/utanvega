@@ -139,7 +139,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
         // otherwise can't prove flattenEventRows()'s return value is safe to mutate here, and
         // (surprisingly) flags the unrelated lastYear/lastHolidayDate reassignment further down
         // this same component as a purity violation.
-        const rows = [...flattenEventRows(sorted)];
+        // Table view has no separate "recently completed" section — a just-finished series race
+        // needs to render as its own past row here, consistent with a non-series past event.
+        const rows = [...flattenEventRows(sorted, true)];
         // Re-sort by individual race date when sorting by date fields
         if (sortField === 'daysUntil' || sortField === 'nextEditionDate') {
             rows.sort((a, b) => {

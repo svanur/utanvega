@@ -16,6 +16,7 @@ public enum TicketStatus
     Closed,
     NotStarted,
     Free,
+    Invitational,
 }
 
 public enum ResultType

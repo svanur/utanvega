@@ -32,6 +32,7 @@ import { TrailMapView } from '../components/TrailMapView';
 import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
 import LostLocation from '../components/LostLocation';
+import LinkifiedText from '../components/LinkifiedText';
 import { useLocalize } from '../utils/localize';
 import { breadcrumbContext } from '../utils/breadcrumbContext';
 
@@ -180,7 +181,10 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         return findPath(locationTree, slug) || [];
     }, [slug, locationTree]);
 
+    // Gated on the same condition that renders the map section below (#1253) so visitors
+    // landing on a location with no trails never see a geolocation permission prompt.
     useEffect(() => {
+        if (!(trails && trails.length > 0)) return;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -194,7 +198,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 }
             );
         }
-    }, []);
+    }, [trails]);
 
     if (loading) {
         return (
@@ -255,7 +259,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
                     {location.description && (
                         <Typography variant="body1" color="text.secondary" paragraph>
-                            {loc(location.description, location.descriptionEn)}
+                            <LinkifiedText text={loc(location.description, location.descriptionEn)} />
                         </Typography>
                     )}
 

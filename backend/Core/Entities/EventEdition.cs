@@ -6,6 +6,7 @@ public enum RegistrationStatus
     Open,
     Closed,
     NotRequired,
+    Invitational,
 }
 
 public enum EditionStatus
@@ -68,12 +69,20 @@ public class EventEdition
     public void CancelWithRaces()
     {
         Status = EditionStatus.Cancelled;
-        if (RegistrationStatus != RegistrationStatus.NotRequired)
+        // NotRequired and Invitational are both deliberate overrides that have nothing to do with
+        // a registration window — forcing either to Closed on cancellation would misrepresent a
+        // free walk-in or invitation-only event as one whose registration window simply ended.
+        if (RegistrationStatus != RegistrationStatus.NotRequired && RegistrationStatus != RegistrationStatus.Invitational)
             RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status != RaceStatus.Cancelled))
         {
             race.Status = RaceStatus.Cancelled;
-            race.TicketStatus = TicketStatus.Closed;
+            // Same Free/Invitational exemption as the RegistrationStatus guard above, but at the
+            // race level: a race deliberately marked Free or Invitational isn't describing a
+            // registration window either, so cancelling the edition shouldn't overwrite it to
+            // Closed and misrepresent it as "registration window ended".
+            if (race.TicketStatus != TicketStatus.Free && race.TicketStatus != TicketStatus.Invitational)
+                race.TicketStatus = TicketStatus.Closed;
         }
     }
 
@@ -81,12 +90,15 @@ public class EventEdition
     public void CompleteWithRaces()
     {
         Status = EditionStatus.Completed;
-        if (RegistrationStatus != RegistrationStatus.NotRequired)
+        // Same NotRequired/Invitational exemption as CancelWithRaces above — see its comment.
+        if (RegistrationStatus != RegistrationStatus.NotRequired && RegistrationStatus != RegistrationStatus.Invitational)
             RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status == RaceStatus.Active))
         {
             race.Status = RaceStatus.Completed;
-            race.TicketStatus = TicketStatus.Closed;
+            // Same Free/Invitational exemption as CancelWithRaces above — see its comment.
+            if (race.TicketStatus != TicketStatus.Free && race.TicketStatus != TicketStatus.Invitational)
+                race.TicketStatus = TicketStatus.Closed;
         }
     }
 }

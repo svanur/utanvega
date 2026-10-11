@@ -50,8 +50,27 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         Enum.TryParse<RegistrationStatus>(request.RegistrationStatus, ignoreCase: true, out var regStatus);
 
         edition.Year = request.Year;
-        edition.Date = request.Date;
-        edition.EndDate = request.EndDate;
+        // #1070: a Series edition with at least one dated race has its Date/EndDate derived live
+        // at read time (EditionStatusHelpers.ComputeEffectiveEditionDates) rather than trusted from
+        // these stored columns — every DTO this edition is ever read through (including the one the
+        // admin dialog pre-seeds its own form from) already reflects that derived value, not the
+        // raw stored one. Writing request.Date/EndDate straight through here would silently
+        // persist that already-derived snapshot back into the stored columns, destroying the
+        // "fall back to stored values" ground truth this whole feature relies on the moment the
+        // race set next changes. Same IsEditionDateDerivedFromRaces gate the read side uses, so the
+        // two conditions can never drift apart — leave the stored columns untouched in that case.
+        // #1261: a Cancelled race's date must not count toward that gate either — excluded here
+        // with the same filter the read-side queries (GetEventsQuery/GetAllEventDetailsQuery) apply,
+        // so this write-side guard agrees with what was just read. If every dated race is Cancelled,
+        // the filtered list is empty and the gate falls through to "not derived", i.e. the stored
+        // columns stay editable/writable — same fallback the read side picks for that case.
+        if (!EditionStatusHelpers.IsEditionDateDerivedFromRaces(
+                edition.Event.Type,
+                edition.Races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList()))
+        {
+            edition.Date = request.Date;
+            edition.EndDate = request.EndDate;
+        }
         edition.Title = request.Title;
         edition.TitleEn = request.TitleEn;
         edition.RegistrationUrl = request.RegistrationUrl;

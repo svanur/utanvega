@@ -18,6 +18,16 @@ public static class CacheKeys
     public static string Gpx(string slug, bool isEnglish) => $"gpx:{slug}:{(isEnglish ? "en" : "is")}";
     public static string Trending(int count, int days) => $"trending:{count}:{days}";
 
+    /// <summary>
+    /// Same version-tagging approach as Calendar — the threshold param can't be enumerated on write,
+    /// so bumping the version effectively orphans every cached duplicate-scan response.
+    /// </summary>
+    public static string TrailDuplicates(int version, double threshold) =>
+        $"trail-duplicates:{version}:{threshold}";
+
+    /// <summary>Version token incremented on every trail write (create/update/delete/bulk).</summary>
+    public static string TrailDuplicatesVersion => "trail-duplicates:version";
+
     // Activities
     public static string LeaderboardVersion(string trailSlug) => $"leaderboard:{trailSlug}:version";
     public static string Leaderboard(string trailSlug, int version, int limit) => $"leaderboard:{trailSlug}:{version}:{limit}";

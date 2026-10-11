@@ -61,9 +61,11 @@ import {
   type EventDetailDto,
   type EventEditionDto,
   type EditionStatus,
+  type EventType,
   type RaceDto,
   type RaceStatus,
   type RegistrationStatus,
+  type ScheduleRule,
   type TicketStatus,
   type UpdateEventInput,
 } from '../hooks/useEvents';
@@ -85,6 +87,8 @@ import {
   shouldNudgeStatusForYear,
   titleSyncForYear,
   referenceDateForYear,
+  recomputeYearlyWeekdayDate,
+  suggestSeriesLegDates,
   getRaceStatusColor,
   getEditionStatusColor,
   getTicketStatusColor,
@@ -114,6 +118,24 @@ import {
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
+// #1238 follow-up: visually hidden but screen-reader-readable status text, paired with
+// aria-live="polite" on the element it's applied to. Used by the edition-row Complete/Cancel/
+// Delete IconButtons below — their aria-label is static (for selector stability), so unlike an
+// unlabelled button, MUI Tooltip's dynamic "click again to confirm" title is no longer merged
+// into the accessible name when the button arms. This region, referenced via aria-describedby,
+// is what still exposes that arm-state change to assistive tech.
+const VISUALLY_HIDDEN_SX = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+} as const;
+
 function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
   return a.name.localeCompare(b.name);
@@ -129,32 +151,6 @@ function editionHasStaleTx(edition: EventEditionDto): boolean {
   return isTxStale(edition.title, edition.titleEn, h['Title'])
     || isTxStale(edition.notes, edition.notesEn, h['Notes']);
 }
-
-const DAY_OF_WEEK_INDEX: Record<string, number> = {
-  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
-};
-
-function nthWeekdayOfMonth(year: number, month: number, weekOfMonth: number, dayOfWeek: string): string {
-  const dayIdx = DAY_OF_WEEK_INDEX[dayOfWeek] ?? 0;
-  const firstOfMonth = dayjs(new Date(year, month - 1, 1));
-  const firstOccurrence = firstOfMonth.day() <= dayIdx
-    ? firstOfMonth.day(dayIdx)
-    : firstOfMonth.day(dayIdx + 7);
-  return firstOccurrence.add((weekOfMonth - 1) * 7, 'day').format('YYYY-MM-DD');
-}
-
-function suggestSeriesLegDates(rule: import('../hooks/useEvents').ScheduleRule, year: number, legCount: number): string[] {
-  if (!rule.weekOfMonth || !rule.dayOfWeek || !rule.monthStart) return [];
-  const dates: string[] = [];
-  for (let i = 0; i < legCount; i++) {
-    const month = rule.monthStart + i;
-    const actualYear = month > 12 ? year + 1 : year;
-    const actualMonth = month > 12 ? month - 12 : month;
-    dates.push(nthWeekdayOfMonth(actualYear, actualMonth, rule.weekOfMonth, rule.dayOfWeek));
-  }
-  return dates;
-}
-
 
 function formatSchedule(rule: import('../hooks/useEvents').ScheduleRule | null | undefined): string | null {
   if (!rule) return null;
@@ -181,11 +177,11 @@ function formatSchedule(rule: import('../hooks/useEvents').ScheduleRule | null |
   return null;
 }
 
-const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired'];
+const REGISTRATION_STATUSES: RegistrationStatus[] = ['NotStarted', 'Open', 'Closed', 'NotRequired', 'Invitational'];
 
 function getRegistrationStatusColor(status: RegistrationStatus): 'default' | 'success' | 'warning' {
   if (status === 'Open') return 'success';
-  if (status === 'Closed' || status === 'NotRequired') return 'default';
+  if (status === 'Closed' || status === 'NotRequired' || status === 'Invitational') return 'default';
   return 'warning';
 }
 
@@ -248,7 +244,13 @@ interface EditionDialogProps {
   edition: EventEditionDto | null;
   eventId: string;
   onClose: () => void;
-  onSaved: (newEditionId?: string) => void;
+  // #1068: the second argument is the edition's actually-saved date (form.date at Save time, not
+  // the initialValues/editionInitialValues snapshot taken when the dialog was opened) — the
+  // caller needs this to compute cloned race dates relative to what was really saved, since the
+  // admin may have corrected Year/Start date in the dialog before saving. null covers both "no
+  // date was set" and the non-new (edit) branch's needsReview-only PUT, where the caller has no
+  // use for it anyway.
+  onSaved: (newEditionId?: string, savedDate?: string | null) => void;
   // Fired after any gallery create/update/delete made via PhotoGalleryManager's own inline
   // checkmark — independent of Save/Cancel, so the edition meta row's Galleries entry stays
   // live even if the dialog is later dismissed via Cancel (see handleCancelOrDismiss, which
@@ -271,12 +273,29 @@ interface EditionDialogProps {
   // warning below — never for validation, since Title has no uniqueness constraint by design
   // (same-year reruns/reschedules are legitimate).
   siblingEditions: EventEditionDto[];
+  // #1070: the parent event's type — needed to tell whether Start/End date below should be
+  // disabled in favour of a live-derived value (see isDateDerivedFromRaces below). EventEditionDto
+  // itself carries no eventType/type field (an edition doesn't know its parent's type), so this
+  // follows the same prop-passed-down-from-the-call-site pattern as isApproximateScheduleClone
+  // above, sourced there from detail.type (detail being the parent EventDetailDto). Optional
+  // because EventDetailPage.test.tsx mounts EditionDialogInner directly without a parent event
+  // around it — undefined behaves the same as non-Series, i.e. stays editable.
+  eventType?: EventType;
+  // #1251: the parent event's ScheduleRule — needed by the Year field's onChange below to tell
+  // whether a Year correction should recompute the date from the rule's weekOfMonth/dayOfWeek/
+  // month (recomputeYearlyWeekdayDate), rather than blindly swapping the year digits in the
+  // stored date, which breaks the weekday for a "Nth weekday of month" event. Same
+  // prop-passed-down-from-the-call-site pattern as isApproximateScheduleClone/eventType above,
+  // sourced there from detail.scheduleRule. Optional for the same reason as eventType:
+  // EventDetailPage.test.tsx mounts EditionDialogInner directly without a parent event —
+  // undefined behaves the same as "no rule", i.e. falls back to today's year-swap behaviour.
+  eventScheduleRule?: ScheduleRule | null;
 }
 
 // #977: exported (unlike previously) so EventDetailPage.test.tsx can mount this dialog directly
 // and cover its Status/Registration status Selects via getByLabelText, mirroring EventWizardPage's
 // own EditionDetailsStep/RacesStep exports, which exist for the same reason.
-export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions }: EditionDialogProps) {
+export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, onGalleryMutated, onNotify, initialValues, isClone = false, isApproximateScheduleClone = false, siblingEditions, eventType, eventScheduleRule }: EditionDialogProps) {
   const isNew = edition === null;
   const [form, setForm] = useState<EditionFormState>(initialValues ?? (edition ? buildEditionForm(edition) : emptyEditionForm()));
   const [saving, setSaving] = useState(false);
@@ -333,6 +352,24 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
       })
     : undefined;
 
+  // #1070: a Series edition's Date/EndDate are derived live from its races' DateOfRace by the
+  // backend (EditionStatusHelpers.ComputeEffectiveEditionDates) rather than trusted from the
+  // stored columns, so once an existing Series edition has at least one dated race, Start/End date
+  // here must show that derived value and stop accepting admin edits the backend would just
+  // overrule on the next read. A brand-new Series edition with no races yet has nothing to derive
+  // from, and every non-Series edition is unaffected — both stay editable.
+  const seriesDatedRaceDates = eventType === 'Series' && !isNew
+    ? (edition?.races ?? [])
+        .filter(r => r.status !== 'Cancelled')
+        .map(r => r.dateOfRace)
+        .filter((d): d is string => d != null)
+        .sort()
+    : [];
+  const isDateDerivedFromRaces = seriesDatedRaceDates.length > 0;
+  const derivedStartDate = isDateDerivedFromRaces ? seriesDatedRaceDates[0] : null;
+  const derivedEndDate = isDateDerivedFromRaces ? seriesDatedRaceDates[seriesDatedRaceDates.length - 1] : null;
+  const derivedDateTooltip = 'Derived from race dates — edit races to change this';
+
   const handleSave = async () => {
     const input = {
       eventId,
@@ -363,7 +400,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
         // prop, so this stays correct if that gate is ever relaxed.
         await galleryManagerRef.current?.flushPending(result.id);
         onNotify('Edition created', 'success');
-        onSaved(result.id);
+        onSaved(result.id, form.date || null);
       } else {
         // needsReview is patch-if-provided on the backend (UpdateEditionCommand) — the field only
         // exists on an already-created edition (mirrors Trail.NeedsReview, which likewise has no
@@ -378,7 +415,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
           return; // keep the dialog open so the admin can retry the gallery save
         }
         onNotify('Edition saved', 'success');
-        onSaved();
+        onSaved(undefined, form.date || null);
       }
       onClose();
     } catch (err) {
@@ -440,8 +477,27 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
                     updates.titleEn = titleSync.titleEn;
                   }
                   if (newYear.length === 4 && !isNaN(ny) && oldYear.length === 4 && !isNaN(oy)) {
-                    if (prev.date) updates.date = prev.date.replace(/^\d{4}/, newYear);
-                    if (prev.endDate) updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
+                    // #1251: a Yearly event scheduled by weekOfMonth+dayOfWeek+month (e.g. "3rd
+                    // Saturday of August") has a correct date for the new year that a plain
+                    // year-digit swap (the fallback below) would get wrong — the swap keeps the
+                    // old month/day, which lands on the wrong weekday whenever the Nth occurrence
+                    // shifts. recomputeYearlyWeekdayDate returns null for every other rule shape
+                    // (Fixed, Yearly-by-dayOfMonth, Seasonal, Approximate, or no rule), in which
+                    // case the swap below is unchanged from before this fix.
+                    const recomputedDate = prev.date ? recomputeYearlyWeekdayDate(eventScheduleRule, ny) : null;
+                    if (prev.date) updates.date = recomputedDate ?? prev.date.replace(/^\d{4}/, newYear);
+                    if (prev.endDate) {
+                      if (recomputedDate && prev.date) {
+                        // Shift endDate by the same day-offset the recompute produced relative to
+                        // the edition's original Start date, preserving its day-span length — a
+                        // year-digit swap here would otherwise leave End date on the old weekday
+                        // while Start date moves to the recomputed one.
+                        const dayOffset = dayjs(recomputedDate).diff(dayjs(prev.date), 'day');
+                        updates.endDate = dayjs(prev.endDate).add(dayOffset, 'day').format('YYYY-MM-DD');
+                      } else {
+                        updates.endDate = prev.endDate.replace(/^\d{4}/, newYear);
+                      }
+                    }
                     if (prev.resultsUrl) updates.resultsUrl = prev.resultsUrl.replace(new RegExp(`${oy}(/?)$`), `${newYear}$1`);
                   }
                   // A brand-new edition has no saved Status/RegistrationStatus for the admin to
@@ -451,13 +507,17 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
                   // picked a Status/RegistrationStatus of their own, a later Year edit (e.g.
                   // fixing a typo) must not silently clobber that choice again. A clone is also
                   // "new" in the isNew sense but handleCloneEdition already seeded a deliberate
-                  // Status/RegistrationStatus (see #778), so it's excluded here too.
-                  if (shouldNudgeStatusForYear(isNew, isCloneRef.current, statusManuallySetRef.current) && newYear.length === 4 && !isNaN(ny)) {
+                  // Status/RegistrationStatus (see #778) — shouldNudgeStatusForYear still lets a
+                  // clone's correction through when it buckets to Completed, i.e. the admin fixed
+                  // the Year to a genuinely past one (#1068); it only keeps suppressing the nudge
+                  // when the bucket is still Hidden (present/future), which is what the clone's
+                  // Unconfirmed seed already represents.
+                  if (newYear.length === 4 && !isNaN(ny)) {
                     // #797: editionStatusForYear returns null for an out-of-range year (e.g.
                     // '-100', '0000', '9999') — same "leave it alone" behaviour as the other
                     // guard failures below, so an implausible typed year doesn't nudge Status.
                     const nudged = editionStatusForYear(ny);
-                    if (nudged) {
+                    if (nudged && shouldNudgeStatusForYear(isNew, isCloneRef.current, statusManuallySetRef.current, nudged.status)) {
                       updates.status = nudged.status;
                       updates.registrationStatus = nudged.registrationStatus;
                     }
@@ -465,19 +525,33 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
                   return { ...prev, ...updates };
                 });
               }} />
-            <DatePicker label="Start date"
-              value={form.date ? dayjs(form.date) : null}
-              onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
-              referenceDate={referenceDate}
-              slotProps={{ textField: {
-                size: 'small', fullWidth: true,
-                'aria-describedby': isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined,
-              } }} />
-            <DatePicker label="End date (multi-day)"
-              value={form.endDate ? dayjs(form.endDate) : null}
-              onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
-              referenceDate={referenceDate}
-              slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+            <Tooltip title={isDateDerivedFromRaces ? derivedDateTooltip : ''} disableHoverListener={!isDateDerivedFromRaces}>
+              {/* display: contents keeps this wrapper out of the Stack's flex layout entirely —
+                  the DatePicker below lays out exactly as if it were still a direct child, while
+                  still giving Tooltip a DOM node to attach its hover handlers to (a disabled
+                  MUI input does not reliably forward its own). */}
+              <Box sx={{ display: 'contents' }}>
+                <DatePicker label="Start date"
+                  value={isDateDerivedFromRaces ? dayjs(derivedStartDate) : (form.date ? dayjs(form.date) : null)}
+                  onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
+                  referenceDate={referenceDate}
+                  disabled={isDateDerivedFromRaces}
+                  slotProps={{ textField: {
+                    size: 'small', fullWidth: true,
+                    'aria-describedby': isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined,
+                  } }} />
+              </Box>
+            </Tooltip>
+            <Tooltip title={isDateDerivedFromRaces ? derivedDateTooltip : ''} disableHoverListener={!isDateDerivedFromRaces}>
+              <Box sx={{ display: 'contents' }}>
+                <DatePicker label="End date (multi-day)"
+                  value={isDateDerivedFromRaces ? dayjs(derivedEndDate) : (form.endDate ? dayjs(form.endDate) : null)}
+                  onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
+                  referenceDate={referenceDate}
+                  disabled={isDateDerivedFromRaces}
+                  slotProps={{ textField: { size: 'small', fullWidth: true } }} />
+              </Box>
+            </Tooltip>
           </Stack>
           {isApproximateScheduleCloneRef.current && !form.date && (
             <FormHelperText id={startDateHelperId} sx={{ mt: -1.5 }}>
@@ -1297,6 +1371,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       onNotify('Edition deleted');
       setDeletingEditionId(null);
       await refresh();
+      // The events list caches its own copy of hasFutureEdition/anyEditionUnconfirmed
+      // (EVENTS_QUERY_KEY) — without this it can show a stale chip for up to its 30s staleTime.
+      await invalidateEventsList();
     } catch {
       onNotify('Failed to delete edition', 'error');
     }
@@ -1312,6 +1389,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       onNotify('Edition cancelled — races cancelled along with it');
       setCancelingEditionId(null);
       await refresh();
+      // The events list caches its own copy of hasFutureEdition/anyEditionUnconfirmed
+      // (EVENTS_QUERY_KEY) — without this it can show a stale chip for up to its 30s staleTime.
+      await invalidateEventsList();
     } catch {
       onNotify('Failed to cancel edition', 'error');
     }
@@ -1327,6 +1407,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
       onNotify('Edition marked Completed — Active races completed along with it', 'success');
       setCompletingEditionId(null);
       await refresh();
+      // The events list caches its own copy of hasFutureEdition/anyEditionUnconfirmed
+      // (EVENTS_QUERY_KEY) — without this it can show a stale chip for up to its 30s staleTime.
+      await invalidateEventsList();
     } catch {
       onNotify('Failed to complete edition', 'error');
     }
@@ -1634,6 +1717,22 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         const isPast = edition.date ? edition.date < new Date().toISOString().slice(0, 10) : false;
         const isEditionFocused = focusedId === `edition:${edition.id}`;
 
+        // Complete/Cancel/Delete's armed/confirm text, shared between the Tooltip title (sighted)
+        // and the hidden aria-live status region below (assistive tech) — see VISUALLY_HIDDEN_SX.
+        const activeRaceCount = edition.races.filter(r => r.status === 'Active').length;
+        const completeArmed = completingEditionId === edition.id;
+        const completeConfirmText = `Click again to confirm — sets ${activeRaceCount} Active race${activeRaceCount !== 1 ? 's' : ''} to Completed and closes registration (or wait 3 s to cancel)`;
+        const completeStatusId = `edition-${edition.id}-complete-status`;
+
+        const uncancelledRaceCount = edition.races.filter(r => r.status !== 'Cancelled').length;
+        const cancelArmed = cancelingEditionId === edition.id;
+        const cancelConfirmText = `Click again to confirm — cancels ${uncancelledRaceCount} race${uncancelledRaceCount !== 1 ? 's' : ''} and closes registration too (or wait 3 seconds to cancel)`;
+        const cancelStatusId = `edition-${edition.id}-cancel-status`;
+
+        const deleteArmed = deletingEditionId === edition.id;
+        const deleteConfirmText = 'Click again to confirm — or wait 3 seconds to cancel';
+        const deleteStatusId = `edition-${edition.id}-delete-status`;
+
         return (
           <Box
             key={edition.id}
@@ -1737,50 +1836,65 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Edit edition">
-                  <IconButton size="small" onClick={() => { setEditingEdition(edition); setEditionDialogOpen(true); }}>
+                  <IconButton size="small" aria-label="Edit edition" onClick={() => { setEditingEdition(edition); setEditionDialogOpen(true); }}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Clone edition to next year">
-                  <IconButton size="small" onClick={() => handleCloneEdition(edition)}>
+                  <IconButton size="small" aria-label="Clone edition to next year" onClick={() => handleCloneEdition(edition)}>
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 {isPast && edition.status !== 'Completed' && edition.status !== 'Cancelled' && (
-                  <Tooltip title={completingEditionId === edition.id
-                    ? `Click again to confirm — sets ${edition.races.filter(r => r.status === 'Active').length} Active race${edition.races.filter(r => r.status === 'Active').length !== 1 ? 's' : ''} to Completed and closes registration (or wait 3 s to cancel)`
-                    : 'Mark edition Completed (also completes Active races and closes registration)'}>
-                    <IconButton
-                      size="small"
-                      color={completingEditionId === edition.id ? 'info' : 'default'}
-                      onClick={() => void handleCompleteEdition(edition)}
-                    >
-                      <TaskAltIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <>
+                    <Tooltip title={completeArmed ? completeConfirmText : 'Mark edition Completed (also completes Active races and closes registration)'}>
+                      <IconButton
+                        size="small"
+                        aria-label="Mark edition Completed"
+                        aria-describedby={completeStatusId}
+                        color={completeArmed ? 'info' : 'default'}
+                        onClick={() => void handleCompleteEdition(edition)}
+                      >
+                        <TaskAltIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Box id={completeStatusId} role="status" aria-live="polite" sx={VISUALLY_HIDDEN_SX}>
+                      {completeArmed ? completeConfirmText : ''}
+                    </Box>
+                  </>
                 )}
                 {edition.status !== 'Cancelled' && (
-                  <Tooltip title={cancelingEditionId === edition.id
-                    ? `Click again to confirm — cancels ${edition.races.filter(r => r.status !== 'Cancelled').length} race${edition.races.filter(r => r.status !== 'Cancelled').length !== 1 ? 's' : ''} and closes registration too (or wait 3 seconds to cancel)`
-                    : 'Cancel edition (also cancels its races and closes registration)'}>
-                    <IconButton
-                      size="small"
-                      color={cancelingEditionId === edition.id ? 'error' : 'default'}
-                      onClick={() => void handleCancelEdition(edition)}
-                    >
-                      <EventBusyIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <>
+                    <Tooltip title={cancelArmed ? cancelConfirmText : 'Cancel edition (also cancels its races and closes registration)'}>
+                      <IconButton
+                        size="small"
+                        aria-label="Cancel edition"
+                        aria-describedby={cancelStatusId}
+                        color={cancelArmed ? 'error' : 'default'}
+                        onClick={() => void handleCancelEdition(edition)}
+                      >
+                        <EventBusyIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Box id={cancelStatusId} role="status" aria-live="polite" sx={VISUALLY_HIDDEN_SX}>
+                      {cancelArmed ? cancelConfirmText : ''}
+                    </Box>
+                  </>
                 )}
-                <Tooltip title={deletingEditionId === edition.id ? 'Click again to confirm — or wait 3 seconds to cancel' : 'Delete edition'}>
+                <Tooltip title={deleteArmed ? deleteConfirmText : 'Delete edition'}>
                   <IconButton
                     size="small"
-                    color={deletingEditionId === edition.id ? 'error' : 'default'}
+                    aria-label="Delete edition"
+                    aria-describedby={deleteStatusId}
+                    color={deleteArmed ? 'error' : 'default'}
                     onClick={() => void handleDeleteEdition(edition)}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                <Box id={deleteStatusId} role="status" aria-live="polite" sx={VISUALLY_HIDDEN_SX}>
+                  {deleteArmed ? deleteConfirmText : ''}
+                </Box>
               </Stack>
             </Stack>
 
@@ -1988,13 +2102,19 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         isClone={cloneFromEditionId !== null}
         isApproximateScheduleClone={cloneFromEditionId !== null && detail.scheduleRule?.type === 'Approximate'}
         siblingEditions={detail.editions}
+        eventType={detail.type}
+        eventScheduleRule={detail.scheduleRule}
         onClose={() => { setEditionDialogOpen(false); setCloneFromEditionId(null); setEditionInitialValues(undefined); }}
         onGalleryMutated={refresh}
-        onSaved={async (newEditionId) => {
+        onSaved={async (newEditionId, savedDate) => {
           setEditionDialogOpen(false);
           if (newEditionId && cloneFromEditionId) {
             const sourceEdition = detail?.editions.find(ed => ed.id === cloneFromEditionId);
-            const newEdition = { date: editionInitialValues?.date ?? null };
+            // #1068: use the edition's actually-saved date, not the editionInitialValues snapshot
+            // taken when the clone icon was clicked — the admin may have corrected Year/Start
+            // date in the dialog before Save, and cloned race dates must be computed relative to
+            // what was really saved so each race's day-offset from the source edition still holds.
+            const newEdition = { date: savedDate ?? null };
             if (sourceEdition && sourceEdition.races.length > 0) {
               const results = await Promise.allSettled(
                 [...sourceEdition.races].sort(sortRaces).map(race =>

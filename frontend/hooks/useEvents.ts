@@ -80,6 +80,11 @@ export interface EventSummary {
     createdAt: string;
     updatedAt: string | null;
     seriesRaces: SeriesRaceDto[] | null;
+    // #1244: Series-only — the most recent individual race that finished within the last 3 days,
+    // independent of the season edition's own "ongoing" status (displayDate/daysUntil above stay
+    // edition-level). Null for non-Series events and whenever no race in the series finished that
+    // recently.
+    recentlyCompletedSeriesRace: SeriesRaceDto | null;
     gpxPointLat: number | null;
     gpxPointLng: number | null;
     isMountainRace: boolean;

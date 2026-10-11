@@ -131,7 +131,6 @@ function AdminContent() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [, setRefreshTrigger] = useState(0);
-  const [raceDayInitialDate, setRaceDayInitialDate] = useState<string | undefined>(undefined);
   const [eventHealthInitialFilter, setEventHealthInitialFilter] = useState<QuickFilter | undefined>(undefined);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [pendingNav, setPendingNav] = useState(false);
@@ -393,7 +392,7 @@ function AdminContent() {
               <Route path="/events/:slug" element={
                 <EventDetailPage
                   onNotify={notify}
-                  onNavigateToRaceManager={date => { setRaceDayInitialDate(date); setCurrentPage('race-day'); }}
+                  onNavigateToRaceManager={date => navigate(`${PAGE_PATHS['race-day']}?date=${date}`)}
                 />
               } />
               <Route path="/events" element={<EventsListPage onNotify={notify} />} />
@@ -415,10 +414,7 @@ function AdminContent() {
               <Route path="/photographers" element={<PhotographersPage onNotify={notify} />} />
             </Routes>
           ) : currentPage === 'race-day' ? (
-            <RaceDayPage
-              onNotify={notify}
-              initialDate={raceDayInitialDate}
-            />
+            <RaceDayPage onNotify={notify} />
           ) : currentPage === 'translation-health' ? (
             <TranslationHealth onNotify={notify} />
           ) : currentPage === 'feedback' ? (

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, daysBetween, flattenEventRows, formatYearRanges, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import { addDays, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -45,6 +45,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: null,
         seriesRaces: null,
+        recentlyCompletedSeriesRace: null,
         gpxPointLat: null,
         gpxPointLng: null,
         isMountainRace: false,
@@ -249,6 +250,65 @@ describe('flattenEventRows', () => {
         const rows = flattenEventRows([plain, series]);
         expect(rows.map(r => r.kind)).toEqual(['event', 'series-race']);
     });
+
+    // #1244: recentlyCompletedSeriesRace is a separate, explicitly-opted-in field from
+    // seriesRaces (which is future-only) — ignored by default so RacesPage's main upcoming list
+    // (which renders its own dedicated "Nýlokið" card) doesn't double it up.
+    it('ignores recentlyCompletedSeriesRace by default (includeRecentlyCompleted omitted)', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: null, recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event]);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
+    });
+
+    it('ignores recentlyCompletedSeriesRace when includeRecentlyCompleted is explicitly false', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: null, recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], false);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
+    });
+
+    // #1248: with seriesRaces empty/null, the season-level "event" fallback row and the
+    // recentlyCompletedSeriesRace "series-race" row both described this same event in the same
+    // render pass — EventTableView's includeRecentlyCompleted:true rendered it twice. The
+    // series-race row alone represents the event here, so the fallback must be suppressed.
+    it('renders exactly one series-race row (no duplicate event row) when seriesRaces is empty and recentlyCompletedSeriesRace is set', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: null, recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([
+            { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
+        ]);
+    });
+
+    it('renders exactly one series-race row when seriesRaces is an explicit empty array and recentlyCompletedSeriesRace is set', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [], recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([
+            { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
+        ]);
+    });
+
+    // recentlyCompletedSeriesRace is a Series-only concept in practice, but guard the non-Series
+    // path explicitly so a stray value there can never suppress the plain "event" fallback row.
+    it('keeps the plain event row for a non-Series event even if recentlyCompletedSeriesRace is set', () => {
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Race', recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([{ kind: 'event', event, rowDate: event.displayDate }]);
+    });
+
+    it('appends the recently-completed row alongside the future seriesRaces rows, not instead of them', () => {
+        const futureRace = makeSeriesRace({ raceId: 'future', dateOfRace: '2026-10-15' });
+        const recentRace = makeSeriesRace({ raceId: 'recent', dateOfRace: '2026-10-08' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [futureRace], recentlyCompletedSeriesRace: recentRace });
+        const rows = flattenEventRows([event], true);
+        expect(rows).toEqual([
+            { kind: 'series-race', event, race: futureRace, rowDate: '2026-10-15' },
+            { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
+        ]);
+    });
 });
 
 // #1223/#1226/#1227: this ternary (dateOfRace ? daysBetween(...) : null) drifted between
@@ -368,5 +428,42 @@ describe('getWeekRange', () => {
         const now = new Date('2026-03-16T09:00:00'); // Monday
         expect(getWeekRange('this', now)).toEqual({ start: '2026-03-16', end: '2026-03-22' });
         expect(getWeekRange('next', now)).toEqual({ start: '2026-03-23', end: '2026-03-29' });
+    });
+});
+
+// #1252: extracted from CompetitionDetailPage's eventTrailSlugs memo, which collects every distinct
+// trail backing the event-detail map's polylines. Round 1 of #1250 silently dropped the edition-level
+// trailSlug tier — a single-trail event linked only at edition level (no per-race trailSlug) rendered
+// zero polylines — caught only by manual trace against GetEventQuery, not a test. These cases pin
+// down exactly that tier alongside the race-level one.
+function makeRace(trailSlug: string | null): { trailSlug: string | null } {
+    return { trailSlug };
+}
+
+describe('deriveEventTrailSlugs', () => {
+    it('resolves the edition-level trailSlug when no race has one', () => {
+        const primaryEdition = { trailSlug: 'edition-trail', visibleRaces: [makeRace(null), makeRace(null)] };
+        expect(deriveEventTrailSlugs(primaryEdition, [])).toEqual(new Set(['edition-trail']));
+    });
+
+    it('resolves the union of race-level trailSlugs when the edition itself has none', () => {
+        const primaryEdition = { trailSlug: null, visibleRaces: [makeRace('race-a'), makeRace('race-b')] };
+        expect(deriveEventTrailSlugs(primaryEdition, [])).toEqual(new Set(['race-a', 'race-b']));
+    });
+
+    it('resolves the union of the edition-level slug and race-level slugs when both are present', () => {
+        const primaryEdition = { trailSlug: 'edition-trail', visibleRaces: [makeRace('race-a'), makeRace('race-b')] };
+        expect(deriveEventTrailSlugs(primaryEdition, [])).toEqual(new Set(['edition-trail', 'race-a', 'race-b']));
+    });
+
+    it('falls back to the broader visibleRaces when primaryEdition has no races with a trailSlug', () => {
+        const primaryEdition = { trailSlug: null, visibleRaces: [makeRace(null)] };
+        const visibleRaces = [makeRace('fallback-race')];
+        expect(deriveEventTrailSlugs(primaryEdition, visibleRaces)).toEqual(new Set(['fallback-race']));
+    });
+
+    it('returns an empty set when primaryEdition is null/undefined and visibleRaces has no trailSlugs', () => {
+        expect(deriveEventTrailSlugs(null, [makeRace(null)])).toEqual(new Set());
+        expect(deriveEventTrailSlugs(undefined, [])).toEqual(new Set());
     });
 });

@@ -80,6 +80,29 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
         var today = DateOnly.FromDateTime(now);
         var oneYearAhead = today.AddYears(1);
 
+        // Series editions derive Date/EndDate live from their races' DateOfRace rather than
+        // trusting the stored columns, which nothing keeps in sync — same "derive live, don't
+        // store" precedent as ComputeEffectiveRegistrationStatus. Computed once per edition here
+        // and reused via EffDate/EffEndDate everywhere below that would otherwise read ed.Date/
+        // ed.EndDate raw (ResolveNextDate, hasFutureEdition, ongoingEdition, mostRecentPast,
+        // relevantEdition, EndDisplayDate). A Cancelled race's date must not skew the derived
+        // min/max (#1261) — excluded here same as every other race-date consumer in this file
+        // (relevantRaces, seriesRaces, mostRecentPastRace, activityTypes below). If every dated
+        // race ends up excluded (all Cancelled), the filtered list is empty, so
+        // IsEditionDateDerivedFromRaces naturally falls back to the stored Date/EndDate rather
+        // than deriving from the cancelled set — a deliberate choice, not an accident of the
+        // empty-list path.
+        var effectiveEditionDates = events
+            .SelectMany(e => e.Editions, (e, ed) => (e, ed))
+            .ToDictionary(
+                x => x.ed.Id,
+                x => EditionStatusHelpers.ComputeEffectiveEditionDates(
+                    x.e.Type, x.ed.Date, x.ed.EndDate,
+                    x.ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList()));
+
+        DateOnly? EffDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].Date : null;
+        DateOnly? EffEndDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].EndDate : null;
+
         return events.Select(e =>
         {
             // Hidden editions are admin-only. On the public path (IncludeHidden=false) they must not
@@ -90,23 +113,23 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 ? e.Editions.ToList()
                 : e.Editions.Where(ed => ed.Status != EditionStatus.Hidden).ToList();
 
-            var nextDate = ResolveNextDate(e, editionsForCalc, today);
+            var nextDate = ResolveNextDate(e, editionsForCalc, today, EffDate);
             // True when a future edition exists — either with a specific date, or a dateless edition for the current year or later
             var hasFutureEdition = editionsForCalc.Any(ed =>
-                ((ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today) ||
-                (!ed.Date.HasValue && ed.Year.HasValue && ed.Year.Value >= today.Year));
+                ((EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value >= today) ||
+                (!EffDate(ed).HasValue && ed.Year.HasValue && ed.Year.Value >= today.Year));
 
             // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
             var ongoingEdition = editionsForCalc.FirstOrDefault(ed =>
-                ed.Date.HasValue && ed.Date.Value <= today &&
-                (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
+                EffDate(ed).HasValue && EffDate(ed)!.Value <= today &&
+                (EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value >= today);
 
             // Check for recently-past editions (up to 3 days ago)
             // so events with schedule rules still show as "recently completed"
             var mostRecentPast = editionsForCalc
-                .Where(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value < today)
-                .OrderByDescending(ed => ed.EndDate ?? ed.Date)
-                .Select(ed => ed.EndDate ?? ed.Date)
+                .Where(ed => (EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value < today)
+                .OrderByDescending(ed => EffEndDate(ed) ?? EffDate(ed))
+                .Select(ed => EffEndDate(ed) ?? EffDate(ed))
                 .FirstOrDefault();
 
             var recentlyCompleted = e.Status != EventStatus.Cancelled
@@ -119,15 +142,15 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             if (ongoingEdition != null)
             {
                 daysUntil = 0;
-                displayDate = ongoingEdition.Date;
+                displayDate = EffDate(ongoingEdition);
             }
             else if (recentlyCompleted)
             {
                 daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
                 // Use the edition's start date as displayDate so the range "start – end" renders correctly.
                 // daysUntil stays end-date-based so the -1/-2/-3 countdown is accurate.
-                var recentEdition = e.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast);
-                displayDate = recentEdition?.Date ?? mostRecentPast.Value;
+                var recentEdition = e.Editions.FirstOrDefault(ed => (EffEndDate(ed) ?? EffDate(ed)) == mostRecentPast);
+                displayDate = EffDate(recentEdition) ?? mostRecentPast.Value;
             }
             else if (nextDate.HasValue)
             {
@@ -143,10 +166,10 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             // Determine the relevant edition for distances/registration
             var relevantEdition = ongoingEdition
                 ?? (recentlyCompleted
-                    ? editionsForCalc.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
+                    ? editionsForCalc.FirstOrDefault(ed => (EffEndDate(ed) ?? EffDate(ed)) == mostRecentPast)
                     : editionsForCalc
-                        .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-                        .OrderBy(ed => ed.Date)
+                        .Where(ed => EffDate(ed).HasValue && EffDate(ed)!.Value >= today)
+                        .OrderBy(ed => EffDate(ed))
                         .FirstOrDefault());
 
             var relevantRaces = relevantEdition?.Races
@@ -237,6 +260,48 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                     .ToList();
             }
 
+            // #1244: a Series event's whole season edition reads as "ongoing" for its entire span
+            // (see ongoingEdition above, and isOngoingPastDayTwo on the frontend) — correct for the
+            // edition as a whole, but it means recentlyCompleted (gated on ongoingEdition == null)
+            // can never fire for an individual race within that span. Compute race-level recency
+            // independently, same 3-day window as mostRecentPast/recentlyCompleted, but without that
+            // gate, so e.g. a Thursday heat that just raced still surfaces even though the season
+            // keeps going into next week.
+            SeriesRaceDto? recentlyCompletedSeriesRace = null;
+            if (e.Type == EventType.Series)
+            {
+                var mostRecentPastRace = editionsForCalc
+                    .SelectMany(ed => ed.Races
+                        .Where(r => r.Status != RaceStatus.Cancelled && r.DateOfRace.HasValue && r.DateOfRace.Value < today)
+                        .Select(r => (Edition: ed, Race: r)))
+                    .OrderByDescending(x => x.Race.DateOfRace)
+                    .FirstOrDefault();
+
+                if (e.Status != EventStatus.Cancelled
+                    && mostRecentPastRace.Race != null
+                    && (today.DayNumber - mostRecentPastRace.Race.DateOfRace!.Value.DayNumber) <= 3)
+                {
+                    var recentRaceEdition = mostRecentPastRace.Edition;
+                    var recentRace = mostRecentPastRace.Race;
+                    var recentEdEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+                        recentRaceEdition.Status, recentRaceEdition.RegistrationStatus, recentRaceEdition.RegistrationOpens, recentRaceEdition.RegistrationCloses, now);
+
+                    recentlyCompletedSeriesRace = new SeriesRaceDto(
+                        recentRace.Id,
+                        recentRace.Name,
+                        recentRace.NameEn,
+                        recentRace.DateOfRace,
+                        recentRace.StartTime,
+                        !string.IsNullOrWhiteSpace(recentRace.DistanceLabel) ? recentRace.DistanceLabel
+                            : GetTrail(recentRace.TrailId) is { Length: > 0 } rst ? $"{rst.Length / 1000.0:0.#} km"
+                            : null,
+                        recentRace.DistanceLabelEn,
+                        EditionStatusHelpers.ComputeEffectiveTicketStatus(recentRace.Status, recentRace.TicketStatus, recentEdEffectiveRegStatus).ToString(),
+                        recentRaceEdition.RegistrationUrl
+                    );
+                }
+            }
+
             var isMountainRace = editionsForCalc
                 .SelectMany(ed => ed.Races)
                 .Any(r => GetTrail(r.TrailId)?.TerrainType == Core.Entities.TerrainType.Mountainous);
@@ -302,7 +367,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 IsMountainRace: isMountainRace,
                 TerrainType: terrainType,
                 HasFutureEdition: hasFutureEdition,
-                EndDisplayDate: relevantEdition?.EndDate,
+                EndDisplayDate: EffEndDate(relevantEdition),
                 ActivityTypes: activityTypes.Count > 0 ? activityTypes : null,
                 EditionStatus: relevantEdition?.Status.ToString(),
                 EditionEffectiveCancelled: relevantEdition != null
@@ -313,17 +378,18 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 // must never leak it; only the admin events list (IncludeHidden=true) sees the real aggregate.
                 AnyEditionNeedsReview: request.IncludeHidden && editionsForCalc.Any(ed => ed.NeedsReview),
                 AnyEditionUnconfirmed: request.IncludeHidden && editionsForCalc.Any(ed => ed.Status == EditionStatus.Unconfirmed),
-                RegistrationCloses: relevantEdition?.RegistrationCloses
+                RegistrationCloses: relevantEdition?.RegistrationCloses,
+                RecentlyCompletedSeriesRace: recentlyCompletedSeriesRace
             );
         }).ToList();
     }
 
-    private DateOnly? ResolveNextDate(Core.Entities.Event e, IReadOnlyCollection<EventEdition> editions, DateOnly today)
+    private DateOnly? ResolveNextDate(Core.Entities.Event e, IReadOnlyCollection<EventEdition> editions, DateOnly today, Func<EventEdition?, DateOnly?> effDate)
     {
         var nextEditionDate = editions
-            .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-            .OrderBy(ed => ed.Date)
-            .Select(ed => ed.Date)
+            .Where(ed => effDate(ed).HasValue && effDate(ed)!.Value >= today)
+            .OrderBy(ed => effDate(ed))
+            .Select(ed => effDate(ed))
             .FirstOrDefault();
 
         if (nextEditionDate.HasValue)

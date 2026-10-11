@@ -74,8 +74,8 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
-import { applyFilters, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
+import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
+import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons } from '../utils/activityIcon';
@@ -186,6 +186,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [showSwipeHint, setShowSwipeHint] = useState(false);
     const touchStartY = useRef<number | null>(null);
     const PULL_THRESHOLD = 80;
+    // Ticks every minute so the series-race "days until" chip rolls over at midnight for tabs
+    // left open — day-granularity means sub-minute freshness isn't needed, so this stays cheap.
+    // Mirrors EventTableView's nowMs pattern.
+    const [nowMs, setNowMs] = useState(() => Date.now());
+    useEffect(() => {
+        const interval = setInterval(() => setNowMs(Date.now()), 60_000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handlePullStart = (e: React.TouchEvent) => {
         if (window.scrollY === 0) touchStartY.current = e.touches[0].clientY;
@@ -257,44 +265,55 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         trackViewModeChange('events', v);
     };
 
-    // Initialize filters from URL params on first render
+    // #1026: Re-derive filters from URL params on every `searchParams` change, not just on
+    // mount — React Router doesn't remount this component for a same-route navigation (e.g.
+    // SpotlightSearch's "all results for ..." link, or a nav-menu click back to a bare
+    // `/events`), so a one-shot effect left local state stale until a manual refresh forced a
+    // remount. Symmetric by design: every field is set from its param when present and reset to
+    // its default when absent, mirroring the state→URL effect below in the opposite direction.
     useEffect(() => {
-        if (urlInitialized.current) return;
-
-        const updates: Partial<EventFilters> = {};
         const activity = searchParams.get('activity');
         const months = searchParams.get('months');
         const locations = searchParams.get('locations');
-        const itraAny = searchParams.get('itraAny');
+        const itraAny = searchParams.get('itraAny') === 'true';
         const itraPoints = searchParams.get('itraPoints');
         const certs = searchParams.get('certs');
         const champs = searchParams.get('champs');
         const distance = searchParams.get('distance');
         const q = searchParams.get('q');
         const all = searchParams.get('all');
-
-        if (activity) updates.activityTypes = activity.split(',');
-        if (months) updates.months = months.split(',').map(Number);
-        if (locations) updates.locations = locations.split(',');
-        if (itraAny === 'true') updates.itraAny = true;
-        if (itraPoints) updates.itraPoints = itraPoints.split(',').map(Number);
-        if (certs) updates.certifications = certs.split(',');
-        if (champs) updates.championships = champs.split(',');
         const VALID_BUCKETS: RaceDistanceBucket[] = ['<10', '10-21', '21-42', '42-100', '100+'];
-        if (distance) updates.distanceBuckets = distance.split(',').filter((b): b is RaceDistanceBucket => VALID_BUCKETS.includes(b as RaceDistanceBucket));
-        if (searchParams.get('weekend') === 'true') updates.weekendOnly = true;
-        if (searchParams.get('thisWeek') === 'true') updates.thisWeekOnly = true;
-        if (searchParams.get('nextWeek') === 'true') updates.nextWeekOnly = true;
-        if (searchParams.get('mountain') === 'true') updates.mountainRaceOnly = true;
-        if (searchParams.get('favorites') === 'true') updates.favoritesOnly = true;
 
-        if (q) setSearch(q);
+        const next: EventFilters = {
+            activityTypes: activity ? activity.split(',') : [],
+            months: months ? months.split(',').map(Number) : [],
+            locations: locations ? locations.split(',') : [],
+            itraAny,
+            // itraAny and itraPoints are mutually exclusive filters (see activeFilterCount below,
+            // which treats them as alternatives) — mirrors the state→URL sync effect's equivalent
+            // gating below (line 331) in the opposite direction.
+            itraPoints: !itraAny && itraPoints ? itraPoints.split(',').map(Number) : [],
+            certifications: certs ? certs.split(',') : [],
+            championships: champs ? champs.split(',') : [],
+            distanceBuckets: distance ? distance.split(',').filter((b): b is RaceDistanceBucket => VALID_BUCKETS.includes(b as RaceDistanceBucket)) : [],
+            weekendOnly: searchParams.get('weekend') === 'true',
+            thisWeekOnly: searchParams.get('thisWeek') === 'true',
+            nextWeekOnly: searchParams.get('nextWeek') === 'true',
+            mountainRaceOnly: searchParams.get('mountain') === 'true',
+            favoritesOnly: searchParams.get('favorites') === 'true',
+        };
+
+        setSearch(q ?? '');
         // #985: Spotlight's "all results for ..." row links here with q + all=true — arrive with
-        // the future-only restriction already lifted, matching search box pre-filled.
-        if (q && all === 'true') setIncludeAllEvents(true);
-        if (Object.keys(updates).length > 0) setFilters(prev => ({ ...prev, ...updates }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+        // the future-only restriction already lifted, matching search box pre-filled. Resets to
+        // false whenever `all` isn't set so a stale "include past" choice doesn't carry over from
+        // a previous query (including one left over from before a same-route navigation).
+        setIncludeAllEvents(!!q && all === 'true');
+        // Value-equality bail-out: re-running this effect when local state already matches the
+        // URL (e.g. right after the sync effect below wrote it) must not replace `filters` with a
+        // new-but-equal object, or the two effects would ping-pong off each other's re-renders.
+        setFilters(prev => (eventFiltersEqual(prev, next) ? prev : next));
+    }, [searchParams]);
 
     // Sync filters → URL params (skip defaults to keep URL clean)
     useEffect(() => {
@@ -322,7 +341,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         set('mountain', filters.mountainRaceOnly ? 'true' : null);
         set('favorites', filters.favoritesOnly ? 'true' : null);
 
-        setSearchParams(params, { replace: true });
+        // #1026: the hydration effect above now reacts to every `searchParams` change (not just
+        // mount), so skip the actual navigation when nothing would change — otherwise writing an
+        // identical URL would hand hydration a "new" searchParams reference and the two effects
+        // would replaceState back and forth indefinitely.
+        if (params.toString() !== searchParams.toString()) {
+            setSearchParams(params, { replace: true });
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, filters, includeAllEvents]);
 
@@ -448,14 +473,22 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const isRecentlyCompleted = (c: EventSummary) =>
             c.daysUntil != null && c.daysUntil < 0 && c.daysUntil >= -3 && !isEffectivelyCancelled(c);
         const jr = sortedFiltered.filter(isRecentlyCompleted);
+        // #1244: a Series event's season edition can still read as "ongoing" (or even upcoming)
+        // while one of its individual races just finished — so unlike isRecentlyCompleted above,
+        // this must not be mutually exclusive with `upcoming`: the event keeps its place there via
+        // its next race, and also gets a "Nýlokið" card for the one that just raced.
+        const seriesJustRaced = sortedFiltered.filter(c => c.recentlyCompletedSeriesRace != null && !isRecentlyCompleted(c));
         const up = sortedFiltered.filter(c => !isRecentlyCompleted(c));
-        return { justRaced: jr, upcoming: up };
+        return { justRaced: [...jr, ...seriesJustRaced], upcoming: up };
     }, [sortedFiltered]);
     const flattenedUpcoming = useMemo((): FlattenedEventRow[] => {
         // Unlike EventTableView.tsx's equivalent call site, no defensive spread is needed here —
         // react-hooks/immutability doesn't flag this file's in-place .sort() below as mutating
         // flattenEventRows()'s return value.
-        const rows = flattenEventRows(upcoming);
+        // includeRecentlyCompleted: false — this list already excludes recently-completed events via
+        // `upcoming` above, and the dedicated "Nýlokið" card (justRaced, below) covers series races;
+        // flattening recentlyCompletedSeriesRace into this list too would show it twice.
+        const rows = flattenEventRows(upcoming, false);
         if (sortBy === 'date') {
             rows.sort((a, b) => {
                 const dateA = a.rowDate;
@@ -1018,7 +1051,20 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         🏁 {t('races.justRacedSection', { defaultValue: 'Recently completed' })}
                                     </Typography>
                                     <Stack spacing={1.5}>
-                                        {justRaced.map(comp => (
+                                        {justRaced.map(comp => {
+                                            // #1244: a Series event in this section may be here because its whole
+                                            // season edition recently completed (recentRace null — comp's own
+                                            // name/displayDate are the season's), or because a single race within
+                                            // a still-ongoing/upcoming season just finished (recentRace set — name
+                                            // and date must point at that specific race, not the event/season).
+                                            const recentRace = comp.recentlyCompletedSeriesRace;
+                                            const recentRaceDaysUntil = recentRace?.dateOfRace ? daysBetween(recentRace.dateOfRace) : null;
+                                            // #1249: when a single race within a still-ongoing season just
+                                            // finished, the Results button gate (and the countdown chip) must
+                                            // use that race's own days-until, not the edition-level one — the
+                                            // edition itself hasn't finished.
+                                            const effectiveDaysUntil = recentRace ? recentRaceDaysUntil : comp.daysUntil;
+                                            return (
                                             <SwipeableCard
                                                 key={comp.id}
                                                 onSwipeRight={() => {
@@ -1046,9 +1092,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 } }}>
                                                             <Box sx={{ minWidth: 0, width: '100%' }}>
                                                                 <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
-                                                                    {loc(comp.name, comp.nameEn)}
+                                                                    {recentRace
+                                                                        ? `${loc(comp.name, comp.nameEn)} – ${loc(recentRace.raceName, recentRace.raceNameEn) ?? recentRace.raceName}`
+                                                                        : loc(comp.name, comp.nameEn)}
                                                                 </Typography>
-                                                                {(comp.displayDate ?? comp.nextEditionDate) && (
+                                                                {recentRace?.dateOfRace ? (
+                                                                    <Typography variant="body2" color="text.secondary">
+                                                                        {formatNextDate(recentRace.dateOfRace, t)}
+                                                                    </Typography>
+                                                                ) : (comp.displayDate ?? comp.nextEditionDate) && (
                                                                     <Typography variant="body2" color="text.secondary">
                                                                         {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
                                                                     </Typography>
@@ -1065,7 +1117,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                         ))}
                                                                     </Stack>
                                                                 )}
-                                                                {comp.resultsUrl && (comp.daysUntil == null || comp.daysUntil < 0) && (
+                                                                {comp.resultsUrl && (effectiveDaysUntil == null || effectiveDaysUntil < 0) && (
                                                                     <Button
                                                                         size="small"
                                                                         variant="outlined"
@@ -1082,7 +1134,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 )}
                                                             </Box>
                                                                 <Chip
-                                                                label={getCountdownLabel(comp.daysUntil, t)}
+                                                                label={getCountdownLabel(effectiveDaysUntil, t)}
                                                                 color="success"
                                                                 size="small"
                                                                 sx={{ fontWeight: 700 }}
@@ -1101,7 +1153,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 </Tooltip>
                                             </Card>
                                             </SwipeableCard>
-                                        ))}
+                                            );
+                                        })}
                                     </Stack>
                                 </Box>
                             )}
@@ -1165,7 +1218,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 })() : null;
                                 if (row.kind === 'series-race') {
                                     const { event: comp, race } = row;
-                                    const raceDaysUntil = getRowDaysUntil(row);
+                                    const raceDaysUntil = getRowDaysUntil(row, new Date(nowMs));
                                     return (
                                         <Box key={`${comp.id}-${race.raceId}`}>
                                         {yearDivider}
