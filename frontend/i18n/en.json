@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_16_0": {
+                "title": "Clickable links in descriptions, real trail routes on event maps, and support for invitation-only races",
+                "description": "Event, edition, race, and trail description text now turns web addresses into clickable links automatically. Event detail pages show the actual trail route(s) on the map instead of a plain pin, with click-to-highlight when more than one race shares an event. A new \"Invitation only\" status is available for selection-based events like the Backyard Ultra World Championship, so they no longer show as needing registration. For running series, a race that just finished now shows up correctly even while the rest of the season is still ongoing. Alongside these, a long tail of date-handling bugs, stale-cache issues, and admin dashboard fixes were closed out."
+            },
             "v1_15_5": {
                 "title": "Fixed the same 'Yesterday' race-day bug in the events list view, plus internal cleanup",
                 "description": "The previous release fixed a race in a running series showing as \"Yesterday\" instead of \"Today\" in the main table view — it turned out the events list view had its own separate copy of the same date calculation, with the same bug. That's now fixed there too, and the underlying logic was consolidated into one shared place so a fix like this only has to happen once in the future."

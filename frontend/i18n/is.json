@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_16_0": {
+                "title": "Smellanlegir tenglar í lýsingum, raunverulegar hlaupaleiðir á korti viðburða, og stuðningur við boðshlaup",
+                "description": "Lýsingartexti viðburða, móta, hlaupa og leiða breytir nú veffangum sjálfkrafa í smellanlega tengla. Viðburðasíður sýna nú raunverulega hlaupaleið (eða -leiðir) á kortinu í stað einfalds punkts, með möguleika á að smella til að auðkenna þegar fleiri en eitt hlaup deila sama viðburði. Nýr valkostur, \"Eingöngu eftir boði\", er nú í boði fyrir valkvæð hlaup eins og Backyard Ultra heimsmeistaramótið, svo þau birtast ekki lengur sem þurfi skráningu. Fyrir hlaupasyrpur birtist hlaup sem nýlokið er núna rétt þó restin af tímabilinu sé enn í gangi. Samhliða þessu var fjöldi dagsetningavillna, villna í skyndiminni og lagfæringa í stjórnborði lokið."
+            },
             "v1_15_5": {
                 "title": "Sama \"í gær\" villan lagfærð í viðburðalistanum",
                 "description": "Síðasta útgáfa lagaði villu í seríu viðburðu sem birti t.d. \"í gær\" í stað \"í dag\" í töfluyfirliti — í ljós kom að viðburðalistinn var með sína eigin, aðskildu útgáfu af sömu útreikningum, með sömu villu. Það er nú lagfært kóðinn sameinaður á einn stað svo villa sem þessi gerist ekki aftur."
