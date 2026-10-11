@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_16_1": {
+                "title": "Betri röðun á nýlokið hlaupum, þéttari spjöld og lagfæring á vantandi punkti á korti",
+                "description": "\"Nýlokið\" hluti listasýnar raðar nú hlaupum frá elsta til nýjasta í stað þess að erfa röðun úr komandi hlaupum, og hvert spjald er þéttara — vegalengd birtist núna með dagsetningunni í stað þess að vera í sérstökum flipa, nema þegar fleiri en ein vegalengd á við. Viðburðasíður sem hafa engar tengdar hlaupaleiðir en hafa eigin GPS-hnit sýna nú punkt á kortinu aftur, í stað auðs korts. Einnig lagað: spjald í þeim hluta gat sýnt enga vegalengd í sjaldgæfu tilviki þar sem vegalengdarmerking hlaups í hlaupaseríu vantaði."
+            },
             "v1_16_0": {
                 "title": "Smellanlegir tenglar í lýsingum, hlaupaleiðir á korti viðburða o.fl.",
                 "description": "Ef vefföng finnast í lýsingum viðburða, keppnishlaupa og leiða þá birtist veffangið sem smellanlegur tengill. Viðburðasíður sýna allar hlaupaleiðir á korti viburðar, einnig hægt að smella til á leið til að auðkenna þegar fleiri en eitt hlaup eru í sama viðburði. Nýjum valkosti, \"Invitational\" bætt við RegistrationStatus. T.d. Backyard Ultra heimsmeistaramótið, þar sem engin skráning er í boði og aðeins ákveðnir hlauparar eru með. Hlaup í hlaupaseríu birtist nú sem nýlokið þó seríunni sjálfri sé ekki lokið. Samhliða þessu var fjöldi af prófunum bætt við og villur lagaðar."
