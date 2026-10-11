@@ -240,14 +240,19 @@ export type FlattenedEventRow =
 export function flattenEventRows(events: EventSummary[], includeRecentlyCompleted = false): FlattenedEventRow[] {
     const rows: FlattenedEventRow[] = [];
     for (const event of events) {
+        const hasRecentlyCompleted = event.type === 'Series' && includeRecentlyCompleted && !!event.recentlyCompletedSeriesRace;
         if (event.type === 'Series' && event.seriesRaces && event.seriesRaces.length > 0) {
             for (const race of event.seriesRaces) {
                 rows.push({ kind: 'series-race', event, race, rowDate: race.dateOfRace });
             }
-        } else {
+        } else if (!hasRecentlyCompleted) {
+            // #1248: when seriesRaces is empty/null AND there's a recentlyCompletedSeriesRace to
+            // append below, this fallback row would describe the same event a second time in the
+            // same render pass — the series-race row for recentlyCompletedSeriesRace already
+            // represents it, so skip the stale season-level fallback here.
             rows.push({ kind: 'event', event, rowDate: event.displayDate ?? event.nextEditionDate });
         }
-        if (includeRecentlyCompleted && event.recentlyCompletedSeriesRace) {
+        if (hasRecentlyCompleted && event.recentlyCompletedSeriesRace) {
             rows.push({
                 kind: 'series-race',
                 event,
