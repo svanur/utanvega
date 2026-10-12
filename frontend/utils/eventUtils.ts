@@ -318,6 +318,40 @@ export function deriveEventTrailSlugs(
     return slugs;
 }
 
+// #1319: daysUntil === 0 means "race day" for a single-day event, but the backend also pins it to 0
+// for a Series event's *entire ongoing season span* (e.g. Powerade Vetrarhlaupin's Oct–Mar season,
+// one race/month) and for the full date-to-endDate span of any ongoing multi-day edition — so
+// isRaceDay/isRaceWeek can't read daysUntil alone without false-positiving on every day in between.
+// For a Series event, only nextEditionDate (today's own upcoming race, if one exists today) can
+// answer "is today actually a race"; isRaceWeek mirrors that using daysBetween. For every other
+// event type, daysUntil stays the source of truth for isRaceWeek, and for isRaceDay too, except
+// isOngoingPastDayTwo (#613) is now actually applied — the extension #613/#618 deferred to this
+// issue — so a long non-Series multi-day edition stops reading as "race day" past its first two days.
+export interface RaceDayEventInput {
+    type: string;
+    daysUntil: number | null;
+    nextEditionDate: string | null;
+    displayDate: string | null;
+    endDisplayDate: string | null | undefined;
+}
+
+export function computeRaceDayFlags(
+    event: RaceDayEventInput,
+    now: Date = new Date(),
+): { isRaceDay: boolean; isRaceWeek: boolean } {
+    if (event.type === 'Series') {
+        const nextDate = event.nextEditionDate;
+        return {
+            isRaceDay: nextDate !== null && nextDate === toDateOnlyString(now),
+            isRaceWeek: nextDate !== null && daysBetween(nextDate, now) >= 0 && daysBetween(nextDate, now) <= 7,
+        };
+    }
+    return {
+        isRaceDay: event.daysUntil === 0 && !isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate),
+        isRaceWeek: event.daysUntil !== null && event.daysUntil >= 0 && event.daysUntil <= 7,
+    };
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,

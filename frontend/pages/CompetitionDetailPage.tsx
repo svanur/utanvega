@@ -93,7 +93,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags } from '../utils/eventUtils';
 import { getTicketStatusColor, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -310,8 +310,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // is computed later and itself depends on isPostRace below — going through primaryEdition here
     // would be circular.
     const eventOrEditionCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: event.editionEffectiveCancelled });
-    const isRaceDay = !eventOrEditionCancelled && event?.daysUntil === 0;
-    const isRaceWeek = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
+    // #1319: see computeRaceDayFlags for why daysUntil === 0 alone can't tell "today is a race" from
+    // "today is just inside a Series season" (or deep into a long non-Series multi-day edition).
+    const raceDayFlags = event ? computeRaceDayFlags(event) : null;
+    const isRaceDay = !eventOrEditionCancelled && !!raceDayFlags?.isRaceDay;
+    const isRaceWeek = !eventOrEditionCancelled && !!raceDayFlags?.isRaceWeek;
     const isPostRace = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
 
     // Ticking clock for race-day phase transitions and progress bar
