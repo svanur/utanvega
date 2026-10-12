@@ -113,7 +113,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 ? e.Editions.ToList()
                 : e.Editions.Where(ed => ed.Status != EditionStatus.Hidden).ToList();
 
-            var nextDate = ResolveNextDate(e, editionsForCalc, today, EffDate);
+            var nextDate = EditionStatusHelpers.ResolveNextEditionDate(
+                editionsForCalc, today, EffDate, EffEndDate, e.ScheduleRule, _scheduleEngine);
             // True when a future edition exists — either with a specific date, or a dateless edition for the current year or later
             var hasFutureEdition = editionsForCalc.Any(ed =>
                 ((EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value >= today) ||
@@ -382,21 +383,5 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 RecentlyCompletedSeriesRace: recentlyCompletedSeriesRace
             );
         }).ToList();
-    }
-
-    private DateOnly? ResolveNextDate(Core.Entities.Event e, IReadOnlyCollection<EventEdition> editions, DateOnly today, Func<EventEdition?, DateOnly?> effDate)
-    {
-        var nextEditionDate = editions
-            .Where(ed => effDate(ed).HasValue && effDate(ed)!.Value >= today)
-            .OrderBy(ed => effDate(ed))
-            .Select(ed => effDate(ed))
-            .FirstOrDefault();
-
-        if (nextEditionDate.HasValue)
-            return nextEditionDate;
-
-        return e.ScheduleRule != null
-            ? _scheduleEngine.GetNextOccurrence(e.ScheduleRule, today)
-            : null;
     }
 }

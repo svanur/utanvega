@@ -1,4 +1,5 @@
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 
 namespace Utanvega.Backend.Application.Events;
 
@@ -126,6 +127,58 @@ public static class EditionStatusHelpers
             return (storedDate, storedEndDate);
 
         return (raceDates.Min(), raceDates.Max());
+    }
+
+    // Single source of truth for "which upcoming edition should an event surface as its next
+    // date" — shared by GetEventQuery and GetEventsQuery, which previously each kept their own
+    // copy (#1320). Both copies only ever compared an edition's *start* Date against today, so a
+    // Series edition whose first race had already passed while a later race in that same edition
+    // (reflected in the derived EffEndDate from ComputeEffectiveEditionDates above) was still
+    // upcoming would wrongly read as "already over" and fall through to a stale ScheduleRule
+    // occurrence instead of the real remaining race.
+    //
+    // Fixing the comparison to (EndDate ?? Date) >= today is the core of #1320, but a naive version
+    // of that fix would also change *which value* every edition reports: a perfectly ordinary
+    // future multi-day edition (Date and EndDate both still ahead) would start reporting its last
+    // day instead of its first, a regression nothing asked for. So the two concerns are split: the
+    // (EndDate ?? Date) boundary only decides whether an edition still *qualifies* at all (not yet
+    // fully over); the value actually returned for a qualifying edition is its own Date while that
+    // is still in the future, and only falls back to EndDate once the edition has already started
+    // (Date has passed) but hasn't finished — i.e. exactly the "later race still upcoming" case.
+    public static DateOnly? ResolveNextEditionDate(
+        IEnumerable<EventEdition> editions,
+        DateOnly today,
+        Func<EventEdition?, DateOnly?> effDate,
+        Func<EventEdition?, DateOnly?> effEndDate,
+        ScheduleRule? scheduleRule,
+        IScheduleRuleEngine scheduleEngine)
+    {
+        DateOnly? Candidate(EventEdition ed)
+        {
+            var date = effDate(ed);
+            var endDate = effEndDate(ed);
+            var boundary = endDate ?? date;
+            if (!boundary.HasValue || boundary.Value < today)
+                return null; // already fully over — doesn't qualify as "next"
+
+            // Hasn't started yet (or dateless-but-future, caught by boundary above) — surface its
+            // own start date, unchanged from the pre-#1320 behaviour. Already underway — surface
+            // the remaining boundary (EndDate) instead of a start date that has already passed.
+            return date.HasValue && date.Value >= today ? date : endDate;
+        }
+
+        var nextEditionDate = editions
+            .Select(Candidate)
+            .Where(d => d.HasValue)
+            .OrderBy(d => d)
+            .FirstOrDefault();
+
+        if (nextEditionDate.HasValue)
+            return nextEditionDate;
+
+        return scheduleRule != null
+            ? scheduleEngine.GetNextOccurrence(scheduleRule, today)
+            : null;
     }
 
     // Npgsql requires Kind=Utc for a "timestamp with time zone" column. Admin-submitted
