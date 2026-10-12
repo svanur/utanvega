@@ -131,26 +131,37 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ? ev.Editions.ToList()
             : ev.Editions.Where(ed => ed.Status != EditionStatus.Hidden).ToList();
 
-        var nextEditionDate = publicEditions
-            .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-            .OrderBy(ed => ed.Date)
-            .Select(ed => ed.Date)
-            .FirstOrDefault();
+        // Series editions derive Date/EndDate live from their races' DateOfRace rather than
+        // trusting the stored columns, which nothing keeps in sync — same "derive live, don't
+        // store" precedent as ComputeEffectiveRegistrationStatus, and the same pattern
+        // GetEventsQuery already applies for the events-list endpoint (#1070/#1320). Computed once
+        // per edition here and reused via EffDate/EffEndDate everywhere below that would otherwise
+        // read ed.Date/ed.EndDate raw. A Cancelled race's date must not skew the derived min/max
+        // (#1261) — excluded here same as GetEventsQuery.
+        var effectiveEditionDates = ev.Editions
+            .ToDictionary(
+                ed => ed.Id,
+                ed => EditionStatusHelpers.ComputeEffectiveEditionDates(
+                    ev.Type, ed.Date, ed.EndDate,
+                    ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList()));
 
-        var nextDate = nextEditionDate
-            ?? (ev.ScheduleRule != null ? _scheduleEngine.GetNextOccurrence(ev.ScheduleRule, today) : null);
+        DateOnly? EffDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].Date : null;
+        DateOnly? EffEndDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].EndDate : null;
+
+        var nextDate = EditionStatusHelpers.ResolveNextEditionDate(
+            publicEditions, today, EffDate, EffEndDate, ev.ScheduleRule, _scheduleEngine);
 
         // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
         var ongoingEdition = publicEditions.FirstOrDefault(ed =>
-            ed.Date.HasValue && ed.Date.Value <= today &&
-            (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value >= today);
+            EffDate(ed).HasValue && EffDate(ed)!.Value <= today &&
+            (EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value >= today);
 
         // Check for recently-past editions (up to 3 days ago)
         // so events with schedule rules still show as "recently completed"
         var mostRecentPast = publicEditions
-            .Where(ed => (ed.EndDate ?? ed.Date).HasValue && (ed.EndDate ?? ed.Date)!.Value < today)
-            .OrderByDescending(ed => ed.EndDate ?? ed.Date)
-            .Select(ed => ed.EndDate ?? ed.Date)
+            .Where(ed => (EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value < today)
+            .OrderByDescending(ed => EffEndDate(ed) ?? EffDate(ed))
+            .Select(ed => EffEndDate(ed) ?? EffDate(ed))
             .FirstOrDefault();
 
         var recentlyCompleted = ev.Status != EventStatus.Cancelled
@@ -163,13 +174,13 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         if (ongoingEdition != null)
         {
             daysUntil = 0;
-            displayDate = ongoingEdition.Date;
+            displayDate = EffDate(ongoingEdition);
         }
         else if (recentlyCompleted)
         {
             daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-            var recentEdition = ev.Editions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast);
-            displayDate = recentEdition?.Date ?? mostRecentPast.Value;
+            var recentEdition = ev.Editions.FirstOrDefault(ed => (EffEndDate(ed) ?? EffDate(ed)) == mostRecentPast);
+            displayDate = EffDate(recentEdition) ?? mostRecentPast.Value;
         }
         else if (nextDate.HasValue)
         {
@@ -195,7 +206,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
         // terrain color into the public header either. PrimaryElevationProfile is filled in below,
         // after a batched fetch scoped to only the primary trail ids actually selected here.
         var editionResults = publicEditions
-            .OrderByDescending(ed => ed.Date ?? DateOnly.MinValue)
+            .OrderByDescending(ed => EffDate(ed) ?? DateOnly.MinValue)
             .Select(ed => {
                 // Computed once per edition and reused for every race drawn from it below —
                 // do not re-derive from raw dates a second time.
@@ -213,9 +224,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 var dto = new EventEditionDto(
                 ed.Id,
                 ed.EventId,
-                ed.Year ?? ed.Date?.Year,
-                ed.Date,
-                ed.EndDate,
+                ed.Year ?? EffDate(ed)?.Year,
+                EffDate(ed),
+                EffEndDate(ed),
                 ed.Title,
                 ed.TitleEn,
                 ed.RegistrationUrl,
@@ -309,10 +320,10 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
 
         var relevantEdition = ongoingEdition
             ?? (recentlyCompleted
-                ? publicEditions.FirstOrDefault(ed => (ed.EndDate ?? ed.Date) == mostRecentPast)
+                ? publicEditions.FirstOrDefault(ed => (EffEndDate(ed) ?? EffDate(ed)) == mostRecentPast)
                 : publicEditions
-                    .Where(ed => ed.Date.HasValue && ed.Date.Value >= today)
-                    .OrderBy(ed => ed.Date)
+                    .Where(ed => EffDate(ed).HasValue && EffDate(ed)!.Value >= today)
+                    .OrderBy(ed => EffDate(ed))
                     .FirstOrDefault());
 
         var relevantRaces = relevantEdition?.Races

@@ -2008,6 +2008,70 @@ public class EventHandlerTests : IDisposable
         Assert.True(editionDto.NeedsReview);
     }
 
+    // ─── GetEventQuery — live-derived edition dates / next date (#1320) ───
+    // GetEventsQuery already derives a Series edition's Date/EndDate live from its races
+    // (ComputeEffectiveEditionDates, #1070); GetEventQuery (this single-event handler) never got
+    // the same wiring, so its editions[].endDate stayed null and its next-date comparison only
+    // ever checked the edition's raw (and, for Series, unused) Date column against today — missing
+    // a later race in the same edition that's still upcoming once the first race has passed.
+
+    [Fact]
+    public async Task GetEvent_BySlug_SeriesEdition_LaterRaceStillUpcoming_NextEditionDateIsThatRaceNotScheduleRuleFallback()
+    {
+        var ev = CreateTestEvent("Vidavangshlaup Framfara");
+        ev.Slug = "vidavangshlaup-framfara";
+        ev.Type = EventType.Series;
+        // A stale, unrelated schedule rule — same shape as the live bug report — must never win
+        // over a real upcoming race once the fix is in.
+        ev.ScheduleRule = new ScheduleRule { Type = ScheduleType.Fixed, Date = new DateOnly(2027, 9, 25) };
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            // No stored Date/EndDate — Series editions with dated races derive live from races.
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var pastRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Already Run",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-9),
+            Status = RaceStatus.Completed,
+        };
+        var upcomingRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Still To Come",
+            SortOrder = 1,
+            DateOfRace = today.AddDays(19),
+            Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(pastRace, upcomingRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("vidavangshlaup-framfara"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(today.AddDays(19), result!.NextEditionDate);
+
+        var editionDto = Assert.Single(result.Editions);
+        Assert.Equal(today.AddDays(-9), editionDto.Date);
+        Assert.Equal(today.AddDays(19), editionDto.EndDate);
+    }
+
     // ─── GetEventQuery — Primary race / elevation profile card treatment (#927) ───
     // Reimplements the same "primary race" selection as GetEditionsHistoryQueryHandler.BuildRow
     // (#806/#815, see EditionsHistoryHandlerTests) against EventEditionDto instead of
@@ -2920,6 +2984,63 @@ public class EventHandlerTests : IDisposable
         var dto = Assert.Single(result);
         Assert.Equal(today.AddDays(100), dto.DisplayDate);
         Assert.Equal(today.AddDays(101), dto.EndDisplayDate);
+    }
+
+    // ─── GetEventsQuery — live-derived next date for a started-but-not-ended edition (#1320) ───
+    // ResolveNextDate (GetEventsQuery's own copy of this logic, pre-#1320) already had EffDate/
+    // EffEndDate available via #1070's derivation but still only ever compared EffDate against
+    // today — so once a Series edition's first race had passed while a later race in that same
+    // edition was still upcoming, it fell through to the (here, deliberately stale) ScheduleRule.
+
+    [Fact]
+    public async Task GetEvents_SeriesEdition_LaterRaceStillUpcoming_NextEditionDateIsThatRaceNotScheduleRuleFallback()
+    {
+        var ev = CreateTestEvent("Vidavangshlaup Framfara Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = new ScheduleRule { Type = ScheduleType.Fixed, Date = new DateOnly(2027, 9, 25) };
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            // No stored Date/EndDate — Series editions with dated races derive live from races.
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var pastRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Already Run",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-9),
+            Status = RaceStatus.Completed,
+        };
+        var upcomingRace = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Still To Come",
+            SortOrder = 1,
+            DateOfRace = today.AddDays(19),
+            Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.AddRange(pastRace, upcomingRace);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.Equal(today.AddDays(19), dto.NextEditionDate);
+        Assert.Equal(today.AddDays(19), dto.EndDisplayDate);
     }
 
     [Fact]

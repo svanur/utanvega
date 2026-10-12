@@ -1,5 +1,6 @@
 using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 
 namespace backend.Tests.Services;
 
@@ -453,6 +454,88 @@ public class EditionStatusHelpersTests
 
         Assert.Null(result.Date);
         Assert.Null(result.EndDate);
+    }
+
+    // ─── ResolveNextEditionDate (#1320) ───
+
+    private static readonly IScheduleRuleEngine ScheduleEngine = new ScheduleRuleEngine();
+
+    private static EventEdition MakeEdition(DateOnly? date, DateOnly? endDate = null) =>
+        new() { Id = Guid.NewGuid(), Date = date, EndDate = endDate };
+
+    private static DateOnly? EffDate(EventEdition? ed) => ed?.Date;
+    private static DateOnly? EffEndDate(EventEdition? ed) => ed?.EndDate;
+
+    [Fact]
+    public void ResolveNextEditionDate_FutureNotYetStartedEdition_ReturnsItsStartDate()
+    {
+        // Unchanged pre-#1320 behaviour: an edition that hasn't started yet (even a multi-day one
+        // with its own EndDate also in the future) surfaces its start date, not its last day.
+        var today = new DateOnly(2026, 6, 1);
+        var edition = MakeEdition(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 3));
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [edition], today, EffDate, EffEndDate, null, ScheduleEngine);
+
+        Assert.Equal(new DateOnly(2026, 7, 1), result);
+    }
+
+    [Fact]
+    public void ResolveNextEditionDate_StartedButNotEndedEdition_ReturnsEndDateNotStaleScheduleRule()
+    {
+        // The #1320 bug: an edition's start Date has already passed, but a later date within the
+        // same edition (its derived/stored EndDate) hasn't — this must surface that EndDate, not
+        // fall through to the ScheduleRule the old Date-only comparison used to fall back to.
+        var today = new DateOnly(2026, 10, 12);
+        var edition = MakeEdition(new DateOnly(2026, 10, 3), new DateOnly(2026, 10, 31));
+        var staleScheduleRule = new ScheduleRule { Type = ScheduleType.Fixed, Date = new DateOnly(2027, 9, 25) };
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [edition], today, EffDate, EffEndDate, staleScheduleRule, ScheduleEngine);
+
+        Assert.Equal(new DateOnly(2026, 10, 31), result);
+    }
+
+    [Fact]
+    public void ResolveNextEditionDate_FullyPastEdition_FallsBackToScheduleRule()
+    {
+        // An edition that has genuinely ended (both Date and EndDate in the past) must not qualify
+        // — the ScheduleRule fallback is correct here, unlike the "started but not ended" case above.
+        var today = new DateOnly(2026, 10, 12);
+        var edition = MakeEdition(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 3));
+        var scheduleRule = new ScheduleRule { Type = ScheduleType.Fixed, Date = new DateOnly(2027, 9, 25) };
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [edition], today, EffDate, EffEndDate, scheduleRule, ScheduleEngine);
+
+        Assert.Equal(new DateOnly(2027, 9, 25), result);
+    }
+
+    [Fact]
+    public void ResolveNextEditionDate_NoEditionsAndNoScheduleRule_ReturnsNull()
+    {
+        var today = new DateOnly(2026, 10, 12);
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [], today, EffDate, EffEndDate, null, ScheduleEngine);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ResolveNextEditionDate_MultipleQualifyingEditions_ReturnsTheSoonestCandidate()
+    {
+        var today = new DateOnly(2026, 10, 12);
+        // Already underway, candidate = its EndDate (Oct 31).
+        var ongoing = MakeEdition(new DateOnly(2026, 10, 3), new DateOnly(2026, 10, 31));
+        // Not yet started, candidate = its own start Date (Oct 20) — earlier than the ongoing
+        // edition's candidate above, so this must win.
+        var upcoming = MakeEdition(new DateOnly(2026, 10, 20));
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [ongoing, upcoming], today, EffDate, EffEndDate, null, ScheduleEngine);
+
+        Assert.Equal(new DateOnly(2026, 10, 20), result);
     }
 
     [Fact]
