@@ -278,6 +278,23 @@ export function getRowDaysUntil(row: FlattenedEventRow, now: Date = new Date()):
     return row.event.daysUntil;
 }
 
+// #1305/#1311: RacesPage's "Nýlokið" (recently-completed) section combines plain recently-completed
+// events with Series events carrying a recentlyCompletedSeriesRace — both inherit sortedFiltered's
+// *upcoming* order (date/distance/name), which has nothing to do with how recently each actually
+// finished. Re-sorts oldest-of-the-recently-completed first, by each event's actual completion date
+// (the series race's own dateOfRace when present, else the event's displayDate), nulls sorting last.
+export function sortByRecentlyCompletedDate(events: EventSummary[]): EventSummary[] {
+    const recentlyCompletedDate = (c: EventSummary) => c.recentlyCompletedSeriesRace?.dateOfRace ?? c.displayDate;
+    return [...events].sort((a, b) => {
+        const da = recentlyCompletedDate(a);
+        const db = recentlyCompletedDate(b);
+        if (!da && !db) return 0;
+        if (!da) return 1;
+        if (!db) return -1;
+        return da < db ? -1 : da > db ? 1 : 0;
+    });
+}
+
 // #1252: extracted from CompetitionDetailPage's eventTrailSlugs memo so the fallback-tier logic is
 // unit-testable without rendering the page. Mirrors weatherTrailSlug's fallback tiers (edition-level
 // trailSlug, then primaryEdition's own races, then the broader visibleRaces) but collects every
