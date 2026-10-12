@@ -318,6 +318,54 @@ export function deriveEventTrailSlugs(
     return slugs;
 }
 
+// #1319: daysUntil === 0 means "race day" for a single-day event, but the backend also pins it to 0
+// for a Series event's *entire ongoing season span* (e.g. Powerade Vetrarhlaupin's Oct–Mar season,
+// one race/month) and for the full date-to-endDate span of any ongoing multi-day edition — so
+// isRaceDay/isRaceWeek can't read daysUntil alone without false-positiving on every day in between.
+// For every other event type, daysUntil stays the source of truth for isRaceWeek, and for isRaceDay
+// too, except isOngoingPastDayTwo (#613) is now actually applied — the extension #613/#618 deferred
+// to this issue — so a long non-Series multi-day edition stops reading as "race day" past its first
+// two days.
+//
+// #1319 follow-up: a Series event's own answer to "is today actually a race" cannot come from
+// event.nextEditionDate. GetEventQuery.cs (the handler behind GET /api/v1/events/{slug}, which is
+// what powers this page) computes that field from the Series edition's raw, intentionally-stale
+// stored ed.Date column — see the "nothing keeps in sync"/"derive live, don't store" comments on
+// EditionStatusHelpers.ComputeEffectiveEditionDates and in GetEventsQuery.cs/GetAllEventDetailsQuery.cs,
+// both of which derive live from race dates specifically *because* GetEventQuery.cs's stored-column
+// read can drift. Using nextEditionDate here would read "no race today" on a genuine Series race day.
+// raceDates — every non-cancelled, non-hidden race's own dateOfRace across the event's editions, the
+// same per-race data the page already reads for its progress bar/isLiveStageToday — is the only
+// reliable source: isRaceDay/isRaceWeek are true when any individual race actually falls on/within
+// the window, regardless of what the edition's own stored Date column says.
+export interface RaceDayEventInput {
+    type: string;
+    daysUntil: number | null;
+    raceDates: string[];
+    displayDate: string | null;
+    endDisplayDate: string | null | undefined;
+}
+
+export function computeRaceDayFlags(
+    event: RaceDayEventInput,
+    now: Date = new Date(),
+): { isRaceDay: boolean; isRaceWeek: boolean } {
+    if (event.type === 'Series') {
+        const todayStr = toDateOnlyString(now);
+        return {
+            isRaceDay: event.raceDates.includes(todayStr),
+            isRaceWeek: event.raceDates.some(d => {
+                const diff = daysBetween(d, now);
+                return diff >= 0 && diff <= 7;
+            }),
+        };
+    }
+    return {
+        isRaceDay: event.daysUntil === 0 && !isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate),
+        isRaceWeek: event.daysUntil !== null && event.daysUntil >= 0 && event.daysUntil <= 7,
+    };
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,
