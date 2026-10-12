@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { haversineKm } from '../utils/geo';
 
 export interface LocationInfo {
@@ -335,6 +335,34 @@ export function useTrail(id?: string) {
     const loading = isPending && !!id;
     const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
     return { trail, loading, error };
+}
+
+// Fetches each of `slugs` individually against the per-trail endpoint, in parallel — unlike
+// useTrails(true)'s bulk GET /api/v1/trails, this surfaces EventOnly-status trails too, since the
+// per-trail endpoint serves them while the bulk/search list excludes them by design (#1321). Meant
+// for small slug counts (an event's linked trails), not as a general trail-browsing data source.
+// Reuses useTrail's query key so a trail already cached from its own detail page is served instantly.
+export function useTrailsBySlugs(slugs: string[]) {
+    const results = useQueries({
+        queries: slugs.map(slug => ({
+            queryKey: ['trail', slug],
+            queryFn: async () => {
+                const res = await fetch(`${API_URL}/api/v1/trails/${slug}`);
+                if (!res.ok) throw new Error('Failed to fetch trail');
+                return res.json() as Promise<Trail>;
+            },
+            staleTime: 5 * 60 * 1000,
+        })),
+    });
+
+    const trails = useMemo(
+        () => results.map(r => r.data).filter((trail): trail is Trail => !!trail),
+        [results],
+    );
+    const loading = slugs.length > 0 && results.some(r => r.isPending);
+    const error = results.find(r => r.error)?.error ?? null;
+
+    return { trails, loading, error: error instanceof Error ? error.message : error ? String(error) : null };
 }
 
 export function useTrailBySlug(slug?: string) {

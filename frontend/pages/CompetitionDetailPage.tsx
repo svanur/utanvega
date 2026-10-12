@@ -74,7 +74,7 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
-import { useTrailWeather, useTrails } from '../hooks/useTrails';
+import { useTrailWeather, useTrailsBySlugs } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { TrailMapView } from '../components/TrailMapView';
@@ -531,11 +531,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         [primaryEdition, visibleRaces],
     );
 
-    const { trails: allTrails } = useTrails(true);
-    const eventTrails = useMemo(
-        () => allTrails.filter(trail => eventTrailSlugs.has(trail.slug)),
-        [allTrails, eventTrailSlugs],
-    );
+    // Fetched per-slug (not via the public bulk/search trail list) because that list excludes
+    // EventOnly-status trails server-side — a filter an event's own map must not inherit, since an
+    // event can legitimately link trails that aren't meant for general browsing (#1321).
+    const eventTrailSlugsArray = useMemo(() => Array.from(eventTrailSlugs), [eventTrailSlugs]);
+    const { trails: eventTrails } = useTrailsBySlugs(eventTrailSlugsArray);
 
     const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
         bib: false,
