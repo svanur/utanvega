@@ -341,11 +341,20 @@ export function useTrail(id?: string) {
 // useTrails(true)'s bulk GET /api/v1/trails, this surfaces EventOnly-status trails too, since the
 // per-trail endpoint serves them while the bulk/search list excludes them by design (#1321). Meant
 // for small slug counts (an event's linked trails), not as a general trail-browsing data source.
-// Reuses useTrail's query key so a trail already cached from its own detail page is served instantly.
+//
+// Deliberately namespaced under its own 'event-trail' key rather than reusing ['trail', slug] —
+// that key is already shared (collision-prone in its own right, see useTrail below) between
+// useTrail (raw Trail) and useTrailBySlug (`{trail, isFromCache}`), and since there's a single
+// app-wide QueryClient (frontend/main.tsx), writing a third, differently-shaped value under the
+// same key would let same-session navigation between a trail's own page and its event page serve
+// the wrong cached shape to whichever hook reads second — concretely, TrailDetailsPage/
+// TrailLeaderboardPage/TrailComparePage (all useTrailBySlug) could receive a raw Trail where they
+// expect `{trail, isFromCache}`, or vice versa. Own key = no cache-sharing with those pages, but
+// also no risk of ever serving them a mismatched shape (caught in review, #1328).
 export function useTrailsBySlugs(slugs: string[]) {
     const results = useQueries({
         queries: slugs.map(slug => ({
-            queryKey: ['trail', slug],
+            queryKey: ['event-trail', slug],
             queryFn: async () => {
                 const res = await fetch(`${API_URL}/api/v1/trails/${slug}`);
                 if (!res.ok) throw new Error('Failed to fetch trail');
