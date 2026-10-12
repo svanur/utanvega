@@ -27,11 +27,23 @@ public class GetTrailGeometriesQueryHandler : IRequestHandler<GetTrailGeometries
     public async Task<List<TrailGeometryFeature>> Handle(GetTrailGeometriesQuery request, CancellationToken cancellationToken)
     {
         // Use raw SQL to leverage PostGIS ST_Simplify for efficient geometry simplification.
-        // Tolerance 0.0005 degrees (~50m) preserves visual shape while reducing coordinate count.
+        // A single fixed tolerance doesn't work across trail scales: 0.0005 degrees (~50m) is a
+        // sensible cut for a 50+ km ultra route but is comparable to (or larger than) the entire
+        // extent of a short, tightly-looping trail, which collapses it into a handful of
+        // out-of-order points (#1323). Instead, scale the tolerance to 0.1% of each trail's own
+        // "Length" (meters, precomputed on the entity — see Trail.cs), using the same ~0.00001
+        // degrees-per-meter conversion the old fixed value implied, capped at the original 0.0005
+        // degrees so long routes keep the same reduction they had before. Trails with no usable
+        // length signal fall back to the raw (unsimplified) geometry rather than guessing a scale.
         var results = await _context.Database
             .SqlQuery<SimplifiedTrailRow>($"""
                 SELECT "Slug", CAST("ActivityTypeId" AS TEXT) AS "ActivityType",
-                       ST_AsGeoJSON(ST_Simplify("GpxData", 0.0005)) AS "GeoJson"
+                       ST_AsGeoJSON(
+                           CASE
+                               WHEN "Length" IS NULL OR "Length" <= 0 THEN "GpxData"
+                               ELSE ST_Simplify("GpxData", LEAST("Length" * 0.00000001, 0.0005))
+                           END
+                       ) AS "GeoJson"
                 FROM "Trails"
                 WHERE "Status" = 'Published' AND "GpxData" IS NOT NULL
             """)
