@@ -310,9 +310,21 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // is computed later and itself depends on isPostRace below — going through primaryEdition here
     // would be circular.
     const eventOrEditionCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: event.editionEffectiveCancelled });
+    // #1319 follow-up: every non-cancelled, non-hidden race's own dateOfRace across the event's
+    // editions — not event.nextEditionDate, which GetEventQuery.cs derives from the Series
+    // edition's raw, intentionally-stale stored Date column (see computeRaceDayFlags's comment).
+    // Computed straight from event.editions rather than currentEditions/visibleRaces below, since
+    // those are themselves partitioned using nextEditionDate and would reintroduce the same staleness.
+    const seriesRaceDates = useMemo(() => {
+        if (!event || event.type !== 'Series') return [];
+        return event.editions
+            .flatMap(edition => edition.races)
+            .filter(race => race.status !== 'Hidden' && race.status !== 'Cancelled' && race.dateOfRace)
+            .map(race => race.dateOfRace as string);
+    }, [event]);
     // #1319: see computeRaceDayFlags for why daysUntil === 0 alone can't tell "today is a race" from
     // "today is just inside a Series season" (or deep into a long non-Series multi-day edition).
-    const raceDayFlags = event ? computeRaceDayFlags(event) : null;
+    const raceDayFlags = event ? computeRaceDayFlags({ ...event, raceDates: seriesRaceDates }) : null;
     const isRaceDay = !eventOrEditionCancelled && !!raceDayFlags?.isRaceDay;
     const isRaceWeek = !eventOrEditionCancelled && !!raceDayFlags?.isRaceWeek;
     const isPostRace = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
