@@ -74,7 +74,7 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
-import { useTrailWeather, useTrails } from '../hooks/useTrails';
+import { useTrailWeather, useTrailsBySlugs } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { TrailMapView } from '../components/TrailMapView';
@@ -93,7 +93,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags } from '../utils/eventUtils';
 import { getTicketStatusColor, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -310,8 +310,23 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // is computed later and itself depends on isPostRace below — going through primaryEdition here
     // would be circular.
     const eventOrEditionCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: event.editionEffectiveCancelled });
-    const isRaceDay = !eventOrEditionCancelled && event?.daysUntil === 0;
-    const isRaceWeek = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil >= 0 && event.daysUntil <= 7;
+    // #1319 follow-up: every non-cancelled, non-hidden race's own dateOfRace across the event's
+    // editions — not event.nextEditionDate, which GetEventQuery.cs derives from the Series
+    // edition's raw, intentionally-stale stored Date column (see computeRaceDayFlags's comment).
+    // Computed straight from event.editions rather than currentEditions/visibleRaces below, since
+    // those are themselves partitioned using nextEditionDate and would reintroduce the same staleness.
+    const seriesRaceDates = useMemo(() => {
+        if (!event || event.type !== 'Series') return [];
+        return event.editions
+            .flatMap(edition => edition.races)
+            .filter(race => race.status !== 'Hidden' && race.status !== 'Cancelled' && race.dateOfRace)
+            .map(race => race.dateOfRace as string);
+    }, [event]);
+    // #1319: see computeRaceDayFlags for why daysUntil === 0 alone can't tell "today is a race" from
+    // "today is just inside a Series season" (or deep into a long non-Series multi-day edition).
+    const raceDayFlags = event ? computeRaceDayFlags({ ...event, raceDates: seriesRaceDates }) : null;
+    const isRaceDay = !eventOrEditionCancelled && !!raceDayFlags?.isRaceDay;
+    const isRaceWeek = !eventOrEditionCancelled && !!raceDayFlags?.isRaceWeek;
     const isPostRace = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
 
     // Ticking clock for race-day phase transitions and progress bar
@@ -516,11 +531,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         [primaryEdition, visibleRaces],
     );
 
-    const { trails: allTrails } = useTrails(true);
-    const eventTrails = useMemo(
-        () => allTrails.filter(trail => eventTrailSlugs.has(trail.slug)),
-        [allTrails, eventTrailSlugs],
-    );
+    // Fetched per-slug (not via the public bulk/search trail list) because that list excludes
+    // EventOnly-status trails server-side — a filter an event's own map must not inherit, since an
+    // event can legitimately link trails that aren't meant for general browsing (#1321).
+    const eventTrailSlugsArray = useMemo(() => Array.from(eventTrailSlugs), [eventTrailSlugs]);
+    const { trails: eventTrails } = useTrailsBySlugs(eventTrailSlugsArray);
 
     const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
         bib: false,

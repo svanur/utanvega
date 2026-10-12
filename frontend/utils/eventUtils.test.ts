@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -380,6 +380,40 @@ describe('getRowDaysUntil', () => {
     });
 });
 
+// #1305/#1311: extracted from RacesPage's justRaced memo — re-sorts the combined "Nýlokið" list
+// (plain recently-completed events + Series events carrying a recentlyCompletedSeriesRace) oldest-
+// first by actual completion date, since both inputs otherwise inherit sortedFiltered's *upcoming*
+// order (date/distance/name), which has nothing to do with how recently each actually finished.
+describe('sortByRecentlyCompletedDate', () => {
+    it('sorts ascending by displayDate when both events resolve a plain date', () => {
+        const older = makeEvent({ slug: 'older', displayDate: '2026-03-10' });
+        const newer = makeEvent({ slug: 'newer', displayDate: '2026-03-14' });
+        expect(sortByRecentlyCompletedDate([newer, older])).toEqual([older, newer]);
+    });
+
+    it('sorts an event with neither recentlyCompletedSeriesRace.dateOfRace nor displayDate last', () => {
+        const dateless = makeEvent({ slug: 'dateless', displayDate: null, recentlyCompletedSeriesRace: null });
+        const dated = makeEvent({ slug: 'dated', displayDate: '2026-03-10' });
+        expect(sortByRecentlyCompletedDate([dateless, dated])).toEqual([dated, dateless]);
+    });
+
+    it('sorts plain recently-completed events together with Series events by actual race date, preferring recentlyCompletedSeriesRace.dateOfRace over displayDate', () => {
+        // #1244: a Series event's own displayDate/daysUntil stay edition-level (can even read as
+        // upcoming) while recentlyCompletedSeriesRace.dateOfRace is the one that actually just
+        // happened — this must be the field compared, not the season-level displayDate.
+        const plainOld = makeEvent({ slug: 'plain-old', displayDate: '2026-03-08' });
+        const seriesRecent = makeEvent({
+            slug: 'series-recent',
+            type: 'Series',
+            displayDate: '2099-01-01', // deliberately far off / "upcoming" — must be ignored
+            recentlyCompletedSeriesRace: makeSeriesRace({ dateOfRace: '2026-03-09' }),
+        });
+        const plainNew = makeEvent({ slug: 'plain-new', displayDate: '2026-03-11' });
+        const result = sortByRecentlyCompletedDate([plainNew, plainOld, seriesRecent]);
+        expect(result.map(e => e.slug)).toEqual(['plain-old', 'series-recent', 'plain-new']);
+    });
+});
+
 // #843: addDays and getWeekRange were previously local, unexported helpers duplicated between
 // RacesPage.tsx and eventUtils.ts (toDateOnlyString) — moved here so they're shared and tested.
 describe('addDays', () => {
@@ -472,6 +506,119 @@ describe('getWeekRange', () => {
 function makeRace(trailSlug: string | null): { trailSlug: string | null } {
     return { trailSlug };
 }
+
+// #1319: a Series event's daysUntil is pinned to 0 for its entire ongoing season span (e.g.
+// Powerade Vetrarhlaupin's Oct–Mar season, one race/month) — isRaceDay/isRaceWeek must read the
+// event's actual per-race dates instead for Series, or every day of the season falsely reads as
+// "race day". Non-Series behavior must stay exactly as before (daysUntil-based), with the #613
+// isOngoingPastDayTwo threshold now actually applied to isRaceDay, the extension #613/#618 deferred
+// to this issue.
+//
+// #1319 follow-up: raceDates — not event.nextEditionDate — is the Series source of truth, because
+// GetEventQuery.cs derives nextEditionDate from the edition's raw, intentionally-stale stored Date
+// column (see computeRaceDayFlags's comment) rather than deriving it live from race dates the way
+// GetEventsQuery.cs/GetAllEventDetailsQuery.cs do. These tests exercise raceDates directly instead.
+describe('computeRaceDayFlags', () => {
+    describe('Series events', () => {
+        it('is not race day/week when every race date is far outside the window, even with daysUntil pinned to 0 (the Powerade false-positive)', () => {
+            const now = new Date('2026-10-20T00:00:00');
+            const result = computeRaceDayFlags(
+                { type: 'Series', daysUntil: 0, raceDates: ['2026-09-14', '2026-11-12'], displayDate: '2026-10-08', endDisplayDate: '2027-03-11' },
+                now,
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: false });
+        });
+
+        it('is race day and race week when a race date is exactly today', () => {
+            const now = new Date('2026-11-12T00:00:00');
+            const result = computeRaceDayFlags(
+                { type: 'Series', daysUntil: 0, raceDates: ['2026-09-14', '2026-11-12'], displayDate: '2026-10-08', endDisplayDate: '2027-03-11' },
+                now,
+            );
+            expect(result).toEqual({ isRaceDay: true, isRaceWeek: true });
+        });
+
+        it('is race week but not race day when the nearest race date is within 7 days', () => {
+            const now = new Date('2026-11-07T00:00:00');
+            const result = computeRaceDayFlags(
+                { type: 'Series', daysUntil: 0, raceDates: ['2026-09-14', '2026-11-12'], displayDate: '2026-10-08', endDisplayDate: '2027-03-11' },
+                now,
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: true });
+        });
+
+        it('is neither race day nor race week when there is no upcoming race at all', () => {
+            const now = new Date('2026-11-07T00:00:00');
+            const result = computeRaceDayFlags(
+                { type: 'Series', daysUntil: null, raceDates: [], displayDate: null, endDisplayDate: null },
+                now,
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: false });
+        });
+
+        // The regression this follow-up guards against: event.nextEditionDate reading as today's
+        // date would previously have reported race day via nextEditionDate even when none of the
+        // event's actual races are dated today — raceDates must be the only thing consulted now.
+        it('is not race day when only a past race date is supplied, even if a stale nextEditionDate would have matched today', () => {
+            const now = new Date('2026-11-12T00:00:00');
+            const result = computeRaceDayFlags(
+                { type: 'Series', daysUntil: 0, raceDates: ['2026-09-14'], displayDate: '2026-10-08', endDisplayDate: '2027-03-11' },
+                now,
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: false });
+        });
+    });
+
+    describe('non-Series events', () => {
+        it('is race day and race week for a single-day event on its actual race day (daysUntil 0, unchanged behavior)', () => {
+            const result = computeRaceDayFlags(
+                { type: 'Race', daysUntil: 0, raceDates: [], displayDate: '2026-11-12', endDisplayDate: '2026-11-12' },
+            );
+            expect(result).toEqual({ isRaceDay: true, isRaceWeek: true });
+        });
+
+        it('is race week without being race day for daysUntil within 1–7', () => {
+            const result = computeRaceDayFlags(
+                { type: 'Race', daysUntil: 5, raceDates: [], displayDate: '2026-11-17', endDisplayDate: '2026-11-17' },
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: true });
+        });
+
+        it('is neither for a null daysUntil', () => {
+            const result = computeRaceDayFlags(
+                { type: 'Race', daysUntil: null, raceDates: [], displayDate: null, endDisplayDate: null },
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: false });
+        });
+
+        // isOngoingPastDayTwo compares its own internal "today" against displayDate using the real
+        // clock (it has no injectable `now`), so these three use dates relative to the actual
+        // current moment rather than a fixed, arbitrary calendar date.
+        it('is still race day on day 1 of a multi-day non-Series edition', () => {
+            const todayStr = toDateOnlyString(new Date());
+            const result = computeRaceDayFlags(
+                { type: 'Race', daysUntil: 0, raceDates: [], displayDate: todayStr, endDisplayDate: toDateOnlyString(addDays(new Date(), 5)) },
+            );
+            expect(result.isRaceDay).toBe(true);
+        });
+
+        it('is still race day on day 2 of a multi-day non-Series edition', () => {
+            const dayTwoStr = toDateOnlyString(addDays(new Date(), -1));
+            const result = computeRaceDayFlags(
+                { type: 'Race', daysUntil: 0, raceDates: [], displayDate: dayTwoStr, endDisplayDate: toDateOnlyString(addDays(new Date(), 4)) },
+            );
+            expect(result.isRaceDay).toBe(true);
+        });
+
+        it('is no longer race day past day 2 of a multi-day non-Series edition (#613\'s deferred threshold, now applied)', () => {
+            const dayThreeStr = toDateOnlyString(addDays(new Date(), -2));
+            const result = computeRaceDayFlags(
+                { type: 'Race', daysUntil: 0, raceDates: [], displayDate: dayThreeStr, endDisplayDate: toDateOnlyString(addDays(new Date(), 3)) },
+            );
+            expect(result.isRaceDay).toBe(false);
+        });
+    });
+});
 
 describe('deriveEventTrailSlugs', () => {
     it('resolves the edition-level trailSlug when no race has one', () => {

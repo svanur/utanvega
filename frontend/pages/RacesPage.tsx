@@ -74,7 +74,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
+import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
 import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -482,15 +482,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         // #1305: jr/seriesJustRaced both inherit sortedFiltered's *upcoming* order (date/distance/
         // name), which has nothing to do with how recently each actually finished — re-sort the
         // combined list oldest-of-the-recently-completed first, by actual completion date.
-        const recentlyCompletedDate = (c: EventSummary) => c.recentlyCompletedSeriesRace?.dateOfRace ?? c.displayDate;
-        const combinedJustRaced = [...jr, ...seriesJustRaced].sort((a, b) => {
-            const da = recentlyCompletedDate(a);
-            const db = recentlyCompletedDate(b);
-            if (!da && !db) return 0;
-            if (!da) return 1;
-            if (!db) return -1;
-            return da < db ? -1 : da > db ? 1 : 0;
-        });
+        const combinedJustRaced = sortByRecentlyCompletedDate([...jr, ...seriesJustRaced]);
         return { justRaced: combinedJustRaced, upcoming: up };
     }, [sortedFiltered]);
     const flattenedUpcoming = useMemo((): FlattenedEventRow[] => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { haversineKm } from '../utils/geo';
 
 export interface LocationInfo {
@@ -335,6 +335,43 @@ export function useTrail(id?: string) {
     const loading = isPending && !!id;
     const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
     return { trail, loading, error };
+}
+
+// Fetches each of `slugs` individually against the per-trail endpoint, in parallel — unlike
+// useTrails(true)'s bulk GET /api/v1/trails, this surfaces EventOnly-status trails too, since the
+// per-trail endpoint serves them while the bulk/search list excludes them by design (#1321). Meant
+// for small slug counts (an event's linked trails), not as a general trail-browsing data source.
+//
+// Deliberately namespaced under its own 'event-trail' key rather than reusing ['trail', slug] —
+// that key is already shared (collision-prone in its own right, see useTrail below) between
+// useTrail (raw Trail) and useTrailBySlug (`{trail, isFromCache}`), and since there's a single
+// app-wide QueryClient (frontend/main.tsx), writing a third, differently-shaped value under the
+// same key would let same-session navigation between a trail's own page and its event page serve
+// the wrong cached shape to whichever hook reads second — concretely, TrailDetailsPage/
+// TrailLeaderboardPage/TrailComparePage (all useTrailBySlug) could receive a raw Trail where they
+// expect `{trail, isFromCache}`, or vice versa. Own key = no cache-sharing with those pages, but
+// also no risk of ever serving them a mismatched shape (caught in review, #1328).
+export function useTrailsBySlugs(slugs: string[]) {
+    const results = useQueries({
+        queries: slugs.map(slug => ({
+            queryKey: ['event-trail', slug],
+            queryFn: async () => {
+                const res = await fetch(`${API_URL}/api/v1/trails/${slug}`);
+                if (!res.ok) throw new Error('Failed to fetch trail');
+                return res.json() as Promise<Trail>;
+            },
+            staleTime: 5 * 60 * 1000,
+        })),
+    });
+
+    const trails = useMemo(
+        () => results.map(r => r.data).filter((trail): trail is Trail => !!trail),
+        [results],
+    );
+    const loading = slugs.length > 0 && results.some(r => r.isPending);
+    const error = results.find(r => r.error)?.error ?? null;
+
+    return { trails, loading, error: error instanceof Error ? error.message : error ? String(error) : null };
 }
 
 export function useTrailBySlug(slug?: string) {
