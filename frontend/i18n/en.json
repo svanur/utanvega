@@ -793,6 +793,10 @@
             }
         },
         "changelog": {
+            "v1_16_2": {
+                "title": "Fixes for race-day badges, event maps, and short trail routes",
+                "description": "The \"It's race day\" badge and confetti no longer appear on every day of an ongoing running series' season — only on the day of an actual race. Event detail pages now correctly find the next upcoming race date for series events instead of occasionally falling back to a stale scheduled date. Event maps can now show trail routes for invitation-only events whose trails were previously missing from the map entirely. Short trail routes also no longer render as broken, out-of-order lines on maps."
+            },
             "v1_16_1": {
                 "title": "Smarter sorting for recently completed races, condensed cards, and a fix for missing map pins",
                 "description": "The \"Recently completed\" section in the list view now sorts races from oldest to most recent instead of inheriting the upcoming list's order, and each card is more compact — distance now appears inline with the date instead of as a separate chip, except when there's more than one distance to show. Event detail pages that have no linked trail route but do have the event's own map coordinates now show a pin again, instead of a blank map. Also fixed: a card in that section could show no distance information at all in a rare case where a series race's distance label was missing."
