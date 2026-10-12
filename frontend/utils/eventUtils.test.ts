@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey } from './eventUtils';
+import { addDays, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey, sortByRecentlyCompletedDate } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -377,6 +377,40 @@ describe('getRowDaysUntil', () => {
         const race = makeSeriesRace({ dateOfRace: today });
         const row = { kind: 'series-race' as const, event, race, rowDate: race.dateOfRace };
         expect(getRowDaysUntil(row)).toBe(0);
+    });
+});
+
+// #1305/#1311: extracted from RacesPage's justRaced memo — re-sorts the combined "Nýlokið" list
+// (plain recently-completed events + Series events carrying a recentlyCompletedSeriesRace) oldest-
+// first by actual completion date, since both inputs otherwise inherit sortedFiltered's *upcoming*
+// order (date/distance/name), which has nothing to do with how recently each actually finished.
+describe('sortByRecentlyCompletedDate', () => {
+    it('sorts ascending by displayDate when both events resolve a plain date', () => {
+        const older = makeEvent({ slug: 'older', displayDate: '2026-03-10' });
+        const newer = makeEvent({ slug: 'newer', displayDate: '2026-03-14' });
+        expect(sortByRecentlyCompletedDate([newer, older])).toEqual([older, newer]);
+    });
+
+    it('sorts an event with neither recentlyCompletedSeriesRace.dateOfRace nor displayDate last', () => {
+        const dateless = makeEvent({ slug: 'dateless', displayDate: null, recentlyCompletedSeriesRace: null });
+        const dated = makeEvent({ slug: 'dated', displayDate: '2026-03-10' });
+        expect(sortByRecentlyCompletedDate([dateless, dated])).toEqual([dated, dateless]);
+    });
+
+    it('sorts plain recently-completed events together with Series events by actual race date, preferring recentlyCompletedSeriesRace.dateOfRace over displayDate', () => {
+        // #1244: a Series event's own displayDate/daysUntil stay edition-level (can even read as
+        // upcoming) while recentlyCompletedSeriesRace.dateOfRace is the one that actually just
+        // happened — this must be the field compared, not the season-level displayDate.
+        const plainOld = makeEvent({ slug: 'plain-old', displayDate: '2026-03-08' });
+        const seriesRecent = makeEvent({
+            slug: 'series-recent',
+            type: 'Series',
+            displayDate: '2099-01-01', // deliberately far off / "upcoming" — must be ignored
+            recentlyCompletedSeriesRace: makeSeriesRace({ dateOfRace: '2026-03-09' }),
+        });
+        const plainNew = makeEvent({ slug: 'plain-new', displayDate: '2026-03-11' });
+        const result = sortByRecentlyCompletedDate([plainNew, plainOld, seriesRecent]);
+        expect(result.map(e => e.slug)).toEqual(['plain-old', 'series-recent', 'plain-new']);
     });
 });
 
