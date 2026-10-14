@@ -39,28 +39,41 @@ describe('manifest.ts per-host PWA identity', () => {
     expect(body.lang).toBe('is');
   });
 
-  it('keeps icons, theme_color and start_url identical across hosts', async () => {
+  it('keeps theme_color and start_url identical across hosts, but serves each host its own brand icons/shortcuts (#1080)', async () => {
     const [is, en] = await Promise.all([
       json(await handler(makeRequest('hlaupadagskra.is'))),
       json(await handler(makeRequest('360runs.com'))),
     ]);
-    expect(en.icons).toEqual(is.icons);
     expect(en.theme_color).toBe(is.theme_color);
     expect(en.background_color).toBe(is.background_color);
     expect(en.display).toBe(is.display);
     expect(en.start_url).toBe(is.start_url);
     expect(en.scope).toBe(is.scope);
-    expect(en.shortcuts).toEqual(is.shortcuts);
+
+    // Icons/shortcuts are per-brand, not shared (#1080) — IS gets the
+    // Hlaupadagskra ring, EN gets the 360Runs one, never the other's.
+    expect(is.icons).not.toEqual(en.icons);
+    expect(is.shortcuts).not.toEqual(en.shortcuts);
 
     expect(is.start_url).toBe('/');
     expect(is.theme_color).toBe('#1976d2');
     expect(is.icons).toEqual([
-      { src: 'icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
-      { src: 'icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
+      { src: 'icons/hlaupadagskra-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: 'icons/hlaupadagskra-icon-512.png', sizes: '512x512', type: 'image/png' },
       {
-        src: 'icons/icon-512.svg',
+        src: 'icons/hlaupadagskra-icon-512.png',
         sizes: '512x512',
-        type: 'image/svg+xml',
+        type: 'image/png',
+        purpose: 'any maskable',
+      },
+    ]);
+    expect(en.icons).toEqual([
+      { src: 'icons/360runs-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: 'icons/360runs-icon-512.png', sizes: '512x512', type: 'image/png' },
+      {
+        src: 'icons/360runs-icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
         purpose: 'any maskable',
       },
     ]);

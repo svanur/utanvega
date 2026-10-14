@@ -5,9 +5,20 @@ import IosShareIcon from '@mui/icons-material/IosShare';
 import { useTranslation } from 'react-i18next';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
+/**
+ * Brand icon per locale, matching the per-host icons manifest.ts serves at
+ * /manifest.webmanifest (#1080) — keeps the install surface's own branding
+ * consistent with whatever icon the OS will actually install.
+ */
+const BRAND_ICON: Record<string, string> = {
+    is: '/icons/hlaupadagskra-icon-192.png',
+    en: '/icons/360runs-icon-192.png',
+};
+
 export default function InstallBanner() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { showBanner, showIOSHint, install, dismiss } = useInstallPrompt();
+    const brandIcon = BRAND_ICON[i18n.language] ?? BRAND_ICON.is;
 
     if (!showBanner && !showIOSHint) return null;
 
@@ -30,7 +41,12 @@ export default function InstallBanner() {
                     mx: 'auto',
                 }}
             >
-                <Box sx={{ fontSize: 32 }}>🏔️</Box>
+                <Box
+                    component="img"
+                    src={brandIcon}
+                    alt=""
+                    sx={{ width: 32, height: 32, flexShrink: 0 }}
+                />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2" fontWeight="bold" noWrap>
                         {t('install.title')}
