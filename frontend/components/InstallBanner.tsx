@@ -4,10 +4,31 @@ import CloseIcon from '@mui/icons-material/Close';
 import IosShareIcon from '@mui/icons-material/IosShare';
 import { useTranslation } from 'react-i18next';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import { localeForHostname, type Locale } from '../api/_site';
+
+/**
+ * Brand icon per locale, matching the per-host icons manifest.ts serves at
+ * /manifest.webmanifest (#1080) — keeps the install surface's own branding
+ * consistent with whatever icon the OS will actually install.
+ *
+ * Keyed by host (localeForHostname(window.location.hostname)), not by
+ * i18n.language/UI language — a visitor who manually toggles the UI
+ * language via LanguageToggle.tsx still installs (and is served) the
+ * manifest for the host they're actually on, so this banner's icon must
+ * track the same host-derived locale manifest.ts's resolveLocale() uses,
+ * same signal every other BRAND_NAME/brand-asset consumer keys off (see
+ * i18n.ts's brandNameForHostname comment) — not the independently-toggleable
+ * UI language, which would otherwise mismatch the icon actually installed.
+ */
+const BRAND_ICON: Record<Locale, string> = {
+    is: '/icons/hlaupadagskra-icon-192.png',
+    en: '/icons/360runs-icon-192.png',
+};
 
 export default function InstallBanner() {
     const { t } = useTranslation();
     const { showBanner, showIOSHint, install, dismiss } = useInstallPrompt();
+    const brandIcon = BRAND_ICON[localeForHostname(window.location.hostname)];
 
     if (!showBanner && !showIOSHint) return null;
 
@@ -30,7 +51,12 @@ export default function InstallBanner() {
                     mx: 'auto',
                 }}
             >
-                <Box sx={{ fontSize: 32 }}>🏔️</Box>
+                <Box
+                    component="img"
+                    src={brandIcon}
+                    alt=""
+                    sx={{ width: 32, height: 32, flexShrink: 0 }}
+                />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2" fontWeight="bold" noWrap>
                         {t('install.title')}

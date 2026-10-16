@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import { PWA_MANIFEST_STATIC_FIELDS } from './pwaManifestFields';
+import { PWA_MANIFEST_STATIC_FIELDS, PWA_MANIFEST_BRAND_FIELDS } from './pwaManifestFields';
 
 export default defineConfig({
   build: {
@@ -53,6 +53,11 @@ export default defineConfig({
         short_name: 'Hlaupadagskrá',
         description: 'Öll hlaup á einum stað',
         ...PWA_MANIFEST_STATIC_FIELDS,
+        // This build-time manifest cannot vary per host (#1080's per-host
+        // icons live in api/manifest.ts instead, which is what's actually
+        // served in production — see vercel.json's unconditional rewrite);
+        // picking `is` here just keeps this dead-in-production asset valid.
+        ...PWA_MANIFEST_BRAND_FIELDS.is,
       }
     })
   ],
