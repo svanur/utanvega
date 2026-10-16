@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, TextField, Button, Typography, Paper, Alert, CircularProgress } from '@mui/material';
+import { Box, TextField, Button, Paper, Alert, CircularProgress } from '@mui/material';
 import { supabase } from '../hooks/supabase';
 
 export default function LoginPage() {
@@ -34,10 +34,7 @@ export default function LoginPage() {
         }}>
             <Paper elevation={3} sx={{ p: 4, width: '100%', maxWidth: 400 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-                    <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 64, marginBottom: 12 }} />
-                    <Typography variant="h5" align="center">
-                        Hlaupadagskra.is
-                    </Typography>
+                    <img src="/images/360runs-hlaupadagskra.png" alt="360Runs & Hlaupadagskra.is logo" style={{ height: 64 }} />
                 </Box>
                 
                 <form onSubmit={handleLogin}>

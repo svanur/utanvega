@@ -203,10 +203,7 @@ function AdminContent() {
         <AppBar position="static">
           <Toolbar>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
-              <Typography variant="h6" noWrap>
-                Hlaupadagskra.is
-              </Typography>
+              <img src="/images/360runs-hlaupadagskra.png" alt="360Runs & Hlaupadagskra.is logo" style={{ height: 32 }} />
             </Box>
           </Toolbar>
         </AppBar>
@@ -244,10 +241,7 @@ function AdminContent() {
             onClick={() => setCurrentPage('dashboard')}
             sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
           >
-            <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
-            <Typography variant="h6" noWrap>
-              Hlaupadagskra.is
-            </Typography>
+            <img src="/images/360runs-hlaupadagskra.png" alt="360Runs & Hlaupadagskra.is logo" style={{ height: 32 }} />
           </Box>
           <Tooltip title="Search (Ctrl+K)">
             <IconButton
