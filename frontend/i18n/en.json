@@ -695,11 +695,17 @@
             "description": "An interview with the founder of Hlaupadagskra.is, published in Morgunblaðið.",
             "openInNewTab": "Open in new tab"
         },
-        "podcast": {
-            "source": "Spotify",
-            "title": "Podcast interview",
-            "description": "A podcast episode featuring Hlaupadagskra.is — listen on Spotify.",
-            "openInSpotify": "Open in Spotify"
+        "podcastSource": "Spotify",
+        "openInSpotify": "Open in Spotify",
+        "podcasts": {
+            "interview": {
+                "title": "Podcast interview",
+                "description": "A podcast episode featuring Hlaupadagskra.is — listen on Spotify."
+            },
+            "mothersRunning": {
+                "title": "Mæðgur á hlaupum (þær heita báðar Hulda)",
+                "description": "Podcast brought to you by Hlaupadagskra.is"
+            }
         }
     },
     "aboutUs": {
