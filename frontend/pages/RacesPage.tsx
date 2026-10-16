@@ -74,7 +74,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
+import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
 import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -485,6 +485,13 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         const combinedJustRaced = sortByRecentlyCompletedDate([...jr, ...seriesJustRaced]);
         return { justRaced: combinedJustRaced, upcoming: up };
     }, [sortedFiltered]);
+    // #1333: shared by flattenedUpcoming below and EventTableView's row-level week filter, so both
+    // views narrow a Series event's exploded rows down to the same week-range boundary.
+    const weekRange = useMemo(
+        () => filters.thisWeekOnly ? getWeekRange('this') : filters.nextWeekOnly ? getWeekRange('next') : null,
+        [filters.thisWeekOnly, filters.nextWeekOnly],
+    );
+
     const flattenedUpcoming = useMemo((): FlattenedEventRow[] => {
         // Unlike EventTableView.tsx's equivalent call site, no defensive spread is needed here —
         // react-hooks/immutability doesn't flag this file's in-place .sort() below as mutating
@@ -503,8 +510,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                 return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
             });
         }
-        return rows;
-    }, [upcoming, sortBy]);
+        // #1333: `upcoming` kept a Series event whole once any one seriesRaces entry qualified for
+        // thisWeekOnly/nextWeekOnly, so flattenEventRows above still explodes every race into its
+        // own row — narrow back down to just the row(s) actually in the selected week.
+        return filterRowsByWeekRange(rows, weekRange);
+    }, [upcoming, sortBy, weekRange]);
 
     if (loading) {
         return (
@@ -1710,7 +1720,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} />
+                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} weekRange={weekRange} />
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
