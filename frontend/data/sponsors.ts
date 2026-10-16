@@ -28,6 +28,13 @@ export interface PromoSlot {
     textOverlay?: { i18nPrefix: string };
     /** 'wide' renders full-width at natural aspect ratio, no crop — for non-square banners. Defaults to 'card'. */
     shape?: 'card' | 'wide';
+    /**
+     * Fallback passed to useFeatureFlags().isEnabled() when the flag hasn't been created in
+     * admin yet (unknown flags default to true there). Set to false for a slot that must stay
+     * hidden until the owner creates+toggles its flag — e.g. a brand-new campaign slot. Omit for
+     * existing slots to keep the standard unknown-flag-defaults-true behavior.
+     */
+    defaultEnabled?: boolean;
     notes: string;
 }
 
@@ -69,6 +76,10 @@ export const PROMO_SLOTS: PromoSlot[] = [
         alt: 'Mæðgur á hlaupum podcast — hlustaðu á Spotify',
         position: 'top',
         shape: 'wide',
+        // Flag not yet created in admin — default to hidden until the owner creates+enables it,
+        // instead of inheriting isEnabled()'s unknown-flag-defaults-true behavior. Safe to drop
+        // this line once ad_top_promo_3 exists in admin as a real toggle.
+        defaultEnabled: false,
         notes: 'Text baked into image, 900x120. Toggle ad_top_promo_3 off in admin when the campaign ends.',
     },
     {
