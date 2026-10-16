@@ -12,8 +12,8 @@ interface MediaPageProps {
 }
 
 const PODCASTS = [
-    { id: 'interview', episodeId: '1gJfYJp5WDAYELNtCpQwNO' },
     { id: 'mothersRunning', episodeId: '0QYEU8rvLYD14lLYzv51lr' },
+    { id: 'runningAdventure', episodeId: '1gJfYJp5WDAYELNtCpQwNO' },
 ];
 
 export default function MediaPage({ mode, onToggleMode }: MediaPageProps) {
