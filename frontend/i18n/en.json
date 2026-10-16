@@ -695,11 +695,17 @@
             "description": "An interview with the founder of Hlaupadagskra.is, published in Morgunblaðið.",
             "openInNewTab": "Open in new tab"
         },
-        "podcast": {
-            "source": "Spotify",
-            "title": "Podcast interview",
-            "description": "A podcast episode featuring Hlaupadagskra.is — listen on Spotify.",
-            "openInSpotify": "Open in Spotify"
+        "podcastSource": "Spotify",
+        "openInSpotify": "Open in Spotify",
+        "podcasts": {
+            "runningAdventure": {
+                "title": "Hlaupaævintýri",
+                "description": "A podcast episode featuring Hlaupadagskra.is — listen on Spotify."
+            },
+            "mothersRunning": {
+                "title": "Mæðgur á hlaupum (þær heita báðar Hulda)",
+                "description": "Podcast brought to you by Hlaupadagskra.is"
+            }
         }
     },
     "aboutUs": {
@@ -793,6 +799,10 @@
             }
         },
         "changelog": {
+            "v1_16_3": {
+                "title": "Per-host brand icons, a fixed weekly filter for race series, and a new podcast episode",
+                "description": "Hlaupadagskra.is and 360Runs.com now each show their own icon and logo in the PWA install banner, home-screen icon, social share images, and admin dashboard, instead of a shared placeholder. The \"This week\"/\"Next week\" filter now checks each race in a series individually, so a series far in the future no longer floods the list just because its next race happens to be coming up soon. The Media page also gained a second podcast episode and a promo banner for it."
+            },
             "v1_16_2": {
                 "title": "Fixes for race-day badges, event maps, and short trail routes",
                 "description": "The \"It's race day\" badge and confetti no longer appear on every day of an ongoing running series' season — only on the day of an actual race. Event detail pages now correctly find the next upcoming race date for series events instead of occasionally falling back to a stale scheduled date. Event maps can now show trail routes for invitation-only events whose trails were previously missing from the map entirely. Short trail routes also no longer render as broken, out-of-order lines on maps."

@@ -203,10 +203,8 @@ function AdminContent() {
         <AppBar position="static">
           <Toolbar>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
-              <Typography variant="h6" noWrap>
-                Hlaupadagskra.is
-              </Typography>
+              <img src="/images/hlaupadagskra-360runs-ring.png" alt="360Runs & Hlaupadagskra.is logo" style={{ height: 32 }} />
+              <Typography variant="h6" sx={{ fontSize: '0.95rem', lineHeight: 1.1 }}>360Runs &amp; Hlaupadagskra.is</Typography>
             </Box>
           </Toolbar>
         </AppBar>
@@ -242,12 +240,10 @@ function AdminContent() {
           <Box
             component="button"
             onClick={() => setCurrentPage('dashboard')}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', p: 0, color: 'inherit' }}
           >
-            <img src="/images/hlaupadagskra.avif" alt="Hlaupadagskra logo" style={{ height: 32 }} />
-            <Typography variant="h6" noWrap>
-              Hlaupadagskra.is
-            </Typography>
+            <img src="/images/hlaupadagskra-360runs-ring.png" alt="360Runs & Hlaupadagskra.is logo" style={{ height: 32 }} />
+            <Typography variant="h6" sx={{ fontSize: '0.95rem', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>360Runs &amp; Hlaupadagskra.is</Typography>
           </Box>
           <Tooltip title="Search (Ctrl+K)">
             <IconButton

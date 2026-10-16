@@ -264,6 +264,24 @@ export function flattenEventRows(events: EventSummary[], includeRecentlyComplete
     return rows;
 }
 
+// #1333: applied after flattenEventRows whenever thisWeekOnly/nextWeekOnly is active. The
+// event-level check in eventFilters.ts (eventHasDateInRange) decides whether a Series event
+// survives at all, but keeps the *whole* event once any one race qualifies — flattenEventRows
+// then explodes that event into one row per seriesRaces entry regardless of week, so without this
+// second pass a Series event kept for a single upcoming race rendered every other race's row too
+// (its past and future ones alike). This narrows back down to just the row(s) whose own rowDate
+// is actually in range. `range: null` (no week filter active) is a no-op, so callers can pass it
+// unconditionally rather than branching. Non-Series rows are unaffected in practice: their
+// rowDate already equals the date eventHasDateInRange checked, so they only ever land here already
+// agreeing with the event-level decision.
+export function filterRowsByWeekRange(
+    rows: FlattenedEventRow[],
+    range: { start: string; end: string } | null,
+): FlattenedEventRow[] {
+    if (!range) return rows;
+    return rows.filter(row => !!row.rowDate && row.rowDate >= range.start && row.rowDate <= range.end);
+}
+
 // Per-row "days until" for a flattened row — a series-race row has its own dateOfRace (the
 // #1223/#1226 bug was exactly this ternary computed inconsistently in two places), while a plain
 // event row already carries a backend-precomputed daysUntil that must keep being used as-is.

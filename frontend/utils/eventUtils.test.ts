@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -341,6 +341,55 @@ describe('flattenEventRows', () => {
             { kind: 'series-race', event, race: futureRace, rowDate: '2026-10-15' },
             { kind: 'series-race', event, race: recentRace, rowDate: '2026-10-08' },
         ]);
+    });
+});
+
+// #1333: applied after flattenEventRows to narrow a Series event's exploded seriesRaces rows down
+// to the ones actually in [start, end] — the event-level check (eventFilters.ts) only decides
+// whether to keep the event at all, so without this second pass every race's row rendered once any
+// one of them qualified (live repro: Flandrasprettur's "Next week" filter rendering all 6 Hlaup
+// rows instead of just the one actually next week).
+describe('filterRowsByWeekRange', () => {
+    it('is a no-op when range is null', () => {
+        const event = makeEvent({ type: 'Race', displayDate: '2026-06-15' });
+        const rows = flattenEventRows([event]);
+        expect(filterRowsByWeekRange(rows, null)).toEqual(rows);
+    });
+
+    it('discards series-race rows outside the range, keeping only the one(s) inside it', () => {
+        const inRange = makeSeriesRace({ raceId: 'in-range', dateOfRace: '2026-10-20' });
+        const outOfRange1 = makeSeriesRace({ raceId: 'out-1', dateOfRace: '2026-11-17' });
+        const outOfRange2 = makeSeriesRace({ raceId: 'out-2', dateOfRace: '2027-03-16' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [inRange, outOfRange1, outOfRange2] });
+        const rows = flattenEventRows([event]);
+        const result = filterRowsByWeekRange(rows, { start: '2026-10-19', end: '2026-10-25' });
+        expect(result).toEqual([{ kind: 'series-race', event, race: inRange, rowDate: '2026-10-20' }]);
+    });
+
+    // False-negative regression: a series-race row later in the list can be the one inside range
+    // even though the series's earliest/next race is outside it — row-level filtering must not
+    // assume the in-range race is always first.
+    it('keeps a later series-race row inside range even when the earlier one is outside it', () => {
+        const outOfRange = makeSeriesRace({ raceId: 'next', dateOfRace: '2026-10-01' });
+        const laterInRange = makeSeriesRace({ raceId: 'later', dateOfRace: '2026-10-22' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [outOfRange, laterInRange] });
+        const rows = flattenEventRows([event]);
+        const result = filterRowsByWeekRange(rows, { start: '2026-10-19', end: '2026-10-25' });
+        expect(result).toEqual([{ kind: 'series-race', event, race: laterInRange, rowDate: '2026-10-22' }]);
+    });
+
+    it('keeps a non-Series event row when its rowDate is inside range, drops it when outside', () => {
+        const inRange = makeEvent({ slug: 'in', type: 'Race', displayDate: '2026-10-20' });
+        const outOfRange = makeEvent({ slug: 'out', type: 'Race', displayDate: '2026-11-01' });
+        const rows = flattenEventRows([inRange, outOfRange]);
+        const result = filterRowsByWeekRange(rows, { start: '2026-10-19', end: '2026-10-25' });
+        expect(result.map(r => r.event.slug)).toEqual(['in']);
+    });
+
+    it('discards a row with a null rowDate', () => {
+        const event = makeEvent({ type: 'Race', displayDate: null, nextEditionDate: null });
+        const rows = flattenEventRows([event]);
+        expect(filterRowsByWeekRange(rows, { start: '2026-10-19', end: '2026-10-25' })).toEqual([]);
     });
 });
 
