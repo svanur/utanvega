@@ -562,3 +562,34 @@ export function useTrailWeather(slug?: string) {
     const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
     return { weather, loading, error };
 }
+
+export interface TrailClimate {
+    averageHigh: number;
+    averageLow: number;
+    averagePrecipitation: number;
+    precipitationChance: number;
+    averageMaxWind: number;
+    yearsOfData: number;
+    targetMonth: number;
+    targetDay: number;
+}
+
+// Historical climate normals for a given (month, day) — an ERA5 reanalysis average going back
+// ~15 years, not a forecast. Much longer staleTime than useTrailWeather since the same (slug,
+// month, day) is effectively immutable data; the backend's own cache TTL is 7 days for the same
+// reason (GetTrailClimateQuery.cs).
+export function useTrailClimate(slug?: string, month?: number, day?: number) {
+    const { data: climate = null, isPending, error: queryError } = useQuery<TrailClimate | null>({
+        queryKey: ['climate', slug, month, day],
+        queryFn: () => fetch(`${API_URL}/api/v1/trails/${slug}/climate?month=${month}&day=${day}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Climate data unavailable');
+                return res.json() as Promise<TrailClimate>;
+            }),
+        enabled: !!slug && !!month && !!day,
+        staleTime: 24 * 60 * 60 * 1000,
+    });
+    const loading = isPending && !!slug && !!month && !!day;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
+    return { climate, loading, error };
+}

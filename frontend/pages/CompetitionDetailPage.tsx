@@ -65,6 +65,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
+import ClimateCard from '../components/ClimateCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
 import LinkifiedText from '../components/LinkifiedText';
@@ -74,7 +75,7 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
-import { useTrailWeather, useTrailsBySlugs } from '../hooks/useTrails';
+import { useTrailWeather, useTrailClimate, useTrailsBySlugs } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { TrailMapView } from '../components/TrailMapView';
@@ -519,6 +520,33 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [event, primaryEdition, visibleRaces]);
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
+
+    // #1335: same trail-resolution tiers as weatherTrailSlug, minus its daysUntil <= 7 gate — climate
+    // normals are historical averages, not a forecast, so they're useful (and should render) at any
+    // distance from the event date, unlike the live WeatherCard above.
+    const climateTrailSlug = useMemo(() => {
+        if (!event) return undefined;
+        return primaryEdition?.trailSlug
+            ?? primaryEdition?.visibleRaces.find(race => race.trailSlug)?.trailSlug
+            ?? visibleRaces.find(race => race.trailSlug)?.trailSlug
+            ?? undefined;
+    }, [event, primaryEdition, visibleRaces]);
+
+    // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
+    // ScheduleRule client-side (that's the backend's job).
+    const climateTarget = useMemo(() => {
+        const dateStr = event?.displayDate ?? event?.nextEditionDate;
+        if (!dateStr) return null;
+        const date = new Date(dateStr + 'T00:00:00');
+        if (Number.isNaN(date.getTime())) return null;
+        return { month: date.getMonth() + 1, day: date.getDate() };
+    }, [event]);
+
+    const { climate, loading: climateLoading, error: climateError } = useTrailClimate(
+        climateTrailSlug,
+        climateTarget?.month,
+        climateTarget?.day,
+    );
 
     // Collects every distinct trail referenced by the current edition — mirroring weatherTrailSlug's
     // fallback tiers above (edition-level trailSlug, then primaryEdition's races, then the broader
@@ -1136,6 +1164,18 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {t('races.raceDayWeatherDesc')}
                         </Typography>
                         <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} raceDate={nextRaceDate} />
+                    </Box>
+                )}
+
+                {isEnabled('climate_normals') && climateTrailSlug && climateTarget && (climateLoading || climate) && (
+                    <Box sx={{ mt: 3 }}>
+                        <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
+                            {t('races.climateNormals')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                            {t('races.climateNormalsDesc', { years: climate?.yearsOfData ?? 15 })}
+                        </Typography>
+                        <ClimateCard climate={climate} loading={climateLoading} error={climateError} />
                     </Box>
                 )}
 

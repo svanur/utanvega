@@ -635,6 +635,19 @@ app.MapGet("/api/v1/trails/{slug}/weather", async (string slug, IMediator mediat
 })
 .WithName("GetTrailWeather");
 
+app.MapGet("/api/v1/trails/{slug}/climate", async (string slug, int? month, int? day, IMediator mediator) =>
+{
+    if (month is null or < 1 or > 12 || day is null or < 1 or > 31)
+    {
+        return Results.BadRequest("Invalid month/day. Month must be 1-12 and day must be 1-31.");
+    }
+
+    var climate = await mediator.Send(new GetTrailClimateQuery(slug, month.Value, day.Value));
+    if (climate == null) return Results.NotFound();
+    return Results.Ok(climate);
+})
+.WithName("GetTrailClimate");
+
 app.MapGet("/api/v1/trails/{slug}/leaderboard", async (string slug, int? limit, IMediator mediator) =>
 {
     if (limit is <= 0 or > 1000)

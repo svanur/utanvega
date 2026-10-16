@@ -568,6 +568,15 @@
             "99": "Ofsaveður"
         }
     },
+    "climate": {
+        "title": "Venjulega á þessum degi",
+        "avgHighLow": "Meðalhámark / meðallágmark",
+        "avgPrecipitation": "Meðalúrkoma",
+        "chanceOfRain": "Líkur á úrkomu",
+        "avgWind": "Meðal hámarksvindur",
+        "basedOnYears": "Byggt á {{years}} ára veðurfarsgögnum",
+        "unavailable": "Veðurfarsgögn ekki tiltæk"
+    },
     "privacy": {
         "title": "Persónuverndarstefna",
         "intro": "Hlaupadagskra.is leggur áherslu á að virða friðhelgi einkalífs þíns. Þessi stefna útskýrir hvaða gögn við söfnum, hvernig við notum þau og réttindi þín. Í stuttu máli: við söfnum mjög litlu og deilum engu.",
@@ -1481,6 +1490,8 @@
         "statusUpcoming": "Óstaðfest",
         "raceDayWeather": "Veður á leiðinni",
         "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
+        "climateNormals": "Veðurfar í sögulegu samhengi",
+        "climateNormalsDesc": "Hvernig þessi dagur hefur venjulega litið út síðustu {{years}} ár — ekki spá.",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
         "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
