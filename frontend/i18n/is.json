@@ -695,11 +695,17 @@
             "description": "Viðtal við stofnanda Hlaupadagskrár.is, birt í Morgunblaðinu.",
             "openInNewTab": "Opna í nýjum flipa"
         },
-        "podcast": {
-            "source": "Spotify",
-            "title": "Podcast viðtal",
-            "description": "Podcast þáttur með Hlaupadagskrá.is — hlustaðu á Spotify.",
-            "openInSpotify": "Opna í Spotify"
+        "podcastSource": "Spotify",
+        "openInSpotify": "Opna í Spotify",
+        "podcasts": {
+            "interview": {
+                "title": "Podcast viðtal",
+                "description": "Podcast þáttur með Hlaupadagskrá.is — hlustaðu á Spotify."
+            },
+            "mothersRunning": {
+                "title": "Mæðgur á hlaupum (þær heita báðar Hulda)",
+                "description": "Podcast þáttur í boði Hlaupadagskra.is — hlustaðu á Spotify."
+            }
         }
     },
     "aboutUs": {
