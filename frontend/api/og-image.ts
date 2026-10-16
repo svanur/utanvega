@@ -1,6 +1,6 @@
 import { ImageResponse } from '@vercel/og';
 import type React from 'react';
-import { resolveLocale, BRAND_NAME, TAGLINE, type Locale } from './_site';
+import { resolveLocale, siteOrigin, BRAND_NAME, TAGLINE, type Locale } from './_site';
 
 export const config = { runtime: 'edge' };
 
@@ -51,18 +51,71 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 /**
  * Top-bar brand label per locale — derived from _site.ts's BRAND_NAME (#1096),
  * uppercased and suffixed to read as the domain (360Runs has no ".com" of its
- * own the way Hlaupadagskra.is already carries its ".is").
+ * own the way Hlaupadagskra.is already carries its ".is"). Used to carry a
+ * leading 🏃 emoji baked into the string itself; that emoji is now the
+ * BRAND_FALLBACK_EMOJI rendered next to the real ring logo image (#1221).
  */
 const BRAND_LABEL: Record<Locale, string> = {
-  is: `🏃 ${BRAND_NAME.is.toUpperCase()}`,
-  en: `🏃 ${BRAND_NAME.en.toUpperCase()}.COM`,
+  is: BRAND_NAME.is.toUpperCase(),
+  en: `${BRAND_NAME.en.toUpperCase()}.COM`,
 };
 
-/** defaultImage() heading per locale — same shared BRAND_NAME, no decoration beyond the emoji. */
+/** defaultImage() heading per locale — same shared BRAND_NAME, no further decoration. */
 const BRAND_HEADING: Record<Locale, string> = {
-  is: `🏃 ${BRAND_NAME.is}`,
-  en: `🏃 ${BRAND_NAME.en}`,
+  is: BRAND_NAME.is,
+  en: BRAND_NAME.en,
 };
+
+/**
+ * Per-host ring-logo PNG that now sits next to BRAND_LABEL/BRAND_HEADING
+ * instead of the emoji they used to carry (#1221). Same already-committed
+ * artwork pwaManifestFields.ts's ICON_STEMS keys for the PWA
+ * manifest/install banner (#1080) — reused here rather than duplicated or
+ * re-generated. Built into an absolute URL via siteOrigin(request), since
+ * @vercel/og's `<img>` fetches its `src` over the network at render time —
+ * a relative path has nothing to resolve against there.
+ */
+const LOGO_PATH: Record<Locale, string> = {
+  is: 'icons/hlaupadagskra-icon-512.png',
+  en: 'icons/360runs-icon-512.png',
+};
+
+/** Glyph shown instead of the logo image when logoUrl() can't confirm it's reachable. */
+const BRAND_FALLBACK_EMOJI = '🏃';
+
+/**
+ * Confirms the per-host logo is actually reachable before handing its URL to
+ * @vercel/og's `<img>`. This matters because satori/resvg fetch that URL
+ * themselves, *inside* the ReadableStream that the ImageResponse constructor
+ * returns synchronously (see node_modules/@vercel/og/dist/index.js's `p`
+ * class) — a failure there rejects the stream after handler() has already
+ * returned, somewhere the surrounding try/catch below can no longer reach.
+ * Doing our own cheap preflight fetch here — which *is* inside an awaited,
+ * try/catch-guarded path — lets a network hiccup degrade to
+ * BRAND_FALLBACK_EMOJI instead of corrupting the whole OG image response.
+ */
+async function logoUrl(locale: Locale, request: Request): Promise<string | null> {
+  const url = `${siteOrigin(request)}/${LOGO_PATH[locale]}`;
+  try {
+    const res = await fetch(url);
+    return res.ok ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+/** `<img>` element for the ring logo — h() only models `style`+`children`, not `src`/`width`/`height`. */
+function logoImg(src: string, size: number): Record<string, unknown> {
+  return {
+    type: 'img',
+    props: {
+      src,
+      width: size,
+      height: size,
+      style: { display: 'flex', borderRadius: '50%' },
+    },
+  };
+}
 
 interface TrailResponse {
   name: string;
@@ -82,17 +135,20 @@ export default async function handler(request: Request) {
   const locale = resolveLocale(request);
 
   if (!slug) {
-    return defaultImage(locale);
+    return defaultImage(locale, request);
   }
 
   try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/v1/trails/${encodeURIComponent(slug)}`,
-      { headers: { Accept: 'application/json' } }
-    );
+    const [res, logo] = await Promise.all([
+      fetch(
+        `${BACKEND_URL}/api/v1/trails/${encodeURIComponent(slug)}`,
+        { headers: { Accept: 'application/json' } }
+      ),
+      logoUrl(locale, request),
+    ]);
 
     if (!res.ok) {
-      return defaultImage(locale);
+      return defaultImage(locale, request);
     }
 
     const trail = await res.json() as TrailResponse;
@@ -128,6 +184,9 @@ export default async function handler(request: Request) {
         h(
           'div',
           { display: 'flex', alignItems: 'center', gap: '12px' },
+          logo
+            ? logoImg(logo, 40)
+            : h('div', { display: 'flex', fontSize: '28px' }, BRAND_FALLBACK_EMOJI),
           h('div', {
             fontSize: '28px',
             fontWeight: 700,
@@ -210,11 +269,13 @@ export default async function handler(request: Request) {
       },
     });
   } catch {
-    return defaultImage(locale);
+    return defaultImage(locale, request);
   }
 }
 
-function defaultImage(locale: Locale) {
+async function defaultImage(locale: Locale, request: Request) {
+  const logo = await logoUrl(locale, request);
+
   const image = h(
     'div',
     {
@@ -228,7 +289,14 @@ function defaultImage(locale: Locale) {
       fontFamily: 'sans-serif',
       color: 'white',
     },
-    h('div', { display: 'flex', fontSize: '72px', fontWeight: 800, marginBottom: '16px' }, BRAND_HEADING[locale]),
+    h(
+      'div',
+      { display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '16px' },
+      logo
+        ? logoImg(logo, 96)
+        : h('div', { display: 'flex', fontSize: '72px' }, BRAND_FALLBACK_EMOJI),
+      h('div', { display: 'flex', fontSize: '72px', fontWeight: 800 }, BRAND_HEADING[locale]),
+    ),
     h('div', { display: 'flex', fontSize: '28px', color: '#94a3b8' }, TAGLINE[locale]),
   );
 

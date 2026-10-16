@@ -53,10 +53,59 @@ function flattenText(node: unknown): string[] {
   return [];
 }
 
-async function renderedText(request: Request): Promise<string[]> {
+/** Recursively collects the `src` of every `img` element in the tree (logoImg()'s output). */
+function flattenImgSrcs(node: unknown): string[] {
+  if (Array.isArray(node)) return node.flatMap(flattenImgSrcs);
+  if (node && typeof node === 'object') {
+    const { type, props } = node as { type?: string; props?: { src?: string; children?: unknown } };
+    const own = type === 'img' && typeof props?.src === 'string' ? [props.src] : [];
+    const nested = props && 'children' in props ? flattenImgSrcs(props.children) : [];
+    return [...own, ...nested];
+  }
+  return [];
+}
+
+/**
+ * Renders once and derives both text and img srcs from the *same* captured
+ * element, rather than calling handler() twice per test — two independent
+ * calls would each append to the shared `captured` array, and reading
+ * `captured[captured.length - 1]` from both risks one seeing the other's push.
+ */
+async function render(request: Request): Promise<{ text: string[]; imgSrcs: string[] }> {
   await handler(request);
   const element = captured[captured.length - 1];
-  return flattenText(element);
+  return { text: flattenText(element), imgSrcs: flattenImgSrcs(element) };
+}
+
+/**
+ * Stubs global fetch to branch on the request URL: the `/icons/...` logo
+ * request (logoUrl()'s preflight) is handled separately from the backend
+ * trail request, since a single test often exercises both.
+ */
+function stubFetch(responder: (url: string) => Promise<Response> | Response) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      return responder(url);
+    })
+  );
+}
+
+const trail = {
+  name: 'Esjan hringur',
+  slug: 'esjan-hringur',
+  length: 12000,
+  elevationGain: 780,
+  elevationLoss: 780,
+  activityType: 'TrailRunning',
+  difficulty: 'Hard',
+  locations: [{ name: 'Reykjavík' }],
+};
+
+/** Logo request/response pair: `ok` logo fetches resolve, by locale's LOGO_PATH stem. */
+function isLogoRequest(url: string): boolean {
+  return url.includes('/icons/');
 }
 
 describe('og-image.ts locale-aware branding', () => {
@@ -66,73 +115,94 @@ describe('og-image.ts locale-aware branding', () => {
   });
 
   describe('trail-found branch (top-bar logo)', () => {
-    const trail = {
-      name: 'Esjan hringur',
-      slug: 'esjan-hringur',
-      length: 12000,
-      elevationGain: 780,
-      elevationLoss: 780,
-      activityType: 'TrailRunning',
-      difficulty: 'Hard',
-      locations: [{ name: 'Reykjavík' }],
-    };
-
     beforeEach(() => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async () => new Response(JSON.stringify(trail), { status: 200 }))
+      stubFetch((url) =>
+        isLogoRequest(url)
+          ? new Response(null, { status: 200 })
+          : new Response(JSON.stringify(trail), { status: 200 })
       );
     });
 
-    it('shows the English/360Runs brand on the 360runs.com host', async () => {
-      const text = await renderedText(makeRequest('slug=esjan-hringur', '360runs.com'));
-      expect(text).toContain('🏃 360RUNS.COM');
-      expect(text).not.toContain('🏃 HLAUPADAGSKRA.IS');
+    it('shows the English/360Runs brand text and logo on the 360runs.com host', async () => {
+      const { text, imgSrcs } = await render(makeRequest('slug=esjan-hringur', '360runs.com'));
+      expect(text).toContain('360RUNS.COM');
+      expect(text).not.toContain('HLAUPADAGSKRA.IS');
+      expect(imgSrcs).toContain('https://360runs.com/icons/360runs-icon-512.png');
     });
 
-    it('shows the unchanged Icelandic brand on the hlaupadagskra.is host', async () => {
-      const text = await renderedText(makeRequest('slug=esjan-hringur', 'www.hlaupadagskra.is'));
-      expect(text).toContain('🏃 HLAUPADAGSKRA.IS');
+    it('shows the unchanged Icelandic brand text and logo on the hlaupadagskra.is host', async () => {
+      const { text, imgSrcs } = await render(makeRequest('slug=esjan-hringur', 'www.hlaupadagskra.is'));
+      expect(text).toContain('HLAUPADAGSKRA.IS');
+      expect(imgSrcs).toContain('https://www.hlaupadagskra.is/icons/hlaupadagskra-icon-512.png');
     });
 
-    it('falls back to the Icelandic brand on an unknown host (preview deploys)', async () => {
-      const text = await renderedText(
-        makeRequest('slug=esjan-hringur', 'some-preview.vercel.app')
+    it('falls back to the Icelandic brand text and logo on an unknown host (preview deploys)', async () => {
+      const { text, imgSrcs } = await render(makeRequest('slug=esjan-hringur', 'some-preview.vercel.app'));
+      expect(text).toContain('HLAUPADAGSKRA.IS');
+      expect(imgSrcs).toContain('https://some-preview.vercel.app/icons/hlaupadagskra-icon-512.png');
+    });
+
+    it('falls back to the 🏃 emoji, with no img element, when the logo preflight fetch fails', async () => {
+      stubFetch((url) =>
+        isLogoRequest(url)
+          ? Promise.reject(new Error('network down'))
+          : Promise.resolve(new Response(JSON.stringify(trail), { status: 200 }))
       );
-      expect(text).toContain('🏃 HLAUPADAGSKRA.IS');
+      const { text, imgSrcs } = await render(makeRequest('slug=esjan-hringur', '360runs.com'));
+      expect(text).toContain('🏃');
+      expect(imgSrcs).toEqual([]);
+    });
+
+    it('falls back to the 🏃 emoji, with no img element, when the logo preflight fetch is non-ok', async () => {
+      stubFetch((url) =>
+        isLogoRequest(url)
+          ? new Response(null, { status: 404 })
+          : new Response(JSON.stringify(trail), { status: 200 })
+      );
+      const { text, imgSrcs } = await render(makeRequest('slug=esjan-hringur', '360runs.com'));
+      expect(text).toContain('🏃');
+      expect(imgSrcs).toEqual([]);
     });
   });
 
   describe('defaultImage() branch', () => {
-    it('no-slug request: shows English heading/tagline on the 360runs.com host', async () => {
-      const text = await renderedText(makeRequest('', '360runs.com'));
-      expect(text).toContain('🏃 360Runs');
+    it('no-slug request: shows English heading/tagline and logo on the 360runs.com host', async () => {
+      stubFetch((url) => (isLogoRequest(url) ? new Response(null, { status: 200 }) : new Response(null, { status: 404 })));
+      const { text, imgSrcs } = await render(makeRequest('', '360runs.com'));
+      expect(text).toContain('360Runs');
       expect(text).toContain('All running events in one place');
+      expect(imgSrcs).toContain('https://360runs.com/icons/360runs-icon-512.png');
     });
 
-    it('no-slug request: unchanged Icelandic heading/tagline on the hlaupadagskra.is host', async () => {
-      const text = await renderedText(makeRequest('', 'www.hlaupadagskra.is'));
-      expect(text).toContain('🏃 Hlaupadagskra.is');
+    it('no-slug request: unchanged Icelandic heading/tagline and logo on the hlaupadagskra.is host', async () => {
+      stubFetch((url) => (isLogoRequest(url) ? new Response(null, { status: 200 }) : new Response(null, { status: 404 })));
+      const { text, imgSrcs } = await render(makeRequest('', 'www.hlaupadagskra.is'));
+      expect(text).toContain('Hlaupadagskra.is');
       expect(text).toContain('Öll hlaup á einum stað');
+      expect(imgSrcs).toContain('https://www.hlaupadagskra.is/icons/hlaupadagskra-icon-512.png');
     });
 
     it('failed backend fetch (non-ok response): varies by host too', async () => {
-      vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 500 })));
-      const text = await renderedText(makeRequest('slug=missing-trail', '360runs.com'));
-      expect(text).toContain('🏃 360Runs');
+      stubFetch((url) => (isLogoRequest(url) ? new Response(null, { status: 200 }) : new Response(null, { status: 500 })));
+      const { text, imgSrcs } = await render(makeRequest('slug=missing-trail', '360runs.com'));
+      expect(text).toContain('360Runs');
       expect(text).toContain('All running events in one place');
+      expect(imgSrcs).toContain('https://360runs.com/icons/360runs-icon-512.png');
     });
 
-    it('thrown fetch error: varies by host too', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn(async () => {
-          throw new Error('network down');
-        })
-      );
-      const text = await renderedText(makeRequest('slug=missing-trail', '360runs.com'));
-      expect(text).toContain('🏃 360Runs');
+    it('thrown fetch error: degrades gracefully to the 🏃 emoji rather than throwing', async () => {
+      // Every fetch call throws here — including logoUrl()'s own preflight —
+      // which is exactly the "network hiccup" scenario #1221 asks to be
+      // verified: the response still renders, just without the logo image.
+      stubFetch(() => {
+        throw new Error('network down');
+      });
+      const request = makeRequest('slug=missing-trail', '360runs.com');
+      const { text, imgSrcs } = await render(request);
+      expect(text).toContain('360Runs');
+      expect(text).toContain('🏃');
       expect(text).toContain('All running events in one place');
+      expect(imgSrcs).toEqual([]);
     });
   });
 });
