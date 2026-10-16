@@ -11,9 +11,31 @@ export default function PromoStrip({ position }: { position: 'top' | 'bottom' })
     const active = PROMO_SLOTS.filter(slot => slot.position === position && isEnabled(slot.flag));
     if (active.length === 0) return null;
 
+    const wideSlots = active.filter(slot => slot.shape === 'wide');
+    const cardSlots = active.filter(slot => slot.shape !== 'wide');
+
     return (
-        <Stack data-promo-strip direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: position === 'bottom' ? 4 : 0, mb: 3 }}>
-            {active.map(slot => (
+        <Stack data-promo-strip spacing={1.5} sx={{ mt: position === 'bottom' ? 4 : 0, mb: 3 }}>
+            {wideSlots.map(slot => (
+                <Box
+                    key={slot.flag}
+                    component={RouterLink}
+                    to={slot.href}
+                    {...(isExternalHref(slot.href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    sx={{ display: 'block' }}
+                >
+                    <Box
+                        component="img"
+                        src={slot.img}
+                        alt={slot.alt}
+                        sx={{ width: '100%', height: 'auto', display: 'block', borderRadius: 2 }}
+                    />
+                </Box>
+            ))}
+
+            {cardSlots.length > 0 && (
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            {cardSlots.map(slot => (
                 <Box
                     key={slot.flag}
                     component={RouterLink}
@@ -59,6 +81,8 @@ export default function PromoStrip({ position }: { position: 'top' | 'bottom' })
                     )}
                 </Box>
             ))}
+            </Stack>
+            )}
         </Stack>
     );
 }

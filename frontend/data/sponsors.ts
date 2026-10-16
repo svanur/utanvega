@@ -26,6 +26,8 @@ export interface PromoSlot {
     position: 'top' | 'bottom';
     /** If set, renders a text + CTA button overlay from these i18n keys: .title / .dates / .cta */
     textOverlay?: { i18nPrefix: string };
+    /** 'wide' renders full-width at natural aspect ratio, no crop — for non-square banners. Defaults to 'card'. */
+    shape?: 'card' | 'wide';
     notes: string;
 }
 
@@ -58,6 +60,16 @@ export const PROMO_SLOTS: PromoSlot[] = [
         position: 'top',
         textOverlay: { i18nPrefix: 'promos.runningTrip' },
         notes: 'Text overlay rendered from i18n — update promos.runningTrip.* keys',
+    },
+    {
+        flag: 'ad_top_promo_3',
+        name: 'Mæðgur á hlaupum podcast',
+        img: '/sponsors/maedgur-a-hlaupum-podcast.png',
+        href: 'https://open.spotify.com/episode/0QYEU8rvLYD14lLYzv51lr',
+        alt: 'Mæðgur á hlaupum podcast — hlustaðu á Spotify',
+        position: 'top',
+        shape: 'wide',
+        notes: 'Text baked into image, 900x120. Toggle ad_top_promo_3 off in admin when the campaign ends.',
     },
     {
         flag: 'ad_bottom_promo_1',
