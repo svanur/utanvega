@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { applyFilters, eventFiltersEqual, matchesDistanceBucket, parseDistanceKm, type EventFilters } from './eventFilters';
-import type { EventSummary } from '../hooks/useEvents';
+import { getWeekRange } from './eventUtils';
+import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 const DEFAULT_FILTERS: EventFilters = {
     activityTypes: [],
@@ -68,6 +69,20 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         endDisplayDate: null,
         editionStatus: null,
         editionEffectiveCancelled: false,
+        ...overrides,
+    };
+}
+
+function makeSeriesRace(overrides: Partial<SeriesRaceDto> = {}): SeriesRaceDto {
+    return {
+        raceId: 'race-1',
+        raceName: 'Test Sub-Race',
+        raceNameEn: null,
+        dateOfRace: '2026-07-01',
+        startTime: null,
+        distanceLabel: null,
+        ticketStatus: 'Available',
+        registrationUrl: null,
         ...overrides,
     };
 }
@@ -228,6 +243,56 @@ describe('applyFilters — weekend/this-week/next-week filters', () => {
         ];
         const result = applyFilters(events, { ...DEFAULT_FILTERS, nextWeekOnly: true }, '', [], false);
         expect(result.map(e => e.slug)).toEqual([]);
+    });
+});
+
+// #1333: a Series event's displayDate/nextEditionDate only ever names its *next* race, so the
+// event-level thisWeekOnly/nextWeekOnly check must also consult seriesRaces or it false-negatives
+// on a series whose soonest race already missed the target week while a later race in the same
+// series lands inside it.
+describe('applyFilters — #1333 Series week filters also consult seriesRaces', () => {
+    it('keeps a Series event whose nextEditionDate is outside next week but a later seriesRaces date is inside it (false-negative regression)', () => {
+        const { start } = getWeekRange('next');
+        const events = [
+            makeEvent({
+                slug: 'series', type: 'Series', displayDate: null, nextEditionDate: '2099-01-01',
+                seriesRaces: [makeSeriesRace({ raceId: 'r1', dateOfRace: '2099-01-01' }), makeSeriesRace({ raceId: 'r2', dateOfRace: start })],
+            }),
+        ];
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, nextWeekOnly: true }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual(['series']);
+    });
+
+    it('drops a Series event whose nextEditionDate and every seriesRaces date are outside next week', () => {
+        const events = [
+            makeEvent({
+                slug: 'series', type: 'Series', displayDate: null, nextEditionDate: '2099-01-01',
+                seriesRaces: [makeSeriesRace({ dateOfRace: '2099-02-01' })],
+            }),
+        ];
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, nextWeekOnly: true }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual([]);
+    });
+
+    it('ignores seriesRaces for a non-Series event — only its own displayDate decides, as before', () => {
+        const { start } = getWeekRange('next');
+        const events = [
+            makeEvent({ slug: 'race', type: 'Race', displayDate: '2099-01-01', seriesRaces: [makeSeriesRace({ dateOfRace: start })] }),
+        ];
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, nextWeekOnly: true }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual([]);
+    });
+
+    it('applies the same seriesRaces check to thisWeekOnly', () => {
+        const { start } = getWeekRange('this');
+        const events = [
+            makeEvent({
+                slug: 'series', type: 'Series', displayDate: null, nextEditionDate: '2099-01-01',
+                seriesRaces: [makeSeriesRace({ dateOfRace: start })],
+            }),
+        ];
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, thisWeekOnly: true }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual(['series']);
     });
 });
 

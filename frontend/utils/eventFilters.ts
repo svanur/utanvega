@@ -54,6 +54,18 @@ export function matchesDistanceBucket(km: number, bucket: RaceDistanceBucket): b
     return km >= 100;
 }
 
+// #1333: used by applyFilters's thisWeekOnly/nextWeekOnly checks — true when the event's own
+// representative date (displayDate/nextEditionDate) falls in [start, end], OR, for a Series
+// event, when any of its seriesRaces dates does. Exported for direct unit coverage of the
+// Series-only branch (see eventFilters.test.ts) independent of the getWeekRange('this'/'next')
+// plumbing in applyFilters itself.
+export function eventHasDateInRange(c: EventSummary, start: string, end: string): boolean {
+    const d = c.displayDate ?? c.nextEditionDate;
+    if (d && d >= start && d <= end) return true;
+    if (c.type !== 'Series' || !c.seriesRaces) return false;
+    return c.seriesRaces.some(race => !!race.dateOfRace && race.dateOfRace >= start && race.dateOfRace <= end);
+}
+
 // Shared filter steps used by RacesPage's `filtered`, `hasMoreEventsIncludingPast`, and
 // `monthsWithEvents`. Add new filter types here — all three consumers pick them up automatically.
 // `favoriteEvents`/`includeAllEvents` are explicit parameters (not closure captures over component
@@ -84,8 +96,15 @@ export function applyFilters(
     if (f.certifications.length > 0) result = result.filter(c => c.certifications?.some(cert => f.certifications.includes(cert)));
     if (f.championships.length > 0) result = result.filter(c => c.championshipCategories?.some(ch => f.championships.includes(ch)));
     if (f.weekendOnly) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; if (!d) return false; const day = new Date(d + 'T00:00:00').getDay(); return day === 0 || day === 6; });
-    if (f.thisWeekOnly) { const { start, end } = getWeekRange('this'); result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && d >= start && d <= end; }); }
-    if (f.nextWeekOnly) { const { start, end } = getWeekRange('next'); result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && d >= start && d <= end; }); }
+    // #1333: a Series event's displayDate/nextEditionDate only ever names its *next* race — once
+    // that race is in the past (or just outside the target week), the event-level check below used
+    // to drop the whole event even when a later race in the same seriesRaces list actually falls
+    // inside the target week (e.g. a 6-race series whose soonest race is next week but a later one
+    // is the week after). Checking seriesRaces too keeps the event in the result set whenever ANY
+    // of its races qualifies — flattenEventRows's row-level filter (eventUtils.ts) then narrows the
+    // rendered rows back down to just the race(s) actually in range.
+    if (f.thisWeekOnly) { const { start, end } = getWeekRange('this'); result = result.filter(c => eventHasDateInRange(c, start, end)); }
+    if (f.nextWeekOnly) { const { start, end } = getWeekRange('next'); result = result.filter(c => eventHasDateInRange(c, start, end)); }
     if (f.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
     if (f.favoritesOnly) result = result.filter(c => favoriteEvents.includes(c.slug));
     if (f.distanceBuckets.length > 0) result = result.filter(c => {

@@ -23,7 +23,7 @@ import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor, formatNextDate, getCountdownLabel, isEffectivelyCancelled, isOngoingPastDayTwo, flattenEventRows, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate, getCountdownLabel, isEffectivelyCancelled, isOngoingPastDayTwo, flattenEventRows, filterRowsByWeekRange, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
 import { ActivityIcons } from '../utils/activityIcon';
 import { getActivityIcon } from '../utils/getActivityIcon';
 import { useLocalize } from '../utils/localize';
@@ -37,12 +37,18 @@ interface EventTableViewProps {
     userLocation: { lat: number; lng: number } | null;
     onToggleFavorite: (slug: string) => void;
     isFavoriteEvent: (slug: string) => boolean;
+    // #1333: RacesPage's thisWeekOnly/nextWeekOnly keep a Series event once any one of its races
+    // is in the target week, so flattenEventRows below still explodes every race into its own
+    // row — this narrows back down to just the row(s) actually in range, same range RacesPage's
+    // own list view applies, via the shared filterRowsByWeekRange. null when neither filter is
+    // active (no-op).
+    weekRange: { start: string; end: string } | null;
 }
 
 type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type' | 'distance';
 type SortDir = 'asc' | 'desc';
 
-const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, onToggleFavorite, isFavoriteEvent }) => {
+const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, onToggleFavorite, isFavoriteEvent, weekRange }) => {
     const { t } = useTranslation();
     const loc = useLocalize();
     const navigate = useNavigate();
@@ -153,8 +159,12 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                 return dir * aDate.localeCompare(bDate);
             });
         }
-        return rows;
-    }, [events, sortField, sortDir, getDistanceKm, loc]);
+        // #1333: spread into a fresh array for the same react-hooks/immutability reason as the
+        // `rows` spread above — otherwise the lint rule can't prove this hook's return value is
+        // safe, and (surprisingly) flags the unrelated lastYear/lastHolidayDate reassignment
+        // further down this component as a purity violation.
+        return [...filterRowsByWeekRange(rows, weekRange)];
+    }, [events, sortField, sortDir, getDistanceKm, loc, weekRange]);
 
     const columns: { field: SortField; label: string; align?: 'left' | 'right' | 'center' }[] = [
         { field: 'daysUntil', label: t('races.table.date', 'Date'), align: 'center' },
