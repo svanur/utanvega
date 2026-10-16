@@ -698,8 +698,8 @@
         "podcastSource": "Spotify",
         "openInSpotify": "Opna í Spotify",
         "podcasts": {
-            "interview": {
-                "title": "Podcast viðtal",
+            "runningAdventure": {
+                "title": "Hlaupaævintýri",
                 "description": "Podcast þáttur með Hlaupadagskrá.is — hlustaðu á Spotify."
             },
             "mothersRunning": {

@@ -698,8 +698,8 @@
         "podcastSource": "Spotify",
         "openInSpotify": "Open in Spotify",
         "podcasts": {
-            "interview": {
-                "title": "Podcast interview",
+            "runningAdventure": {
+                "title": "Hlaupaævintýri",
                 "description": "A podcast episode featuring Hlaupadagskra.is — listen on Spotify."
             },
             "mothersRunning": {
