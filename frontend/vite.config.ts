@@ -21,7 +21,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      // No includeAssets: this build-time manifest is dead in production (see
+      // the comment below), and the files it used to list (favicon.ico,
+      // mask-icon.svg) don't exist in frontend/public — there's nothing
+      // real to precache beyond Workbox's own default glob patterns.
       workbox: {
         runtimeCaching: [
           {
