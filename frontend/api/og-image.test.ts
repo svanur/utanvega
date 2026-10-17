@@ -203,6 +203,17 @@ describe('og-image.ts locale-aware branding', () => {
       expect(imgSrcs).toContain('https://360runs.com/icons/360runs-icon-512.png');
     });
 
+    it('failed backend fetch (non-ok response): reuses handler()\'s already-resolved logo rather than fetching it again (#1340)', async () => {
+      stubFetch((url) => (isLogoRequest(url) ? new Response(null, { status: 200 }) : new Response(null, { status: 500 })));
+      await render(makeRequest('slug=missing-trail', '360runs.com'));
+      const logoFetchCalls = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls
+        .filter(([input]) => {
+          const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+          return isLogoRequest(url);
+        });
+      expect(logoFetchCalls.length).toBeLessThanOrEqual(1);
+    });
+
     it('thrown fetch error: degrades gracefully to the 🏃 emoji rather than throwing', async () => {
       // Every fetch call throws here — including logoUrl()'s own preflight —
       // which is exactly the "network hiccup" scenario #1221 asks to be
