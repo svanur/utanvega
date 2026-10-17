@@ -1170,7 +1170,11 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Box>
                 )}
 
-                {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate) && (
+                {/* Mount whenever loading, data arrived, or the backend came back with neither
+                    data nor an error (#1355) — that's the "no usable climate data" case,
+                    which ClimateCard renders as an explicit unavailable message rather than
+                    nothing. A real fetch error still suppresses the card, same as before. */}
+                {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate || !climateError) && (
                     <Box sx={{ mt: 3 }}>
                         <ClimateCard climate={climate} loading={climateLoading} error={climateError} locationName={event?.locationName} />
                     </Box>
