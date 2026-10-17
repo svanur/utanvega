@@ -98,7 +98,10 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         </Stack>
                     )}
                 </Stack>
-                <IconButton size="small">
+                {/* IconButton is decorative — the click handler lives on the header Stack above.
+                    Width/height forced to 44px so the icon's own hit area still meets the
+                    WCAG 2.5.5 / mobile touch-target minimum on top of the row-level click area. */}
+                <IconButton size="small" sx={{ width: 44, height: 44 }}>
                     {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </IconButton>
             </Stack>
