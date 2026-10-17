@@ -2072,6 +2072,47 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(today.AddDays(19), editionDto.EndDate);
     }
 
+    // ─── GetEventQuery — dateless edition with a future EndDate must not surface as "next" (#1327) ───
+    // ResolveNextEditionDate's (EndDate ?? Date) boundary fix for #1320 accidentally let a Date ==
+    // null, EndDate-set edition qualify as "next" too, even though ongoingEdition/relevantEdition
+    // below both require EffDate(ed).HasValue and so never treat that same edition as current or
+    // upcoming — NextEditionDate and the relevantEdition-derived EditionStatus must agree.
+
+    [Fact]
+    public async Task GetEvent_BySlug_DatelessEditionWithFutureEndDate_NextEditionDateAndEditionStatusAgree()
+    {
+        var ev = CreateTestEvent("Dateless Edition Event");
+        ev.Slug = "dateless-edition-event";
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = null,
+            EndDate = today.AddDays(30),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventQuery("dateless-edition-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        // Neither NextEditionDate nor EditionStatus may resolve to this dateless edition — with no
+        // ScheduleRule to fall back to, NextEditionDate is null and relevantEdition is null too.
+        Assert.Null(result!.NextEditionDate);
+        Assert.Null(result.EditionStatus);
+    }
+
     // ─── GetEventQuery — Primary race / elevation profile card treatment (#927) ───
     // Reimplements the same "primary race" selection as GetEditionsHistoryQueryHandler.BuildRow
     // (#806/#815, see EditionsHistoryHandlerTests) against EventEditionDto instead of
@@ -3041,6 +3082,45 @@ public class EventHandlerTests : IDisposable
         var dto = Assert.Single(result);
         Assert.Equal(today.AddDays(19), dto.NextEditionDate);
         Assert.Equal(today.AddDays(19), dto.EndDisplayDate);
+    }
+
+    // ─── GetEventsQuery — dateless edition with a future EndDate must not surface as "next" (#1327) ───
+    // Same ResolveNextEditionDate boundary fix as GetEventQuery above — NextEditionDate and the
+    // relevantEdition-derived EditionStatus must agree even though this handler keeps its own copy
+    // of ongoingEdition/relevantEdition.
+
+    [Fact]
+    public async Task GetEvents_DatelessEditionWithFutureEndDate_NextEditionDateAndEditionStatusAgree()
+    {
+        var ev = CreateTestEvent("Dateless Edition Event List");
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = null,
+            EndDate = today.AddDays(30),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        // Neither NextEditionDate nor EditionStatus may resolve to this dateless edition — with no
+        // ScheduleRule to fall back to, NextEditionDate is null and relevantEdition is null too.
+        Assert.Null(dto.NextEditionDate);
+        Assert.Null(dto.EditionStatus);
     }
 
     [Fact]
