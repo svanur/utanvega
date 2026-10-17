@@ -86,23 +86,6 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
             {/* Collapsible content */}
             <Collapse in={expanded}>
                 <Box sx={{ mt: 2 }}>
-                    <Stack direction="row" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
-                        {locationName && (
-                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                <LocationOnIcon fontSize="small" color="action" />
-                                <Typography variant="body2" color="text.secondary">
-                                    {locationName}
-                                </Typography>
-                            </Stack>
-                        )}
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
-                            <CalendarMonthIcon fontSize="small" color="action" />
-                            <Typography variant="body2" color="text.secondary">
-                                {targetDateLabel}
-                            </Typography>
-                        </Stack>
-                    </Stack>
-
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <ThermostatIcon color="action" />
                         <Box>
@@ -146,6 +129,30 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.avgWind')}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                        {locationName && (
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <LocationOnIcon fontSize="small" color="action" />
+                                <Box>
+                                    <Typography variant="body2" fontWeight="bold">
+                                        {locationName}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {t('climate.location')}
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        )}
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <CalendarMonthIcon fontSize="small" color="action" />
+                            <Box>
+                                <Typography variant="body2" fontWeight="bold">
+                                    {targetDateLabel}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {t('climate.date')}
                                 </Typography>
                             </Box>
                         </Stack>

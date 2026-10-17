@@ -574,6 +574,8 @@
         "avgPrecipitation": "Avg. precipitation",
         "chanceOfRain": "Chance of rain",
         "avgWind": "Avg. max wind",
+        "location": "Location",
+        "date": "Date",
         "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
         "unavailable": "Historical climate data unavailable"
     },
