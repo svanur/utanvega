@@ -55,8 +55,24 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
         );
     }
 
-    if (error || !climate) {
+    if (error) {
         return null;
+    }
+
+    // Backend returns null (not an error) when the event has no usable coordinate or no years
+    // of archive data to average — distinct from a fetch failure, so it gets its own message
+    // instead of silently vanishing like the error case above.
+    if (!climate) {
+        return (
+            <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <HistoryIcon color="secondary" />
+                    <Typography variant="body2" color="text.secondary">
+                        {t('climate.unavailable')}
+                    </Typography>
+                </Stack>
+            </Paper>
+        );
     }
 
     const precipitationChancePct = Math.round(climate.precipitationChance * 100);
