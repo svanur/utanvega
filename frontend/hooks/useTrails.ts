@@ -562,3 +562,36 @@ export function useTrailWeather(slug?: string) {
     const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
     return { weather, loading, error };
 }
+
+export interface EventClimate {
+    averageHigh: number;
+    averageLow: number;
+    averagePrecipitation: number;
+    precipitationChance: number;
+    averageMaxWind: number;
+    yearsOfData: number;
+    targetMonth: number;
+    targetDay: number;
+}
+
+// Historical climate normals for a given (month, day) — an ERA5 reanalysis average going back
+// ~15 years, not a forecast. Much longer staleTime than useTrailWeather since the same (eventSlug,
+// month, day) is effectively immutable data; the backend's own cache TTL is 7 days for the same
+// reason (GetEventClimateQuery.cs). Climate is event data, not trail data — the backend resolves
+// the coordinate from the event's own GpxPointLat/Lng, falling back to its Location, so this
+// works for events without any attached trail.
+export function useEventClimate(eventSlug?: string, month?: number, day?: number) {
+    const { data: climate = null, isPending, error: queryError } = useQuery<EventClimate | null>({
+        queryKey: ['climate', eventSlug, month, day],
+        queryFn: () => fetch(`${API_URL}/api/v1/events/${eventSlug}/climate?month=${month}&day=${day}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Climate data unavailable');
+                return res.json() as Promise<EventClimate>;
+            }),
+        enabled: !!eventSlug && !!month && !!day,
+        staleTime: 24 * 60 * 60 * 1000,
+    });
+    const loading = isPending && !!eventSlug && !!month && !!day;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
+    return { climate, loading, error };
+}

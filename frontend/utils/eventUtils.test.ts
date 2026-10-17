@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -666,6 +666,36 @@ describe('computeRaceDayFlags', () => {
             );
             expect(result.isRaceDay).toBe(false);
         });
+    });
+});
+
+describe('resolveSeriesClimateDate', () => {
+    it('returns null for an empty raceDates list (a brand-new Series edition with no races yet)', () => {
+        expect(resolveSeriesClimateDate([], new Date('2026-11-07T00:00:00'))).toBeNull();
+    });
+
+    it('prefers the nearest upcoming race date over a later one', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(resolveSeriesClimateDate(['2026-12-12', '2026-11-12', '2027-01-15'], now)).toBe('2026-11-12');
+    });
+
+    it('treats today itself as upcoming (not past)', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(resolveSeriesClimateDate(['2026-09-14', '2026-11-12'], now)).toBe('2026-11-12');
+    });
+
+    it('falls back to the most recently passed race once the whole season is over', () => {
+        const now = new Date('2027-04-01T00:00:00');
+        expect(resolveSeriesClimateDate(['2026-10-10', '2026-11-12', '2027-03-11'], now)).toBe('2027-03-11');
+    });
+
+    // The regression this guards against: Powerade Vetrarhlaupin's Oct-Mar season reading its
+    // displayDate as October (the season's min(raceDates)) for the whole ongoing span — climate
+    // in February must resolve to February's own race, not October's.
+    it('resolves to the in-season upcoming race, not the season\'s first race', () => {
+        const now = new Date('2027-02-20T00:00:00');
+        const powerade = ['2026-10-08', '2026-11-12', '2026-12-10', '2027-01-14', '2027-02-25', '2027-03-11'];
+        expect(resolveSeriesClimateDate(powerade, now)).toBe('2027-02-25');
     });
 });
 

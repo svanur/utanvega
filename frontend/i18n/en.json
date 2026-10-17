@@ -568,6 +568,17 @@
             "99": "Severe thunderstorm"
         }
     },
+    "climate": {
+        "title": "Climate Normals",
+        "avgHighLow": "Average high / low",
+        "avgPrecipitation": "Avg. precipitation",
+        "chanceOfRain": "Chance of rain",
+        "avgWind": "Avg. max wind",
+        "location": "Location",
+        "date": "Date",
+        "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
+        "unavailable": "Historical climate data unavailable"
+    },
     "privacy": {
         "title": "Privacy Policy",
         "intro": "{{brandName}} is committed to respecting your privacy. This policy explains what data we collect, how we use it, and your rights. The short version: we collect very little and share nothing.",

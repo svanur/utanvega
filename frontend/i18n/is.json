@@ -568,6 +568,17 @@
             "99": "Ofsaveður"
         }
     },
+    "climate": {
+        "title": "Veðurfar í sögulegu samhengi",
+        "avgHighLow": "Meðalhámark / meðallágmark",
+        "avgPrecipitation": "Meðalúrkoma",
+        "chanceOfRain": "Líkur á úrkomu",
+        "avgWind": "Meðal hámarksvindur",
+        "location": "Staðsetning",
+        "date": "Dagsetning",
+        "basedOnYears": "Hvernig þessi dagur hefur venjulega litið út síðustu {{years}} ár — ekki spá.",
+        "unavailable": "Veðurfarsgögn ekki tiltæk"
+    },
     "privacy": {
         "title": "Persónuverndarstefna",
         "intro": "Hlaupadagskra.is leggur áherslu á að virða friðhelgi einkalífs þíns. Þessi stefna útskýrir hvaða gögn við söfnum, hvernig við notum þau og réttindi þín. Í stuttu máli: við söfnum mjög litlu og deilum engu.",

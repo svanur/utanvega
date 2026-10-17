@@ -65,6 +65,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import WeatherCard from '../components/WeatherCard';
+import ClimateCard from '../components/ClimateCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
 import LinkifiedText from '../components/LinkifiedText';
@@ -74,7 +75,7 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
-import { useTrailWeather, useTrailsBySlugs } from '../hooks/useTrails';
+import { useTrailWeather, useEventClimate, useTrailsBySlugs } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { TrailMapView } from '../components/TrailMapView';
@@ -93,7 +94,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate } from '../utils/eventUtils';
 import { getTicketStatusColor, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -519,6 +520,35 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [event, primaryEdition, visibleRaces]);
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
+
+    // #1335: climate is event data, not trail data — the backend resolves the coordinate from the
+    // event's own GpxPointLat/Lng, falling back to its Location, so this needs only the event's
+    // slug (no trail-resolution tiers, unlike weatherTrailSlug) and works for events with no
+    // attached trail at all. Historical averages are also useful at any distance from the event
+    // date, unlike the live WeatherCard above, so there's no daysUntil gate either.
+    const climateEventSlug = event?.slug;
+
+    // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
+    // ScheduleRule client-side (that's the backend's job). For a Series event, displayDate/
+    // nextEditionDate is the season's min(raceDates) — its *first* race — for as long as the
+    // season is "ongoing" (e.g. Powerade Vetrarhlaupin's whole Oct-Mar span), the same staleness
+    // computeRaceDayFlags above already works around — so climate would otherwise show October's
+    // normals in February. Use the specific current/next individual race's own date instead.
+    const climateTarget = useMemo(() => {
+        const dateStr = event?.type === 'Series'
+            ? resolveSeriesClimateDate(seriesRaceDates)
+            : (event?.displayDate ?? event?.nextEditionDate);
+        if (!dateStr) return null;
+        const date = new Date(dateStr + 'T00:00:00');
+        if (Number.isNaN(date.getTime())) return null;
+        return { month: date.getMonth() + 1, day: date.getDate() };
+    }, [event, seriesRaceDates]);
+
+    const { climate, loading: climateLoading, error: climateError } = useEventClimate(
+        climateEventSlug,
+        climateTarget?.month,
+        climateTarget?.day,
+    );
 
     // Collects every distinct trail referenced by the current edition — mirroring weatherTrailSlug's
     // fallback tiers above (edition-level trailSlug, then primaryEdition's races, then the broader
@@ -1136,6 +1166,12 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             {t('races.raceDayWeatherDesc')}
                         </Typography>
                         <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} raceDate={nextRaceDate} />
+                    </Box>
+                )}
+
+                {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate) && (
+                    <Box sx={{ mt: 3 }}>
+                        <ClimateCard climate={climate} loading={climateLoading} error={climateError} locationName={event?.locationName} />
                     </Box>
                 )}
 
