@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -544,6 +544,50 @@ describe('getWeekRange', () => {
         const now = new Date('2026-03-16T09:00:00'); // Monday
         expect(getWeekRange('this', now)).toEqual({ start: '2026-03-16', end: '2026-03-22' });
         expect(getWeekRange('next', now)).toEqual({ start: '2026-03-23', end: '2026-03-29' });
+    });
+});
+
+// #1325: isOngoingPastDayTwo previously read `new Date()` internally instead of taking an
+// injectable `now` like every other function in this file — these cases isolate its own boundary
+// behavior directly, rather than only indirectly via computeRaceDayFlags's non-Series tests.
+describe('isOngoingPastDayTwo', () => {
+    it('is false whenever daysUntil is not 0, regardless of display dates', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(1, '2026-11-12', '2026-11-15', now)).toBe(false);
+        expect(isOngoingPastDayTwo(-1, '2026-11-12', '2026-11-15', now)).toBe(false);
+        expect(isOngoingPastDayTwo(null, '2026-11-12', '2026-11-15', now)).toBe(false);
+    });
+
+    it('is false when displayDate or endDisplayDate is missing', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(0, null, '2026-11-15', now)).toBe(false);
+        expect(isOngoingPastDayTwo(0, '2026-11-12', null, now)).toBe(false);
+        expect(isOngoingPastDayTwo(0, '2026-11-12', undefined, now)).toBe(false);
+    });
+
+    it('is false for a single-day edition, where endDisplayDate equals displayDate', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-12', now)).toBe(false);
+    });
+
+    it('is false on day 0 (the edition\'s own start date)', () => {
+        const now = new Date('2026-11-12T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(false);
+    });
+
+    it('is false on day 1 elapsed (still "just started")', () => {
+        const now = new Date('2026-11-13T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(false);
+    });
+
+    it('is true on day 2 elapsed', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(true);
+    });
+
+    it('is true past day 2, for as long as the edition keeps daysUntil pinned to 0', () => {
+        const now = new Date('2026-11-15T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(true);
     });
 });
 
