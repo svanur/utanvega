@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -724,5 +724,87 @@ describe('deriveEventTrailSlugs', () => {
     it('returns an empty set when primaryEdition is null/undefined and visibleRaces has no trailSlugs', () => {
         expect(deriveEventTrailSlugs(null, [makeRace(null)])).toEqual(new Set());
         expect(deriveEventTrailSlugs(undefined, [])).toEqual(new Set());
+    });
+});
+
+// #1357: CompetitionDetailPage's hero pill, mid-season, must not read the backend-pinned
+// event.daysUntil (0 for the whole Series season) as "Today" — it should derive a real countdown
+// from the nearest individual race date, same resolution resolveSeriesClimateDate already uses.
+describe('resolveHeroDaysUntil', () => {
+    it('returns the real days-until the nearest upcoming race for a Series event mid-season (not 0)', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        const powerade = ['2026-09-14', '2026-11-12', '2027-01-14'];
+        expect(resolveHeroDaysUntil({ type: 'Series', daysUntil: 0 }, powerade, now)).toBe(5);
+    });
+
+    it('returns 0 when a Series race date is exactly today', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(resolveHeroDaysUntil({ type: 'Series', daysUntil: 0 }, ['2026-09-14', '2026-11-12'], now)).toBe(0);
+    });
+
+    it('returns null for a Series event with no race dates at all', () => {
+        expect(resolveHeroDaysUntil({ type: 'Series', daysUntil: 0 }, [], new Date('2026-11-07T00:00:00'))).toBeNull();
+    });
+
+    it('passes a non-Series event\'s daysUntil through unchanged', () => {
+        expect(resolveHeroDaysUntil({ type: 'Race', daysUntil: 3 }, [], new Date('2026-11-07T00:00:00'))).toBe(3);
+    });
+});
+
+// #1357: EditionMeta's "Day X of Y" chip must never compute/render for a Series edition — its
+// date/endDate span the whole season (derived from min/max race date on the backend), not a
+// continuous multi-day event.
+describe('resolveEditionDayProgress', () => {
+    it('returns null for a Series edition even when today falls within its season-spanning date/endDate', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(resolveEditionDayProgress(true, '2026-09-14', '2027-03-11', now)).toBeNull();
+    });
+
+    it('still computes the day/total for a genuine (non-Series) multi-day edition currently in progress', () => {
+        const now = new Date('2026-03-16T00:00:00');
+        expect(resolveEditionDayProgress(false, '2026-03-14', '2026-03-18', now)).toEqual({ day: 3, totalDays: 5 });
+    });
+});
+
+// #1357: a race only counts as "happening today" — and so only it may show the 'in-progress'
+// chip/green border — when either the edition isn't a multi-day/Series span, or this specific
+// race's own dateOfRace matches today. Mirrors the compound condition the race progress bar
+// already applies, extended to racePhase/pastStart.
+describe('isRaceHappeningToday', () => {
+    it('is true for a single-day, non-multi-day race on its actual race day (unchanged behavior)', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(isRaceHappeningToday(0, false, '2026-11-12', now)).toBe(true);
+    });
+
+    it('is false for a single-day race when daysUntil is not 0', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(isRaceHappeningToday(1, false, '2026-11-13', now)).toBe(false);
+    });
+
+    it('is true for the one stage of a genuine multi-day edition whose dateOfRace is today', () => {
+        const now = new Date('2026-03-16T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-03-16', now)).toBe(true);
+    });
+
+    it('is false for a past stage of a genuine multi-day edition even though daysUntil is still pinned to 0', () => {
+        const now = new Date('2026-03-17T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-03-15', now)).toBe(false);
+    });
+
+    // The exact Series mid-season regression: daysUntil stays pinned to 0 for the whole season,
+    // so a past race in the same edition must not read as "today" just because of that pinning.
+    it('is false for a past Series race mid-season even though daysUntil is pinned to 0 for the whole season', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-09-14', now)).toBe(false);
+    });
+
+    it('is true for the specific Series race whose dateOfRace is today', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-11-12', now)).toBe(true);
+    });
+
+    it('is false for a future Series race not yet reached, even with daysUntil pinned to 0', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2027-01-14', now)).toBe(false);
     });
 });

@@ -406,6 +406,57 @@ export function resolveSeriesClimateDate(raceDates: string[], now: Date = new Da
     return past[0] ?? null;
 }
 
+// #1357: pulls CompetitionDetailPage's hero pill fallback countdown out into a pure function —
+// the page has no render-level test harness (see CompetitionDetailPage.test.tsx), so logic that
+// needs covering lives here instead, same as computeRaceDayFlags/resolveSeriesClimateDate above.
+// A Series event's own daysUntil is pinned to 0 for its entire season span (see the comment on
+// daysUntil pinning above), so once isRaceDay has already ruled out "today is an actual race",
+// the pill must derive its countdown from the nearest individual race date instead — reusing
+// resolveSeriesClimateDate, the same resolution climate normals already use for this reason.
+export function resolveHeroDaysUntil(
+    event: { type: string; daysUntil: number | null },
+    seriesRaceDates: string[],
+    now: Date = new Date(),
+): number | null {
+    if (event.type !== 'Series') return event.daysUntil;
+    const targetDate = resolveSeriesClimateDate(seriesRaceDates, now);
+    return targetDate ? daysBetween(targetDate, now) : null;
+}
+
+// #1357: EditionMeta's "Day X of Y" chip is only meaningful for a genuine multi-day edition. A
+// Series edition's date/endDate span the whole season (EditionStatusHelpers.
+// ComputeEffectiveEditionDates derives them from the min/max dateOfRace across its races), not a
+// continuous event, so the chip must never compute/render for one. Extracted for the same reason
+// getMultiDayEditionProgress itself is extracted: unit-testable without rendering EditionMeta.
+export function resolveEditionDayProgress(
+    isSeries: boolean,
+    date: string | null | undefined,
+    endDate: string | null | undefined,
+    now: Date = new Date(),
+): { day: number; totalDays: number } | null {
+    if (isSeries) return null;
+    return getMultiDayEditionProgress(date, endDate, now);
+}
+
+// #1357: a race only counts as "happening today" — and so only it may read 'in-progress'/draw a
+// green border in RaceCard — when either the edition isn't a multi-day/Series span, or this
+// specific race's own dateOfRace matches today. Without this, daysUntil === 0 alone (pinned for
+// a Series event's whole season, or a long multi-day edition's whole date..endDate span, per the
+// daysUntil-pinning comment above) would mark every other race in that span as "today" too — in
+// particular a past race with no cutoffMinutes set would then read 'in-progress' forever, since
+// nothing would ever time it out. Mirrors the compound condition the race progress bar already
+// applies (`!isMultiDayOngoingEdition || isLiveStageToday`), extracted so racePhase/pastStart can
+// share and unit-test it rather than re-deriving isLiveStageToday inline.
+export function isRaceHappeningToday(
+    daysUntil: number | null | undefined,
+    isMultiDayOngoingEdition: boolean | undefined,
+    dateOfRace: string | null | undefined,
+    now: Date = new Date(),
+): boolean {
+    const isLiveStageToday = !!isMultiDayOngoingEdition && dateOfRace === toDateOnlyString(now);
+    return daysUntil === 0 && (!isMultiDayOngoingEdition || isLiveStageToday);
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,
