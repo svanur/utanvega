@@ -148,7 +148,7 @@ export default async function handler(request: Request) {
     ]);
 
     if (!res.ok) {
-      return defaultImage(locale, request);
+      return defaultImage(locale, request, logo);
     }
 
     const trail = await res.json() as TrailResponse;
@@ -273,8 +273,16 @@ export default async function handler(request: Request) {
   }
 }
 
-async function defaultImage(locale: Locale, request: Request) {
-  const logo = await logoUrl(locale, request);
+/**
+ * `logo` is accepted pre-resolved so callers that already ran logoUrl() for
+ * this same request (handler()'s `!res.ok` branch, which resolves it inside
+ * the Promise.all alongside the trail fetch) don't trigger a second,
+ * redundant network round-trip here (#1340). Callers with no prior fetch —
+ * the no-slug path and the top-level catch — omit it and this resolves it
+ * itself, same as before.
+ */
+async function defaultImage(locale: Locale, request: Request, logo?: string | null) {
+  const resolvedLogo = logo !== undefined ? logo : await logoUrl(locale, request);
 
   const image = h(
     'div',
@@ -292,8 +300,8 @@ async function defaultImage(locale: Locale, request: Request) {
     h(
       'div',
       { display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '16px' },
-      logo
-        ? logoImg(logo, 96)
+      resolvedLogo
+        ? logoImg(resolvedLogo, 96)
         : h('div', { display: 'flex', fontSize: '72px' }, BRAND_FALLBACK_EMOJI),
       h('div', { display: 'flex', fontSize: '72px', fontWeight: 800 }, BRAND_HEADING[locale]),
     ),
