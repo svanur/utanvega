@@ -11,7 +11,6 @@ import {
     Collapse,
 } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
-import ThermostatIcon from '@mui/icons-material/Thermostat';
 import AirIcon from '@mui/icons-material/Air';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -25,6 +24,19 @@ interface ClimateCardProps {
     loading: boolean;
     error: string | null;
     locationName?: string | null;
+}
+
+// Unlike WeatherCard, there's no WMO weatherCode to key off — climate normals are an aggregate
+// (average high/low, chance of rain, average wind) over ~15 past years, not one dated forecast.
+// This heuristic picks a representative emoji from those aggregates instead, so the card still
+// gives a "live" at-a-glance read rather than a fixed icon unrelated to the actual normals —
+// reusing the same emoji set WeatherCard's getWeatherIcon draws from, for visual consistency.
+function getClimateIcon(climate: EventClimate): string {
+    if (climate.averageLow <= 0 && climate.precipitationChance >= 0.3) return '🌨️';
+    if (climate.precipitationChance >= 0.5) return '🌧️';
+    if (climate.precipitationChance >= 0.2) return '🌦️';
+    if (climate.averageHigh >= 15) return '☀️';
+    return '⛅';
 }
 
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
@@ -48,6 +60,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
     }
 
     const precipitationChancePct = Math.round(climate.precipitationChance * 100);
+    const icon = getClimateIcon(climate);
     // Climate normals have no year of their own (averaged across ~15 past years), so this is
     // deliberately "15. júlí", not a dated "15. júlí 2027" — reusing the same months array other
     // pages already pull from the races namespace rather than duplicating it under climate.
@@ -72,7 +85,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                     {/* Quick summary when collapsed — mirrors WeatherCard's icon + temp + wind pattern */}
                     {!expanded && (
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
-                            <ThermostatIcon sx={{ fontSize: '1.2rem', color: 'action.active' }} />
+                            <Typography sx={{ fontSize: '1.2rem', lineHeight: 1 }}>{icon}</Typography>
                             <Typography variant="body2" fontWeight="bold">
                                 {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
                             </Typography>
@@ -94,7 +107,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
             <Collapse in={expanded}>
                 <Box sx={{ mt: 2 }}>
                     <Stack direction="row" alignItems="center" spacing={2}>
-                        <ThermostatIcon color="action" />
+                        <Typography sx={{ fontSize: '2.5rem', lineHeight: 1 }}>{icon}</Typography>
                         <Box>
                             <Typography variant="h5" fontWeight="bold" sx={{ lineHeight: 1.1 }}>
                                 {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
