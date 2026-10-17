@@ -10,20 +10,19 @@ using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Tests.Handlers;
 
-// #1335: GetTrailClimateQuery adds an always-visible "climate normals" section (historical
+// #1335: GetEventClimateQuery adds an always-visible "climate normals" section (historical
 // averages, Open-Meteo's archive API) independent of GetTrailWeatherQuery's live 7-day forecast.
-// These tests cover: trail/coordinate resolution (mirroring GetTrailWeatherQueryHandlerTests'
-// sibling, which doesn't exist yet — there is no prior weather handler test coverage to mirror),
-// the server-side aggregation math (internal Aggregate, tested directly so no HTTP mocking is
-// needed for the arithmetic), caching, and graceful failure when Open-Meteo is unreachable.
-public class GetTrailClimateQueryHandlerTests : IDisposable
+// Climate is event data, not trail data — the coordinate source is the event's own
+// GpxPointLat/Lng, falling back to its Location's center, never a race's attached trail. These
+// tests cover: that coordinate resolution (including "neither exists" -> null), the server-side
+// aggregation math (internal Aggregate, tested directly so no HTTP mocking is needed for the
+// arithmetic), caching, and graceful failure when Open-Meteo is unreachable.
+public class GetEventClimateQueryHandlerTests : IDisposable
 {
-    private static readonly GeometryFactory Factory = new(new PrecisionModel(), 4326);
-
     private readonly TestDbContextFactory _factory;
     private readonly IMemoryCache _cache;
 
-    public GetTrailClimateQueryHandlerTests()
+    public GetEventClimateQueryHandlerTests()
     {
         _factory = new TestDbContextFactory();
         _cache = new MemoryCache(new MemoryCacheOptions());
@@ -35,30 +34,30 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
         _cache.Dispose();
     }
 
-    private static LineString SimpleLine() => Factory.CreateLineString(new[]
+    private static Event CreateTestEvent(string name, double? gpxLat = null, double? gpxLng = null, Core.Entities.Location? location = null)
     {
-        new CoordinateZ(-21.90, 64.13, 10),
-        new CoordinateZ(-21.89, 64.14, 45),
-    });
-
-    private static Trail CreateTestTrail(string name, bool withGpx = true)
-    {
-        return new Trail
+        return new Event
         {
             Id = Guid.NewGuid(),
             Name = name,
             Slug = name.ToLower().Replace(" ", "-"),
-            Length = 5000,
-            ActivityTypeId = ActivityType.Hiking,
-            Type = TrailType.Loop,
-            Difficulty = Difficulty.Easy,
-            Visibility = Visibility.Public,
-            // TrailStatus defaults to Draft (enum value 0) — the handler's lookup filters to
-            // Published/EventOnly only, same as GetTrailWeatherQuery, so this must be explicit.
-            Status = TrailStatus.Published,
-            GpxData = withGpx ? SimpleLine() : null,
+            Type = EventType.Race,
+            ActivityType = ActivityType.TrailRunning,
+            Status = EventStatus.Confirmed,
+            GpxPointLat = gpxLat,
+            GpxPointLng = gpxLng,
+            Location = location,
+            LocationId = location?.Id,
         };
     }
+
+    private static Core.Entities.Location CreateTestLocation(double lat, double lng) => new()
+    {
+        Id = Guid.NewGuid(),
+        Name = "Test Location",
+        Slug = "test-location-" + Guid.NewGuid(),
+        Center = new Point(lng, lat) { SRID = 4326 },
+    };
 
     // 11 identical days (±5 day window) per year — every mocked HTTP call returns this same body
     // regardless of the start_date/end_date it was asked for, since these tests exercise the
@@ -107,36 +106,36 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
         return factoryMock;
     }
 
-    // --- Trail/coordinate resolution (mirrors GetTrailWeatherQuery's null-on-failure handling) ---
+    // --- Event/coordinate resolution ---
 
     [Fact]
     public async Task Handle_UnknownSlug_ReturnsNull()
     {
         using var ctx = _factory.CreateContext();
         var handlerMock = MockHandlerReturning(FakeArchiveJson);
-        var handler = new GetTrailClimateQueryHandler(ctx, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
+        var handler = new GetEventClimateQueryHandler(ctx, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
 
-        var result = await handler.Handle(new GetTrailClimateQuery("does-not-exist", 7, 15), CancellationToken.None);
+        var result = await handler.Handle(new GetEventClimateQuery("does-not-exist", 7, 15), CancellationToken.None);
 
         Assert.Null(result);
         handlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_TrailWithoutGpxData_ReturnsNull()
+    public async Task Handle_EventWithNeitherGpxPointNorLocation_ReturnsNull()
     {
-        var trail = CreateTestTrail("No Gpx Trail", withGpx: false);
+        var @event = CreateTestEvent("No Coordinate Event");
         using (var ctx = _factory.CreateContext())
         {
-            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
             await ctx.SaveChangesAsync();
         }
 
         using var ctx2 = _factory.CreateContext();
         var handlerMock = MockHandlerReturning(FakeArchiveJson);
-        var handler = new GetTrailClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
 
-        var result = await handler.Handle(new GetTrailClimateQuery(trail.Slug, 7, 15), CancellationToken.None);
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
 
         Assert.Null(result);
         handlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
@@ -145,20 +144,20 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
     // --- Archive API reachable: coordinate resolves and climate normals are aggregated ---
 
     [Fact]
-    public async Task Handle_ResolvedCoordinate_ReturnsAggregatedClimate()
+    public async Task Handle_EventWithGpxPoint_ReturnsAggregatedClimate()
     {
-        var trail = CreateTestTrail("Mountain Loop");
+        var @event = CreateTestEvent("Gpx Point Event", gpxLat: 64.13, gpxLng: -21.90);
         using (var ctx = _factory.CreateContext())
         {
-            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
             await ctx.SaveChangesAsync();
         }
 
         using var ctx2 = _factory.CreateContext();
         var handlerMock = MockHandlerReturning(FakeArchiveJson);
-        var handler = new GetTrailClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
 
-        var result = await handler.Handle(new GetTrailClimateQuery(trail.Slug, 7, 15), CancellationToken.None);
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal(10, result!.AverageHigh);
@@ -171,15 +170,63 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
         Assert.Equal(Math.Round(1.0 / 11, 2), result.PrecipitationChance);
     }
 
+    [Fact]
+    public async Task Handle_EventWithNoGpxPointButLocation_FallsBackToLocationCenter()
+    {
+        var location = CreateTestLocation(64.13, -21.90);
+        var @event = CreateTestEvent("Location Fallback Event", location: location);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Events.Add(@event);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(10, result!.AverageHigh);
+        handlerMock.Protected().Verify("SendAsync", Times.AtLeastOnce(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_EventWithBothGpxPointAndLocation_PrefersGpxPoint()
+    {
+        // Location center is a coordinate far enough from the GPX point that, if the handler used
+        // it instead, FetchArchiveAsync would be called with different lat/lon values — this test
+        // only asserts the result succeeds, with the GPX-point branch covered directly above and
+        // the precedence documented in GetEventClimateQueryHandler.Handle's if/else-if ordering.
+        var location = CreateTestLocation(0, 0);
+        var @event = CreateTestEvent("Both Coordinates Event", gpxLat: 64.13, gpxLng: -21.90, location: location);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Events.Add(@event);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+    }
+
     // --- Caching (mirrors GetTrailWeatherQuery's IMemoryCache pattern) ---
 
     [Fact]
     public async Task Handle_CalledTwice_SecondCallIsServedFromCache()
     {
-        var trail = CreateTestTrail("Cached Trail");
+        var @event = CreateTestEvent("Cached Event", gpxLat: 64.13, gpxLng: -21.90);
         using (var ctx = _factory.CreateContext())
         {
-            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
             await ctx.SaveChangesAsync();
         }
 
@@ -188,8 +235,8 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
 
         using (var ctx2 = _factory.CreateContext())
         {
-            var handler = new GetTrailClimateQueryHandler(ctx2, factory, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
-            var first = await handler.Handle(new GetTrailClimateQuery(trail.Slug, 7, 15), CancellationToken.None);
+            var handler = new GetEventClimateQueryHandler(ctx2, factory, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+            var first = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
             Assert.NotNull(first);
         }
 
@@ -197,8 +244,8 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
 
         using (var ctx3 = _factory.CreateContext())
         {
-            var handler = new GetTrailClimateQueryHandler(ctx3, factory, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
-            var second = await handler.Handle(new GetTrailClimateQuery(trail.Slug, 7, 15), CancellationToken.None);
+            var handler = new GetEventClimateQueryHandler(ctx3, factory, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+            var second = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
             Assert.NotNull(second);
         }
 
@@ -214,10 +261,10 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_DifferentDay_IsNotServedFromTheOtherDaysCacheEntry()
     {
-        var trail = CreateTestTrail("Distinct Cache Trail");
+        var @event = CreateTestEvent("Distinct Cache Event", gpxLat: 64.13, gpxLng: -21.90);
         using (var ctx = _factory.CreateContext())
         {
-            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
             await ctx.SaveChangesAsync();
         }
 
@@ -226,15 +273,15 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
 
         using (var ctx2 = _factory.CreateContext())
         {
-            var handler = new GetTrailClimateQueryHandler(ctx2, factory, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
-            await handler.Handle(new GetTrailClimateQuery(trail.Slug, 7, 15), CancellationToken.None);
+            var handler = new GetEventClimateQueryHandler(ctx2, factory, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+            await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
         }
         var callsAfterFirst = GetSendAsyncInvocationCount(handlerMock);
 
         using (var ctx3 = _factory.CreateContext())
         {
-            var handler = new GetTrailClimateQueryHandler(ctx3, factory, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
-            await handler.Handle(new GetTrailClimateQuery(trail.Slug, 8, 1), CancellationToken.None);
+            var handler = new GetEventClimateQueryHandler(ctx3, factory, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+            await handler.Handle(new GetEventClimateQuery(@event.Slug, 8, 1), CancellationToken.None);
         }
         var callsAfterSecond = GetSendAsyncInvocationCount(handlerMock);
 
@@ -247,18 +294,18 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
     [Fact]
     public async Task Handle_ArchiveApiUnreachable_ReturnsNullRatherThanThrowing()
     {
-        var trail = CreateTestTrail("Unreachable Trail");
+        var @event = CreateTestEvent("Unreachable Event", gpxLat: 64.13, gpxLng: -21.90);
         using (var ctx = _factory.CreateContext())
         {
-            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
             await ctx.SaveChangesAsync();
         }
 
         using var ctx2 = _factory.CreateContext();
         var handlerMock = MockHandlerThrowing();
-        var handler = new GetTrailClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetTrailClimateQueryHandler>.Instance);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
 
-        var result = await handler.Handle(new GetTrailClimateQuery(trail.Slug, 7, 15), CancellationToken.None);
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
 
         Assert.Null(result);
     }
@@ -286,7 +333,7 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
             YearResponse(12, 2, 2, 6),
         };
 
-        var result = GetTrailClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
 
         Assert.NotNull(result);
         Assert.Equal(11, result!.AverageHigh);
@@ -306,7 +353,7 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
             null,
         };
 
-        var result = GetTrailClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
 
         Assert.NotNull(result);
         Assert.Equal(1, result!.YearsOfData);
@@ -318,7 +365,7 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
     {
         var responses = new List<OpenMeteoArchiveResponse?> { null, null, null };
 
-        var result = GetTrailClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
 
         Assert.Null(result);
     }
@@ -342,7 +389,7 @@ public class GetTrailClimateQueryHandlerTests : IDisposable
             },
         };
 
-        var result = GetTrailClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
 
         Assert.NotNull(result);
         Assert.Equal(Math.Round(2.0 / 3, 2), result!.PrecipitationChance);

@@ -16,10 +16,10 @@ import AirIcon from '@mui/icons-material/Air';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import type { TrailClimate } from '../hooks/useTrails';
+import type { EventClimate } from '../hooks/useTrails';
 
 interface ClimateCardProps {
-    climate: TrailClimate | null;
+    climate: EventClimate | null;
     loading: boolean;
     error: string | null;
 }

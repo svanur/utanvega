@@ -75,7 +75,7 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
-import { useTrailWeather, useTrailClimate, useTrailsBySlugs } from '../hooks/useTrails';
+import { useTrailWeather, useEventClimate, useTrailsBySlugs } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { TrailMapView } from '../components/TrailMapView';
@@ -521,16 +521,12 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
 
-    // #1335: same trail-resolution tiers as weatherTrailSlug, minus its daysUntil <= 7 gate — climate
-    // normals are historical averages, not a forecast, so they're useful (and should render) at any
-    // distance from the event date, unlike the live WeatherCard above.
-    const climateTrailSlug = useMemo(() => {
-        if (!event) return undefined;
-        return primaryEdition?.trailSlug
-            ?? primaryEdition?.visibleRaces.find(race => race.trailSlug)?.trailSlug
-            ?? visibleRaces.find(race => race.trailSlug)?.trailSlug
-            ?? undefined;
-    }, [event, primaryEdition, visibleRaces]);
+    // #1335: climate is event data, not trail data — the backend resolves the coordinate from the
+    // event's own GpxPointLat/Lng, falling back to its Location, so this needs only the event's
+    // slug (no trail-resolution tiers, unlike weatherTrailSlug) and works for events with no
+    // attached trail at all. Historical averages are also useful at any distance from the event
+    // date, unlike the live WeatherCard above, so there's no daysUntil gate either.
+    const climateEventSlug = event?.slug;
 
     // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
     // ScheduleRule client-side (that's the backend's job).
@@ -542,8 +538,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         return { month: date.getMonth() + 1, day: date.getDate() };
     }, [event]);
 
-    const { climate, loading: climateLoading, error: climateError } = useTrailClimate(
-        climateTrailSlug,
+    const { climate, loading: climateLoading, error: climateError } = useEventClimate(
+        climateEventSlug,
         climateTarget?.month,
         climateTarget?.day,
     );
@@ -1167,7 +1163,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Box>
                 )}
 
-                {isEnabled('climate_normals') && climateTrailSlug && climateTarget && (climateLoading || climate) && (
+                {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate) && (
                     <Box sx={{ mt: 3 }}>
                         <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
                             {t('races.climateNormals')}

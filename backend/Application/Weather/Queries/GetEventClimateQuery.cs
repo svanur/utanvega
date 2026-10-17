@@ -4,7 +4,6 @@ using System.Text.Json.Serialization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Weather.Queries;
@@ -25,14 +24,17 @@ public record ClimateDto(
 
 // MediatR query — TargetMonth/TargetDay are a concrete calendar date already resolved by the
 // caller (event.displayDate ?? event.nextEditionDate), not a ScheduleRule re-interpreted here.
-public record GetTrailClimateQuery(string Slug, int TargetMonth, int TargetDay) : IRequest<ClimateDto?>;
+// Climate is event data, not trail data — an event's own GpxPointLat/Lng (falling back to its
+// Location's center) is the coordinate source, not any race's attached trail. An event with no
+// trail at all can still show its climate card.
+public record GetEventClimateQuery(string Slug, int TargetMonth, int TargetDay) : IRequest<ClimateDto?>;
 
-public class GetTrailClimateQueryHandler : IRequestHandler<GetTrailClimateQuery, ClimateDto?>
+public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery, ClimateDto?>
 {
     private readonly UtanvegaDbContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMemoryCache _cache;
-    private readonly ILogger<GetTrailClimateQueryHandler> _logger;
+    private readonly ILogger<GetEventClimateQueryHandler> _logger;
 
     private const int YearsOfHistory = 15;
     private const int WindowDays = 5;
@@ -42,11 +44,11 @@ public class GetTrailClimateQueryHandler : IRequestHandler<GetTrailClimateQuery,
 
     private static readonly TimeSpan CacheDuration = TimeSpan.FromDays(7);
 
-    public GetTrailClimateQueryHandler(
+    public GetEventClimateQueryHandler(
         UtanvegaDbContext context,
         IHttpClientFactory httpClientFactory,
         IMemoryCache cache,
-        ILogger<GetTrailClimateQueryHandler> logger)
+        ILogger<GetEventClimateQueryHandler> logger)
     {
         _context = context;
         _httpClientFactory = httpClientFactory;
@@ -54,31 +56,43 @@ public class GetTrailClimateQueryHandler : IRequestHandler<GetTrailClimateQuery,
         _logger = logger;
     }
 
-    public async Task<ClimateDto?> Handle(GetTrailClimateQuery request, CancellationToken cancellationToken)
+    public async Task<ClimateDto?> Handle(GetEventClimateQuery request, CancellationToken cancellationToken)
     {
-        var cacheKey = $"climate:{request.Slug}:{request.TargetMonth}:{request.TargetDay}";
+        var cacheKey = $"climate:event:{request.Slug}:{request.TargetMonth}:{request.TargetDay}";
         if (_cache.TryGetValue(cacheKey, out ClimateDto? cached))
             return cached;
 
-        var trail = await _context.Trails
+        var @event = await _context.Events
             .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Slug == request.Slug && (t.Status == TrailStatus.Published || t.Status == TrailStatus.EventOnly), cancellationToken);
+            .Include(e => e.Location)
+            .FirstOrDefaultAsync(e => e.Slug == request.Slug, cancellationToken);
 
-        if (trail?.GpxData == null)
+        if (@event == null)
             return null;
 
-        var coords = trail.GpxData.Coordinates;
-        if (coords.Length == 0)
+        // Event's own GPS point first, Location's center as fallback — never a race's trail.
+        double lat, lon;
+        if (@event.GpxPointLat is { } gpxLat && @event.GpxPointLng is { } gpxLng)
+        {
+            lat = gpxLat;
+            lon = gpxLng;
+        }
+        else if (@event.Location?.Center is { } center)
+        {
+            lat = center.Y;
+            lon = center.X;
+        }
+        else
+        {
             return null;
-
-        var startCoord = coords[0];
+        }
 
         var currentYear = DateTime.UtcNow.Year;
         // Full past years only — the current year's target date may not have happened yet, which
         // would make the archive API return a short/empty window for it.
         var years = Enumerable.Range(currentYear - YearsOfHistory, YearsOfHistory);
 
-        var fetchTasks = years.Select(year => FetchArchiveAsync(startCoord.Y, startCoord.X, year, request.TargetMonth, request.TargetDay, cancellationToken));
+        var fetchTasks = years.Select(year => FetchArchiveAsync(lat, lon, year, request.TargetMonth, request.TargetDay, cancellationToken));
         var responses = await Task.WhenAll(fetchTasks);
 
         var result = Aggregate(responses, request.TargetMonth, request.TargetDay);
