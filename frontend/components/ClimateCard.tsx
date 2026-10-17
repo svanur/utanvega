@@ -98,7 +98,15 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         </Box>
                     </Stack>
 
-                    <Stack direction="row" spacing={3} sx={{ mt: 2, flexWrap: 'wrap', gap: 1.5 }}>
+                    <Box
+                        sx={{
+                            mt: 2,
+                            display: 'grid',
+                            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
+                            columnGap: 1.5,
+                            rowGap: 1.5,
+                        }}
+                    >
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                             <WaterDropIcon fontSize="small" color="action" />
                             <Box>
@@ -133,10 +141,10 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                             </Box>
                         </Stack>
                         {locationName && (
-                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                                 <LocationOnIcon fontSize="small" color="action" />
-                                <Box>
-                                    <Typography variant="body2" fontWeight="bold">
+                                <Box sx={{ minWidth: 0 }}>
+                                    <Typography variant="body2" fontWeight="bold" noWrap>
                                         {locationName}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
@@ -156,7 +164,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                                 </Typography>
                             </Box>
                         </Stack>
-                    </Stack>
+                    </Box>
 
                     <Divider sx={{ my: 2 }} />
 
