@@ -384,6 +384,28 @@ export function computeRaceDayFlags(
     };
 }
 
+// A Series event's season can span many months (e.g. Powerade Vetrarhlaupin, Oct-Mar, one race per
+// month) at a single fixed location — so the calendar date relevant for climate normals is
+// whichever individual race is current/next, not the season's own displayDate/nextEditionDate
+// (which GetEventQuery.cs derives as min(raceDates), i.e. the season's *first* race, same
+// staleness computeRaceDayFlags above already had to work around for daysUntil). Prefers the
+// earliest race on or after today; falls back to the most recently passed race once the whole
+// season is over, mirroring the backend's own ongoing/recentlyCompleted/next priority for
+// non-Series events.
+export function resolveSeriesClimateDate(raceDates: string[], now: Date = new Date()): string | null {
+    if (raceDates.length === 0) return null;
+
+    const upcoming = raceDates
+        .filter(d => daysBetween(d, now) >= 0)
+        .sort((a, b) => daysBetween(a, now) - daysBetween(b, now));
+    if (upcoming.length > 0) return upcoming[0];
+
+    const past = raceDates
+        .filter(d => daysBetween(d, now) < 0)
+        .sort((a, b) => daysBetween(b, now) - daysBetween(a, now));
+    return past[0] ?? null;
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,

@@ -94,7 +94,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate } from '../utils/eventUtils';
 import { getTicketStatusColor, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -529,14 +529,20 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const climateEventSlug = event?.slug;
 
     // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
-    // ScheduleRule client-side (that's the backend's job).
+    // ScheduleRule client-side (that's the backend's job). For a Series event, displayDate/
+    // nextEditionDate is the season's min(raceDates) — its *first* race — for as long as the
+    // season is "ongoing" (e.g. Powerade Vetrarhlaupin's whole Oct-Mar span), the same staleness
+    // computeRaceDayFlags above already works around — so climate would otherwise show October's
+    // normals in February. Use the specific current/next individual race's own date instead.
     const climateTarget = useMemo(() => {
-        const dateStr = event?.displayDate ?? event?.nextEditionDate;
+        const dateStr = event?.type === 'Series'
+            ? resolveSeriesClimateDate(seriesRaceDates)
+            : (event?.displayDate ?? event?.nextEditionDate);
         if (!dateStr) return null;
         const date = new Date(dateStr + 'T00:00:00');
         if (Number.isNaN(date.getTime())) return null;
         return { month: date.getMonth() + 1, day: date.getDate() };
-    }, [event]);
+    }, [event, seriesRaceDates]);
 
     const { climate, loading: climateLoading, error: climateError } = useEventClimate(
         climateEventSlug,
