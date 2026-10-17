@@ -90,11 +90,12 @@ export function isOngoingPastDayTwo(
     daysUntil: number | null,
     displayDate: string | null,
     endDisplayDate: string | null | undefined,
+    now: Date = new Date(),
 ): boolean {
     if (daysUntil !== 0) return false;
     if (!displayDate || !endDisplayDate || endDisplayDate === displayDate) return false;
     const start = new Date(displayDate + 'T00:00:00');
-    const today = new Date();
+    const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     const elapsedDays = Math.round((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     return elapsedDays >= 2;
@@ -379,7 +380,7 @@ export function computeRaceDayFlags(
         };
     }
     return {
-        isRaceDay: event.daysUntil === 0 && !isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate),
+        isRaceDay: event.daysUntil === 0 && !isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate, now),
         isRaceWeek: event.daysUntil !== null && event.daysUntil >= 0 && event.daysUntil <= 7,
     };
 }
