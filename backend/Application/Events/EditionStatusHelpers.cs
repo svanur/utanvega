@@ -156,15 +156,20 @@ public static class EditionStatusHelpers
         DateOnly? Candidate(EventEdition ed)
         {
             var date = effDate(ed);
+            if (!date.HasValue)
+                return null; // no start date at all — every other edition-scoped field
+                             // (ongoingEdition/relevantEdition in GetEventQuery/GetEventsQuery)
+                             // treats this edition as nonexistent, so NextEditionDate must too (#1327)
+
             var endDate = effEndDate(ed);
             var boundary = endDate ?? date;
-            if (!boundary.HasValue || boundary.Value < today)
+            if (boundary.Value < today)
                 return null; // already fully over — doesn't qualify as "next"
 
-            // Hasn't started yet (or dateless-but-future, caught by boundary above) — surface its
-            // own start date, unchanged from the pre-#1320 behaviour. Already underway — surface
-            // the remaining boundary (EndDate) instead of a start date that has already passed.
-            return date.HasValue && date.Value >= today ? date : endDate;
+            // Hasn't started yet — surface its own start date, unchanged from the pre-#1320
+            // behaviour. Already underway — surface the remaining boundary (EndDate) instead of
+            // a start date that has already passed.
+            return date.Value >= today ? date : endDate;
         }
 
         var nextEditionDate = editions

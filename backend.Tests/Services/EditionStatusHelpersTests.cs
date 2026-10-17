@@ -539,6 +539,36 @@ public class EditionStatusHelpersTests
     }
 
     [Fact]
+    public void ResolveNextEditionDate_DatelessEditionWithFutureEndDate_FallsBackToScheduleRule()
+    {
+        // #1327: an edition with Date == null but a future EndDate must not qualify as "next" —
+        // every other edition-scoped field (ongoingEdition/relevantEdition) ignores it because it
+        // has no Date at all, so NextEditionDate must agree and fall through to the ScheduleRule.
+        var today = new DateOnly(2026, 10, 12);
+        var edition = MakeEdition(null, new DateOnly(2026, 10, 31));
+        var scheduleRule = new ScheduleRule { Type = ScheduleType.Fixed, Date = new DateOnly(2027, 9, 25) };
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [edition], today, EffDate, EffEndDate, scheduleRule, ScheduleEngine);
+
+        Assert.Equal(new DateOnly(2027, 9, 25), result);
+    }
+
+    [Fact]
+    public void ResolveNextEditionDate_DatelessEditionWithFutureEndDateAndNoScheduleRule_ReturnsNull()
+    {
+        // Same as above, but with no ScheduleRule to fall back to — the dateless edition must
+        // still be excluded, so the overall result is null rather than its EndDate.
+        var today = new DateOnly(2026, 10, 12);
+        var edition = MakeEdition(null, new DateOnly(2026, 10, 31));
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [edition], today, EffDate, EffEndDate, null, ScheduleEngine);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void AsUtc_NullValue_ReturnsNull()
     {
         var result = EditionStatusHelpers.AsUtc(null);
