@@ -97,7 +97,7 @@ const BRAND_FALLBACK_EMOJI = '🏃';
 async function logoUrl(locale: Locale, request: Request): Promise<string | null> {
   const url = `${siteOrigin(request)}/${LOGO_PATH[locale]}`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { method: 'HEAD' });
     return res.ok ? url : null;
   } catch {
     return null;

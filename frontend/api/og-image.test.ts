@@ -82,12 +82,12 @@ async function render(request: Request): Promise<{ text: string[]; imgSrcs: stri
  * request (logoUrl()'s preflight) is handled separately from the backend
  * trail request, since a single test often exercises both.
  */
-function stubFetch(responder: (url: string) => Promise<Response> | Response) {
+function stubFetch(responder: (url: string, init?: RequestInit) => Promise<Response> | Response) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      return responder(url);
+      return responder(url, init);
     })
   );
 }
@@ -140,6 +140,19 @@ describe('og-image.ts locale-aware branding', () => {
       const { text, imgSrcs } = await render(makeRequest('slug=esjan-hringur', 'some-preview.vercel.app'));
       expect(text).toContain('HLAUPADAGSKRA.IS');
       expect(imgSrcs).toContain('https://some-preview.vercel.app/icons/hlaupadagskra-icon-512.png');
+    });
+
+    it('preflights the logo with a HEAD request, not GET, to avoid downloading the full PNG body', async () => {
+      const methods: (string | undefined)[] = [];
+      stubFetch((url, init) => {
+        if (isLogoRequest(url)) {
+          methods.push(init?.method);
+          return new Response(null, { status: 200 });
+        }
+        return new Response(JSON.stringify(trail), { status: 200 });
+      });
+      await render(makeRequest('slug=esjan-hringur', '360runs.com'));
+      expect(methods).toEqual(['HEAD']);
     });
 
     it('falls back to the 🏃 emoji, with no img element, when the logo preflight fetch fails', async () => {
