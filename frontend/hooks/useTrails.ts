@@ -321,30 +321,15 @@ export function useTrails(disableGeolocation = false) {
     };
 }
 
-export function useTrail(id?: string) {
-    const { data: trail = null, isPending, error: queryError } = useQuery<Trail | null>({
-        queryKey: ['trail', id],
-        queryFn: () => fetch(`${API_URL}/api/v1/trails/${id}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch trail');
-                return res.json() as Promise<Trail>;
-            }),
-        enabled: !!id,
-        staleTime: 5 * 60 * 1000,
-    });
-    const loading = isPending && !!id;
-    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
-    return { trail, loading, error };
-}
-
 // Fetches each of `slugs` individually against the per-trail endpoint, in parallel — unlike
 // useTrails(true)'s bulk GET /api/v1/trails, this surfaces EventOnly-status trails too, since the
 // per-trail endpoint serves them while the bulk/search list excludes them by design (#1321). Meant
 // for small slug counts (an event's linked trails), not as a general trail-browsing data source.
 //
 // Deliberately namespaced under its own 'event-trail' key rather than reusing ['trail', slug] —
-// that key is already shared (collision-prone in its own right, see useTrail below) between
-// useTrail (raw Trail) and useTrailBySlug (`{trail, isFromCache}`), and since there's a single
+// that key was previously shared (collision-prone in its own right) between the now-deleted,
+// zero-call-site useTrail(id) hook (raw Trail) and useTrailBySlug (`{trail, isFromCache}`);
+// useTrail was removed in #1329 for exactly that reason. Since there's a single
 // app-wide QueryClient (frontend/main.tsx), writing a third, differently-shaped value under the
 // same key would let same-session navigation between a trail's own page and its event page serve
 // the wrong cached shape to whichever hook reads second — concretely, TrailDetailsPage/
