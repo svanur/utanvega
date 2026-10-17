@@ -64,7 +64,6 @@ import RaceProgressBar from '../components/RaceProgressBar';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
-import WeatherCard from '../components/WeatherCard';
 import ClimateCard from '../components/ClimateCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
@@ -525,7 +524,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // event's own GpxPointLat/Lng, falling back to its Location, so this needs only the event's
     // slug (no trail-resolution tiers, unlike weatherTrailSlug) and works for events with no
     // attached trail at all. Historical averages are also useful at any distance from the event
-    // date, unlike the live WeatherCard above, so there's no daysUntil gate either.
+    // date, unlike a live forecast, so there's no daysUntil gate either.
     const climateEventSlug = event?.slug;
 
     // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
@@ -1154,18 +1153,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 })}
                             </List>
                         </Paper>
-                    </Box>
-                )}
-
-                {isEnabled('weather_forecast') && weatherTrailSlug && (
-                    <Box sx={{ mt: 3 }}>
-                        <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
-                            {t('races.raceDayWeather')}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                            {t('races.raceDayWeatherDesc')}
-                        </Typography>
-                        <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} raceDate={nextRaceDate} />
                     </Box>
                 )}
 

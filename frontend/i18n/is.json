@@ -1490,8 +1490,6 @@
         "ticketStatusLabel": "Skráningarstaða",
         "maxParticipants": "Hámarksfjöldi þátttakenda",
         "statusUpcoming": "Óstaðfest",
-        "raceDayWeather": "Veður á leiðinni",
-        "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
         "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
