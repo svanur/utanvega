@@ -139,12 +139,15 @@ function HourlyStrip({ hourly, t }: { hourly: HourlyForecastDto[]; t: (key: stri
                 {t('weather.hourlyToday')}
             </Typography>
             <Box sx={{ position: 'relative' }}>
+                {/* width/height forced to 44px — size="small" alone left this below the
+                    WCAG 2.5.5 / mobile touch-target minimum (same defect as the header toggles). */}
                 <IconButton
                     size="small"
                     onClick={() => scroll('left')}
                     sx={{
                         position: 'absolute', left: -8, top: '50%', transform: 'translateY(-50%)',
                         zIndex: 1, bgcolor: 'background.paper', boxShadow: 1,
+                        width: 44, height: 44,
                         display: { xs: 'none', sm: 'flex' },
                         '&:hover': { bgcolor: 'action.hover' },
                     }}
@@ -193,12 +196,15 @@ function HourlyStrip({ hourly, t }: { hourly: HourlyForecastDto[]; t: (key: stri
                         </Box>
                     ))}
                 </Box>
+                {/* width/height forced to 44px — size="small" alone left this below the
+                    WCAG 2.5.5 / mobile touch-target minimum (same defect as the header toggles). */}
                 <IconButton
                     size="small"
                     onClick={() => scroll('right')}
                     sx={{
                         position: 'absolute', right: -8, top: '50%', transform: 'translateY(-50%)',
                         zIndex: 1, bgcolor: 'background.paper', boxShadow: 1,
+                        width: 44, height: 44,
                         display: { xs: 'none', sm: 'flex' },
                         '&:hover': { bgcolor: 'action.hover' },
                     }}
@@ -336,7 +342,10 @@ export default function WeatherCard({ weather, loading, error, raceDate }: Weath
                         variant="outlined"
                         title={t(`weather.${conditionDescKey}`)}
                     />
-                    <IconButton size="small" sx={{ ml: 0.5 }}>
+                    {/* IconButton is decorative — the click handler lives on the header Stack above.
+                        Width/height forced to 44px so the icon's own hit area still meets the
+                        WCAG 2.5.5 / mobile touch-target minimum on top of the row-level click area. */}
+                    <IconButton size="small" sx={{ ml: 0.5, width: 44, height: 44 }}>
                         {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </IconButton>
                 </Stack>
