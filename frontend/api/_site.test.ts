@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HOST_LOCALES, isIndexableHost, localeForHostname, siteOrigin } from './_site';
+import { FAVICON_PATH, HOST_LOCALES, isIndexableHost, localeForHostname, siteOrigin } from './_site';
 
 function makeRequest(url: string, headers: Record<string, string> = {}): Request {
   return new Request(url, { headers });
@@ -37,6 +37,15 @@ describe('isIndexableHost', () => {
       'x-forwarded-host': '360runs.com',
     });
     expect(isIndexableHost(request)).toBe(true);
+  });
+});
+
+describe('FAVICON_PATH', () => {
+  it('maps every locale to its per-host PNG, with the Icelandic icon as the fallback default', () => {
+    expect(FAVICON_PATH).toEqual({
+      is: '/icons/hlaupadagskra-icon-192.png',
+      en: '/icons/360runs-icon-192.png',
+    });
   });
 });
 
