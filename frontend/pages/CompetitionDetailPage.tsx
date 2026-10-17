@@ -1171,13 +1171,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                 {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate) && (
                     <Box sx={{ mt: 3 }}>
-                        <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
-                            {t('races.climateNormals')}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                            {t('races.climateNormalsDesc', { years: climate?.yearsOfData ?? 15 })}
-                        </Typography>
-                        <ClimateCard climate={climate} loading={climateLoading} error={climateError} />
+                        <ClimateCard climate={climate} loading={climateLoading} error={climateError} locationName={event?.locationName} />
                     </Box>
                 )}
 

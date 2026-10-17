@@ -569,12 +569,12 @@
         }
     },
     "climate": {
-        "title": "Venjulega á þessum degi",
+        "title": "Veðurfar í sögulegu samhengi",
         "avgHighLow": "Meðalhámark / meðallágmark",
         "avgPrecipitation": "Meðalúrkoma",
         "chanceOfRain": "Líkur á úrkomu",
         "avgWind": "Meðal hámarksvindur",
-        "basedOnYears": "Byggt á {{years}} ára veðurfarsgögnum",
+        "basedOnYears": "Hvernig þessi dagur hefur venjulega litið út síðustu {{years}} ár — ekki spá.",
         "unavailable": "Veðurfarsgögn ekki tiltæk"
     },
     "privacy": {
@@ -1490,8 +1490,6 @@
         "statusUpcoming": "Óstaðfest",
         "raceDayWeather": "Veður á leiðinni",
         "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
-        "climateNormals": "Veðurfar í sögulegu samhengi",
-        "climateNormalsDesc": "Hvernig þessi dagur hefur venjulega litið út síðustu {{years}} ár — ekki spá.",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
         "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",

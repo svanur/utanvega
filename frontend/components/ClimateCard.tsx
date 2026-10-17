@@ -16,18 +16,21 @@ import AirIcon from '@mui/icons-material/Air';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import type { EventClimate } from '../hooks/useTrails';
 
 interface ClimateCardProps {
     climate: EventClimate | null;
     loading: boolean;
     error: string | null;
+    locationName?: string | null;
 }
 
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
 // icon, "usually" framing, no condition chip) so a visitor can't mistake a 15-year average for
 // today's forecast when both cards render on the same event-detail page (#1335).
-export default function ClimateCard({ climate, loading, error }: ClimateCardProps) {
+export default function ClimateCard({ climate, loading, error, locationName }: ClimateCardProps) {
     const { t } = useTranslation();
     const [expanded, setExpanded] = useState(false);
 
@@ -45,6 +48,11 @@ export default function ClimateCard({ climate, loading, error }: ClimateCardProp
     }
 
     const precipitationChancePct = Math.round(climate.precipitationChance * 100);
+    // Climate normals have no year of their own (averaged across ~15 past years), so this is
+    // deliberately "15. júlí", not a dated "15. júlí 2027" — reusing the same months array other
+    // pages already pull from the races namespace rather than duplicating it under climate.
+    const months = t('races.months', { returnObjects: true }) as unknown as string[];
+    const targetDateLabel = `${climate.targetDay}. ${months[climate.targetMonth - 1]}`;
 
     return (
         <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
@@ -78,6 +86,23 @@ export default function ClimateCard({ climate, loading, error }: ClimateCardProp
             {/* Collapsible content */}
             <Collapse in={expanded}>
                 <Box sx={{ mt: 2 }}>
+                    <Stack direction="row" spacing={2} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 0.5 }}>
+                        {locationName && (
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <LocationOnIcon fontSize="small" color="action" />
+                                <Typography variant="body2" color="text.secondary">
+                                    {locationName}
+                                </Typography>
+                            </Stack>
+                        )}
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <CalendarMonthIcon fontSize="small" color="action" />
+                            <Typography variant="body2" color="text.secondary">
+                                {targetDateLabel}
+                            </Typography>
+                        </Stack>
+                    </Stack>
+
                     <Stack direction="row" alignItems="center" spacing={2}>
                         <ThermostatIcon color="action" />
                         <Box>

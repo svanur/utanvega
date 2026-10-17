@@ -569,12 +569,12 @@
         }
     },
     "climate": {
-        "title": "Usually around this date",
+        "title": "Climate Normals",
         "avgHighLow": "Average high / low",
         "avgPrecipitation": "Avg. precipitation",
         "chanceOfRain": "Chance of rain",
         "avgWind": "Avg. max wind",
-        "basedOnYears": "Based on {{years}} years of historical data",
+        "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
         "unavailable": "Historical climate data unavailable"
     },
     "privacy": {
@@ -1490,8 +1490,6 @@
         "statusUpcoming": "Unconfirmed",
         "raceDayWeather": "Trail Weather – Race Forecast",
         "raceDayWeatherDesc": "Current conditions and 7-day forecast at the race route. Race day is highlighted.",
-        "climateNormals": "Climate Normals",
-        "climateNormalsDesc": "What this date has usually looked like over the past {{years}} years — not a forecast.",
         "checklistTitle": "Race day checklist",
         "checklistWeatherReady": "Current snapshot: {{temperature}}°C and {{wind}} m/s wind.",
         "checklistWeatherFallback": "Quick prep before heading out:",
