@@ -69,12 +69,19 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                     <Typography variant="h6" fontWeight="bold">
                         {t('climate.title')}
                     </Typography>
-                    {/* Quick summary when collapsed */}
+                    {/* Quick summary when collapsed — mirrors WeatherCard's icon + temp + wind pattern */}
                     {!expanded && (
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
+                            <ThermostatIcon sx={{ fontSize: '1.2rem', color: 'action.active' }} />
                             <Typography variant="body2" fontWeight="bold">
                                 {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
                             </Typography>
+                            <Stack direction="row" alignItems="center" spacing={0.3}>
+                                <AirIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                <Typography variant="caption" color="text.secondary">
+                                    {climate.averageMaxWind.toFixed(0)} m/s
+                                </Typography>
+                            </Stack>
                         </Stack>
                     )}
                 </Stack>
