@@ -350,7 +350,11 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     center (e.g. an event's own gpxPointLat/Lng) so the map still shows a marker and
                     zooms somewhere meaningful instead of sitting at its hardcoded default view. */}
                 {trailsWithLocation.length === 0 && fallbackCenter && (
-                    <Marker position={[fallbackCenter.lat, fallbackCenter.lng]} icon={trailIcon} />
+                    <Marker position={[fallbackCenter.lat, fallbackCenter.lng]} icon={trailIcon}>
+                        <Popup>
+                            <Typography variant="body2">{t('map.eventLocation')}</Typography>
+                        </Popup>
+                    </Marker>
                 )}
 
                 {visibleGeometries.map(geo => {
