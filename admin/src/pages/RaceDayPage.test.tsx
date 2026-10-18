@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -104,5 +104,81 @@ describe('RaceDayPage URL -> state date sync', () => {
     fireEvent.click(screen.getByText('jump-to-date'));
 
     await waitFor(() => expect(datesRequested()).toContain('2026-11-05'));
+  });
+});
+
+// #1288: markEditionsCompleted's optimistic local patch (RaceDayPage.tsx:325-333) mirrors the
+// backend's CompleteWithRaces(), which leaves registrationStatus untouched for both NotRequired
+// and Invitational editions (EventEdition.IsDeliberateOverride). The patch here was only updated
+// for NotRequired when Invitational was added (#1245), so an Invitational edition's displayed
+// registrationStatus was being flipped to Closed locally until the next refetch corrected it.
+// The "Reg closed" progress chip (editionProgress, done: ed.registrationStatus === 'Closed') is
+// used as the observable proxy for registrationStatus here, since the registrationStatus <Select>
+// itself only lists NotStarted/Open/Closed as menu items and renders no visible text for a value
+// outside that set.
+describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', () => {
+  afterEach(() => {
+    cleanup();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockResolvedValue([]);
+  });
+
+  const baseRace = {
+    name: 'Race A', nameEn: null, distanceLabel: null, distanceLabelEn: null,
+    status: 'Completed', ticketStatus: 'Closed', sortOrder: 0,
+    activityType: null, startTime: null, cutoffMinutes: null, resultType: null,
+  };
+
+  const invitationalEdition = {
+    id: 'ed-invitational', eventId: 'event-invitational', eventName: 'Invitational Trail Run',
+    eventSlug: 'invitational-trail-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    resultsUrl: null, registrationUrl: null, registrationStatus: 'Invitational',
+    races: [{ ...baseRace, id: 'race-invitational' }],
+  };
+
+  const openEdition = {
+    ...invitationalEdition,
+    id: 'ed-open', eventId: 'event-open', eventName: 'Open Registration Run',
+    eventSlug: 'open-registration-run', registrationStatus: 'Open',
+    races: [{ ...baseRace, id: 'race-open' }],
+  };
+
+  it("leaves an Invitational edition's registrationStatus unchanged while an Open one closes, after Mark Editions Completed", async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([invitationalEdition, openEdition]);
+      }
+      if (endpoint.includes('/complete')) {
+        return Promise.resolve({});
+      }
+      return Promise.resolve(null);
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Invitational Trail Run');
+    await screen.findByText('Open Registration Run');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark Editions Completed' }));
+
+    const invitationalPaper = screen.getByText('Invitational Trail Run').closest('.MuiPaper-root') as HTMLElement;
+    const openPaper = screen.getByText('Open Registration Run').closest('.MuiPaper-root') as HTMLElement;
+
+    // Invitational stays exempt: the "Reg closed" chip must remain not-done (outlined).
+    await waitFor(() => {
+      const regChip = within(invitationalPaper).getByText('Reg closed').closest('.MuiChip-root');
+      expect(regChip?.className).toContain('MuiChip-outlined');
+    });
+
+    // Regression guard: a plain Open edition still closes as before (filled/done).
+    const openRegChip = within(openPaper).getByText('Reg closed').closest('.MuiChip-root');
+    expect(openRegChip?.className).toContain('MuiChip-filled');
   });
 });
