@@ -1072,7 +1072,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             // a still-ongoing/upcoming season just finished (recentRace set — name
                                             // and date must point at that specific race, not the event/season).
                                             const recentRace = comp.recentlyCompletedSeriesRace;
-                                            const recentRaceDaysUntil = recentRace?.dateOfRace ? daysBetween(recentRace.dateOfRace) : null;
+                                            const recentRaceDaysUntil = recentRace?.dateOfRace ? daysBetween(recentRace.dateOfRace, new Date(nowMs)) : null;
                                             // #1249: when a single race within a still-ongoing season just
                                             // finished, the Results button gate (and the countdown chip) must
                                             // use that race's own days-until, not the edition-level one — the
