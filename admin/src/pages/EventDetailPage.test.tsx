@@ -610,4 +610,59 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     expect(screen.getByRole('button', { name: 'Mark edition Completed' })).toBe(completeButton);
     expect(getDescribedByText(completeButton)).toBe('Click again to confirm — sets 0 Active races to Completed and closes registration (or wait 3 s to cancel)');
   });
+
+  // #1384: #1278/PR #1383 fixed VISUALLY_HIDDEN_SX's width/height/margin (previously 100%/100%/
+  // -8px, which visibly reserved layout space instead of clipping to a 1px offscreen box) but left
+  // no regression test — a future edit could reintroduce the bug silently. This asserts the
+  // *computed* style of one of the three aria-live status boxes the constant is applied to; the
+  // other two (cancelStatusId, deleteStatusId) share the same sx constant, so one box is enough.
+  it('renders the Mark edition Completed status region visually hidden via a 1px clip box (#1384)', async () => {
+    mockState.eventDetail = buildEventDetailFixture();
+
+    renderEventDetailPage(seedQueryClient());
+    await screen.findByText('Active');
+
+    const completeButton = getEditionIconButton('Mark edition Completed');
+    const describedById = completeButton.getAttribute('aria-describedby');
+    if (!describedById) throw new Error('Button has no aria-describedby');
+    const statusBox = document.getElementById(describedById);
+    if (!statusBox) throw new Error(`No element found with id ${describedById}`);
+
+    // width/height are unaffected by any ancestor rule, so the resolved computed style is a
+    // direct, faithful readout of VISUALLY_HIDDEN_SX.
+    const computed = getComputedStyle(statusBox);
+    expect(computed.width).toBe('1px');
+    expect(computed.height).toBe('1px');
+
+    // margin can't be asserted the same way: this Box sits inside a `<Stack spacing={0.5}>`
+    // (the edition-row action Stack), and MUI's Stack spacing implementation injects its own
+    // `> :not(style) ~ :not(style) { margin-left: … }` + `> :not(style):not(style) { margin: 0 }`
+    // rules whose specificity (0,1,2) beats this element's own single-class sx rule (0,1,0) —
+    // so Stack's margin always wins the cascade and getComputedStyle(statusBox).margin never
+    // reflects VISUALLY_HIDDEN_SX's declared value, correct or buggy. That's true in a real
+    // browser too, not a jsdom quirk — confirmed by dumping document.styleSheets during
+    // development of this test. So instead this reads the emotion-generated rule attached
+    // directly to the element's own class (the thing VISUALLY_HIDDEN_SX actually compiles to),
+    // which is exactly where #1278's bare-number-vs-px-string bug lived.
+    const ownClass = Array.from(statusBox.classList).find(c => c.startsWith('css-'));
+    if (!ownClass) throw new Error('Status box has no emotion-generated class');
+    let ownRuleCssText: string | undefined;
+    for (const sheet of Array.from(document.styleSheets)) {
+      let cssRules: CSSRuleList;
+      try {
+        cssRules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      for (const rule of Array.from(cssRules)) {
+        if (rule instanceof CSSStyleRule && rule.selectorText === `.${ownClass}`) {
+          ownRuleCssText = rule.cssText;
+          break;
+        }
+      }
+      if (ownRuleCssText) break;
+    }
+    if (!ownRuleCssText) throw new Error(`No own-class CSS rule found for .${ownClass}`);
+    expect(ownRuleCssText).toContain('margin: -1px');
+  });
 });
