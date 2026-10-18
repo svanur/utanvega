@@ -569,14 +569,14 @@
         }
     },
     "climate": {
-        "title": "Veðurfar í sögulegu samhengi",
+        "title": "Veðurfar viðburðar",
         "avgHighLow": "Meðalhámark / meðallágmark",
         "avgPrecipitation": "Meðalúrkoma",
         "chanceOfRain": "Líkur á úrkomu",
         "avgWind": "Meðal hámarksvindur",
         "location": "Staðsetning",
         "date": "Dagsetning",
-        "basedOnYears": "Hvernig þessi dagur hefur venjulega litið út síðustu {{years}} ár — ekki spá.",
+        "basedOnYears": "Veðurfar viðburðar á þessum stað og tíma síðustu {{years}} ár — ekki veðurspá.",
         "unavailable": "Veðurfarsgögn ekki tiltæk"
     },
     "privacy": {
