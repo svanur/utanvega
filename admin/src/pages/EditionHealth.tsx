@@ -6,6 +6,7 @@ import {
   Collapse, useTheme,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import type { Theme } from '@mui/material/styles';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -21,6 +22,19 @@ interface HealthCheck {
   passed: boolean;
   tooltip: string;
 }
+
+// SummaryCard's `color` prop accepts only these literal palette tokens — not an arbitrary string
+// — so a hex literal (e.g. "#d32f2f") fails to compile at a call site (see #1290, which re-guards
+// against the hardcoded colors removed in #1258/#1289). SummaryCard resolves the token against
+// theme.palette internally; call sites never see a resolved string.
+type ThemeColorToken = 'info.main' | 'success.main' | 'warning.main' | 'error.main';
+
+const resolveThemeColor: Record<ThemeColorToken, (theme: Theme) => string> = {
+  'info.main': theme => theme.palette.info.main,
+  'success.main': theme => theme.palette.success.main,
+  'warning.main': theme => theme.palette.warning.main,
+  'error.main': theme => theme.palette.error.main,
+};
 
 const today = new Date();
 today.setHours(0, 0, 0, 0);
@@ -357,29 +371,29 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
       </Box>
 
       <Stack direction="row" spacing={2} sx={{ mb: activeFilter ? 1.5 : 3 }} flexWrap="wrap" useFlexGap>
-        <SummaryCard title="Total Editions" value={totalEditions} color={theme.palette.info.main} />
-        <SummaryCard title="Avg Health" value={`${avgScore}%`} color={avgScore >= 80 ? theme.palette.success.main : avgScore >= 50 ? theme.palette.warning.main : theme.palette.error.main} />
-        <SummaryCard title="Perfect (100%)" value={perfectCount} color={theme.palette.success.main} />
-        <SummaryCard title="Critical (<50%)" value={criticalCount} color={theme.palette.error.main}
+        <SummaryCard title="Total Editions" value={totalEditions} color="info.main" />
+        <SummaryCard title="Avg Health" value={`${avgScore}%`} color={avgScore >= 80 ? 'success.main' : avgScore >= 50 ? 'warning.main' : 'error.main'} />
+        <SummaryCard title="Perfect (100%)" value={perfectCount} color="success.main" />
+        <SummaryCard title="Critical (<50%)" value={criticalCount} color="error.main"
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
         {/* Neutral color, unlike the red/orange tiles below — a cancelled edition isn't a data-quality
             problem to fix, just a state worth surfacing. */}
-        <SummaryCard title="Cancelled" value={cancelledEditionCount} color={theme.palette.info.main}
+        <SummaryCard title="Cancelled" value={cancelledEditionCount} color="info.main"
           filter="cancelled" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? 'warning.main' : 'success.main'}
           filter="no-date" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Races" value={noRacesCount} color={noRacesCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Races" value={noRacesCount} color={noRacesCount > 0 ? 'warning.main' : 'success.main'}
           filter="no-races" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Trail" value={noTrailCount} color={noTrailCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Trail" value={noTrailCount} color={noTrailCount > 0 ? 'warning.main' : 'success.main'}
           filter="no-trail" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Results URL" value={noResultsCount} color={noResultsCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Results URL" value={noResultsCount} color={noResultsCount > 0 ? 'warning.main' : 'success.main'}
           filter="no-results" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Year Mismatch" value={yearMismatchCount} color={yearMismatchCount > 0 ? theme.palette.error.main : theme.palette.success.main}
+        <SummaryCard title="Year Mismatch" value={yearMismatchCount} color={yearMismatchCount > 0 ? 'error.main' : 'success.main'}
           filter="year-mismatch" activeFilter={activeFilter} onFilter={setActiveFilter}
           tooltip="A race's own date falls in a different year than its edition (Non-Series), or is far from its series siblings' typical date (Series)" />
-        <SummaryCard title="Open (past)" value={badStatusCount} color={badStatusCount > 0 ? theme.palette.error.main : theme.palette.success.main}
+        <SummaryCard title="Open (past)" value={badStatusCount} color={badStatusCount > 0 ? 'error.main' : 'success.main'}
           filter="bad-status" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Not Completed" value={notCompletedCount} color={notCompletedCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="Not Completed" value={notCompletedCount} color={notCompletedCount > 0 ? 'warning.main' : 'success.main'}
           filter="not-completed" activeFilter={activeFilter} onFilter={setActiveFilter}
           tooltip="Past editions whose status is not Completed or Cancelled — click to review and wrap them up" />
       </Stack>
@@ -583,12 +597,14 @@ function SummaryCard({
 }: {
   title: string;
   value: string | number;
-  color: string;
+  color: ThemeColorToken;
   filter?: QuickFilter;
   activeFilter?: QuickFilter | null;
   onFilter?: (f: QuickFilter | null) => void;
   tooltip?: string;
 }) {
+  const theme = useTheme();
+  const resolvedColor = resolveThemeColor[color](theme);
   const isActive = filter != null && activeFilter === filter;
   const isClickable = filter != null && onFilter != null;
   return (
@@ -602,16 +618,16 @@ function SummaryCard({
         ...(isClickable && {
           cursor: 'pointer',
           transition: 'box-shadow 0.15s, border-color 0.15s',
-          '&:hover': { boxShadow: 3, borderColor: color },
+          '&:hover': { boxShadow: 3, borderColor: resolvedColor },
         }),
-        ...(isActive && { borderColor: color, borderWidth: 2, boxShadow: 3 }),
+        ...(isActive && { borderColor: resolvedColor, borderWidth: 2, boxShadow: 3 }),
       }}
     >
       <CardContent sx={{ py: 1.5, px: 2, '&:last-child': { pb: 1.5 } }}>
-        <Typography variant="caption" color={isActive ? color : 'text.secondary'} fontWeight={isActive ? 700 : 400}>
+        <Typography variant="caption" color={isActive ? resolvedColor : 'text.secondary'} fontWeight={isActive ? 700 : 400}>
           {title}
         </Typography>
-        <Typography variant="h5" fontWeight="bold" sx={{ color }}>{value}</Typography>
+        <Typography variant="h5" fontWeight="bold" sx={{ color: resolvedColor }}>{value}</Typography>
       </CardContent>
     </Card>
     </Tooltip>
