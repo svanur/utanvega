@@ -123,12 +123,6 @@ function chooseMenuOption(combobox: HTMLElement, optionText: string) {
 describe('EditionDialogInner — Status/Registration status Selects are reachable via getByLabelText (#977)', () => {
   afterEach(cleanup);
 
-  // #1393: this is the first test in the file to mount EditionDialogInner — synchronous, no real
-  // async waiting, measured well under 1s whenever this file runs alone, but timed out past the
-  // 5000ms default under `npm test`'s full-suite parallel run (15 jsdom+MUI-heavy test files
-  // competing for the machine's CPU cores at once). Same root cause class as TrailHealth.test.tsx's
-  // explicit timeouts (PR #1392) — CPU contention inflating wall-clock time, not a test or
-  // production bug.
   it('locates Status by label and changes it', () => {
     renderEditionDialog();
 
@@ -136,7 +130,7 @@ describe('EditionDialogInner — Status/Registration status Selects are reachabl
 
     chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Active);
     expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
-  }, 15000);
+  });
 
   it('locates Registration status by label and changes it', () => {
     renderEditionDialog();
