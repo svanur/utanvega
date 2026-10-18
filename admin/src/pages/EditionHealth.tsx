@@ -22,6 +22,15 @@ interface HealthCheck {
   tooltip: string;
 }
 
+// Branded string so SummaryCard's `color` prop can only hold a value that has been through
+// themeColor() — i.e. a resolved theme.palette.*.main token — not a raw hex literal (see #1290,
+// which re-guards against the hardcoded colors removed in #1258/#1289).
+type ThemeColor = string & { readonly __themeColor: unique symbol };
+
+function themeColor(value: string): ThemeColor {
+  return value as ThemeColor;
+}
+
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
@@ -357,29 +366,29 @@ export default function EditionHealth({ onViewEvent, onNotify: _onNotify }: Edit
       </Box>
 
       <Stack direction="row" spacing={2} sx={{ mb: activeFilter ? 1.5 : 3 }} flexWrap="wrap" useFlexGap>
-        <SummaryCard title="Total Editions" value={totalEditions} color={theme.palette.info.main} />
-        <SummaryCard title="Avg Health" value={`${avgScore}%`} color={avgScore >= 80 ? theme.palette.success.main : avgScore >= 50 ? theme.palette.warning.main : theme.palette.error.main} />
-        <SummaryCard title="Perfect (100%)" value={perfectCount} color={theme.palette.success.main} />
-        <SummaryCard title="Critical (<50%)" value={criticalCount} color={theme.palette.error.main}
+        <SummaryCard title="Total Editions" value={totalEditions} color={themeColor(theme.palette.info.main)} />
+        <SummaryCard title="Avg Health" value={`${avgScore}%`} color={themeColor(avgScore >= 80 ? theme.palette.success.main : avgScore >= 50 ? theme.palette.warning.main : theme.palette.error.main)} />
+        <SummaryCard title="Perfect (100%)" value={perfectCount} color={themeColor(theme.palette.success.main)} />
+        <SummaryCard title="Critical (<50%)" value={criticalCount} color={themeColor(theme.palette.error.main)}
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
         {/* Neutral color, unlike the red/orange tiles below — a cancelled edition isn't a data-quality
             problem to fix, just a state worth surfacing. */}
-        <SummaryCard title="Cancelled" value={cancelledEditionCount} color={theme.palette.info.main}
+        <SummaryCard title="Cancelled" value={cancelledEditionCount} color={themeColor(theme.palette.info.main)}
           filter="cancelled" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Date" value={noDateCount} color={themeColor(noDateCount > 0 ? theme.palette.warning.main : theme.palette.success.main)}
           filter="no-date" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Races" value={noRacesCount} color={noRacesCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Races" value={noRacesCount} color={themeColor(noRacesCount > 0 ? theme.palette.warning.main : theme.palette.success.main)}
           filter="no-races" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Trail" value={noTrailCount} color={noTrailCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Trail" value={noTrailCount} color={themeColor(noTrailCount > 0 ? theme.palette.warning.main : theme.palette.success.main)}
           filter="no-trail" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="No Results URL" value={noResultsCount} color={noResultsCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="No Results URL" value={noResultsCount} color={themeColor(noResultsCount > 0 ? theme.palette.warning.main : theme.palette.success.main)}
           filter="no-results" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Year Mismatch" value={yearMismatchCount} color={yearMismatchCount > 0 ? theme.palette.error.main : theme.palette.success.main}
+        <SummaryCard title="Year Mismatch" value={yearMismatchCount} color={themeColor(yearMismatchCount > 0 ? theme.palette.error.main : theme.palette.success.main)}
           filter="year-mismatch" activeFilter={activeFilter} onFilter={setActiveFilter}
           tooltip="A race's own date falls in a different year than its edition (Non-Series), or is far from its series siblings' typical date (Series)" />
-        <SummaryCard title="Open (past)" value={badStatusCount} color={badStatusCount > 0 ? theme.palette.error.main : theme.palette.success.main}
+        <SummaryCard title="Open (past)" value={badStatusCount} color={themeColor(badStatusCount > 0 ? theme.palette.error.main : theme.palette.success.main)}
           filter="bad-status" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Not Completed" value={notCompletedCount} color={notCompletedCount > 0 ? theme.palette.warning.main : theme.palette.success.main}
+        <SummaryCard title="Not Completed" value={notCompletedCount} color={themeColor(notCompletedCount > 0 ? theme.palette.warning.main : theme.palette.success.main)}
           filter="not-completed" activeFilter={activeFilter} onFilter={setActiveFilter}
           tooltip="Past editions whose status is not Completed or Cancelled — click to review and wrap them up" />
       </Stack>
@@ -583,7 +592,7 @@ function SummaryCard({
 }: {
   title: string;
   value: string | number;
-  color: string;
+  color: ThemeColor;
   filter?: QuickFilter;
   activeFilter?: QuickFilter | null;
   onFilter?: (f: QuickFilter | null) => void;
