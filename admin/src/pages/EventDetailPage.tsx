@@ -353,12 +353,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
       })
     : undefined;
 
-  // #1070: a Series edition's Date/EndDate are derived live from its races' DateOfRace by the
-  // backend (EditionStatusHelpers.ComputeEffectiveEditionDates) rather than trusted from the
-  // stored columns, so once an existing Series edition has at least one dated race, Start/End date
-  // here must show that derived value and stop accepting admin edits the backend would just
-  // overrule on the next read. A brand-new Series edition with no races yet has nothing to derive
-  // from, and every non-Series edition is unaffected — both stay editable.
+  // #1070: see getSeriesDatedRaceDates in eventHelpers.ts for the derivation rationale.
   const seriesDatedRaceDates = eventType === 'Series' && !isNew
     ? getSeriesDatedRaceDates(edition?.races)
     : [];
