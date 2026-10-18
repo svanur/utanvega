@@ -71,6 +71,13 @@ function renderRaceFormCard() {
 describe('RaceFormCard — ITRA points paste wiring', () => {
   afterEach(cleanup);
 
+  // #1393: this test (synchronous, no real async waiting) was measured well under 1s whenever
+  // this file runs alone, but timed out past the 5000ms default under `npm test`'s full-suite
+  // parallel run — 15 jsdom+MUI-heavy test files compete for the machine's CPU cores at once,
+  // and this is the first test in the file to mount RaceFormCard inside LocalizationProvider/
+  // AdapterDayjs, so it eats whatever CPU-contended render/transform cost is still outstanding
+  // when it runs. Same root cause class as TrailHealth.test.tsx's six explicit timeouts
+  // (PR #1392) — CPU contention inflating wall-clock time, not a test or production bug.
   it('keeps a pasted "1" in an empty field instead of correcting it to "0" like a spinner click', () => {
     renderRaceFormCard();
     const input = screen.getByLabelText('ITRA points') as HTMLInputElement;
@@ -84,7 +91,7 @@ describe('RaceFormCard — ITRA points paste wiring', () => {
     fireEvent.change(input, { target: { value: '1' } });
 
     expect(input.value).toBe('1');
-  });
+  }, 15000);
 });
 
 // #810: same failure class as #809 above, but for drag-and-drop text insertion instead of paste —

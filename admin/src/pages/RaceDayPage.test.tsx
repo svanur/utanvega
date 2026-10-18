@@ -145,6 +145,12 @@ describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', (
     races: [{ ...baseRace, id: 'race-open' }],
   };
 
+  // #1393: this test renders the full RaceDayPage (DatePicker, Autocomplete, multiple edition
+  // Papers) and was measured at ~2.7s for the whole file when run alone, but timed out past the
+  // 5000ms default under `npm test`'s full-suite parallel run (15 jsdom+MUI-heavy files
+  // competing for the machine's CPU cores at once). Same root cause class as
+  // TrailHealth.test.tsx's explicit timeouts (PR #1392) — CPU contention inflating wall-clock
+  // time, not a bug in markEditionsCompleted itself.
   it("leaves an Invitational edition's registrationStatus unchanged while an Open one closes, after Mark Editions Completed", async () => {
     apiFetchMock.mockImplementation((endpoint: string) => {
       if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
@@ -179,7 +185,7 @@ describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', (
 
     // Regression guard: a plain Open edition still closes as before.
     expect(within(openPaper).getByText('Reg: Closed')).toBeTruthy();
-  });
+  }, 15000);
 });
 
 // #1388: REGISTRATION_STATUSES (RaceDayPage.tsx:28) was missing Invitational and NotRequired even

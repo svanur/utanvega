@@ -312,6 +312,12 @@ describe('RacesStep — fast Add races cannot race ahead of an in-flight seed fe
     fireEvent.click(screen.getByRole('button', { name: /^Add \d+ race/ }));
   }
 
+  // #1393: this test drives two full mounts of RacesStep plus four sequential waitFor roundtrips
+  // (deferred seed fetch, Autocomplete select, Add races click, resolved fetch) — comfortably
+  // under the 5000ms default in isolation, but timed out under `npm test`'s full-suite parallel
+  // run, where 15 jsdom+MUI-heavy test files compete for the machine's CPU cores at once. Same
+  // root cause class as TrailHealth.test.tsx's explicit timeouts (PR #1392) — CPU contention
+  // inflating wall-clock time, not a bug in the #968 fix itself.
   it('still shows an earlier mount\'s race and avoids a sortOrder collision when Add races fires before the remount\'s seed fetch resolves', async () => {
     mockTrails = [makeTrail('trail-a', 'Trail A'), makeTrail('trail-b', 'Trail B')];
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -344,7 +350,7 @@ describe('RacesStep — fast Add races cannot race ahead of an in-flight seed fe
     expect(screen.getByText('Trail A')).toBeTruthy();
     // (b) Trail B's sortOrder must not collide with Trail A's already-persisted sortOrder 0.
     expect(capturedSortOrders).toEqual([1]);
-  });
+  }, 15000);
 });
 
 // #968 round 2 (PR #974 review): the round-1 fix above had handleAddRaces await
