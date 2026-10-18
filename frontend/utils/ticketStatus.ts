@@ -44,6 +44,41 @@ export function groupDistances(distances: DistanceEntry[]): GroupedDistance[] {
     return Array.from(map.values());
 }
 
+// #1317: extracted from RacesPage.tsx's justRaced ("Recently completed") card block (#1305/#1312)
+// so the distance/chip-row fallback branching is unit-tested instead of living inline in a ~1800-line
+// component. Output must match the original derivation exactly — this is a refactor, not a behavior
+// change.
+//
+// #1305: this section's cards fold a single distance into the date line instead of a separate chip
+// row — only fall back to the chip row (as the upcoming list does) when there's more than one
+// distance to show, so no information is silently lost.
+// #1312: recentRace's own distanceLabel can legitimately be null (no length on the race or its
+// linked trail — GetEventsQuery.cs). In that case there's nothing to fold into the date line, so
+// fall back to the season's other races (distances) for the chip row instead of showing no distance
+// info at all. The inline label itself must stay sourced from recentRace.distanceLabel only — never
+// substituted.
+export function getRecentRaceDistanceDisplay(
+    recentRace: { distanceLabel: string | null } | null | undefined,
+    distances: DistanceEntry[] | null | undefined
+): { groupedDistances: GroupedDistance[]; singleDistanceLabel: string | null; showDistanceChips: boolean } {
+    const recentRaceHasDistanceLabel = !!recentRace?.distanceLabel;
+    const groupedDistances = (!recentRace || !recentRaceHasDistanceLabel) && distances
+        ? groupDistances(distances)
+        : [];
+    const singleDistanceLabel = recentRace
+        ? recentRace.distanceLabel
+        : groupedDistances.length === 1
+            ? groupedDistances[0].label
+            : null;
+    // Non-recentRace single distance is already shown inline above (via singleDistanceLabel), so
+    // the chip row there only fires above 1. The recentRace-with-no-distanceLabel fallback has
+    // shown nothing inline, so even a single grouped distance needs the chip row to surface it.
+    const showDistanceChips = recentRace
+        ? groupedDistances.length > 0
+        : groupedDistances.length > 1;
+    return { groupedDistances, singleDistanceLabel, showDistanceChips };
+}
+
 // Returns true when every race in the relevant edition is sold out — used to suppress registration UI (button, swipe action)
 export function isAllSoldOut(distances: DistanceEntry[] | null | undefined): boolean {
     if (!distances || distances.length === 0) return false;

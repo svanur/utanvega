@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupDistances, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, getTicketStatusColor, type DistanceEntry } from './ticketStatus';
+import { getRecentRaceDistanceDisplay, groupDistances, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, getTicketStatusColor, type DistanceEntry } from './ticketStatus';
 
 describe('groupDistances', () => {
     it('keeps elevationGain/terrainType when two entries sharing a label agree', () => {
@@ -171,6 +171,90 @@ describe('isRegistrationRequiredForRace', () => {
         expect(isRegistrationRequiredForRace('NotStarted')).toBe(true);
         expect(isRegistrationRequiredForRace(null)).toBe(true);
         expect(isRegistrationRequiredForRace(undefined)).toBe(true);
+    });
+});
+
+describe('getRecentRaceDistanceDisplay', () => {
+    it('groups comp.distances for the chip row and folds a single distance inline when there is no recentRace', () => {
+        const distances: DistanceEntry[] = [
+            { label: '10 km', ticketStatus: 'Available' },
+        ];
+        const result = getRecentRaceDistanceDisplay(null, distances);
+        expect(result.groupedDistances).toHaveLength(1);
+        expect(result.singleDistanceLabel).toBe('10 km');
+        // A single distance is already shown inline, so the chip row must stay hidden.
+        expect(result.showDistanceChips).toBe(false);
+    });
+
+    it('falls back to the chip row (not the inline label) when there is no recentRace and more than one distance', () => {
+        const distances: DistanceEntry[] = [
+            { label: '10 km', ticketStatus: 'Available' },
+            { label: 'Half Marathon', ticketStatus: 'SoldOut' },
+        ];
+        const result = getRecentRaceDistanceDisplay(null, distances);
+        expect(result.groupedDistances).toHaveLength(2);
+        expect(result.singleDistanceLabel).toBeNull();
+        expect(result.showDistanceChips).toBe(true);
+    });
+
+    it('uses recentRace.distanceLabel inline and suppresses the chip row entirely when it is non-blank', () => {
+        const distances: DistanceEntry[] = [
+            { label: '10 km', ticketStatus: 'Available' },
+            { label: 'Half Marathon', ticketStatus: 'SoldOut' },
+        ];
+        const result = getRecentRaceDistanceDisplay({ distanceLabel: '21 km' }, distances);
+        expect(result.singleDistanceLabel).toBe('21 km');
+        // comp.distances is never grouped once recentRace supplies its own label.
+        expect(result.groupedDistances).toHaveLength(0);
+        expect(result.showDistanceChips).toBe(false);
+    });
+
+    it('falls back to grouping comp.distances for the chip row when recentRace.distanceLabel is null', () => {
+        const distances: DistanceEntry[] = [
+            { label: '10 km', ticketStatus: 'Available' },
+        ];
+        const result = getRecentRaceDistanceDisplay({ distanceLabel: null }, distances);
+        // The inline label stays sourced from recentRace.distanceLabel only — never substituted.
+        expect(result.singleDistanceLabel).toBeNull();
+        expect(result.groupedDistances).toHaveLength(1);
+        // Nothing has been shown inline, so even a single grouped distance needs the chip row.
+        expect(result.showDistanceChips).toBe(true);
+    });
+
+    it('treats a blank-string recentRace.distanceLabel like null for the chip-row fallback, while the inline label itself stays the raw blank string (never substituted)', () => {
+        const distances: DistanceEntry[] = [
+            { label: '10 km', ticketStatus: 'Available' },
+        ];
+        const result = getRecentRaceDistanceDisplay({ distanceLabel: '' }, distances);
+        expect(result.singleDistanceLabel).toBe('');
+        expect(result.groupedDistances).toHaveLength(1);
+        expect(result.showDistanceChips).toBe(true);
+    });
+
+    it('shows no chips and no inline label when recentRace.distanceLabel is null and distances is empty/null', () => {
+        expect(getRecentRaceDistanceDisplay({ distanceLabel: null }, null)).toEqual({
+            groupedDistances: [],
+            singleDistanceLabel: null,
+            showDistanceChips: false,
+        });
+        expect(getRecentRaceDistanceDisplay({ distanceLabel: null }, [])).toEqual({
+            groupedDistances: [],
+            singleDistanceLabel: null,
+            showDistanceChips: false,
+        });
+    });
+
+    it('returns no distance info when there is no recentRace and distances is null/undefined', () => {
+        expect(getRecentRaceDistanceDisplay(null, null)).toEqual({
+            groupedDistances: [],
+            singleDistanceLabel: null,
+            showDistanceChips: false,
+        });
+        expect(getRecentRaceDistanceDisplay(undefined, undefined)).toEqual({
+            groupedDistances: [],
+            singleDistanceLabel: null,
+            showDistanceChips: false,
+        });
     });
 });
 
