@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -440,6 +440,34 @@ describe('getRowDaysUntil', () => {
         const race = makeSeriesRace({ dateOfRace: today });
         const row = { kind: 'series-race' as const, event, race, rowDate: race.dateOfRace };
         expect(getRowDaysUntil(row)).toBe(0);
+    });
+});
+
+// #1249/#1286: extracted from RacesPage's "Nýlokið" card JSX — gates the Results button and the
+// countdown chip on a dual season/race days-until, favoring a single still-ongoing-season race's
+// own completion date over the edition-level comp.daysUntil.
+describe('getEffectiveDaysUntil', () => {
+    it('falls back to comp.daysUntil when there is no recentlyCompletedSeriesRace', () => {
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: null });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBe(10);
+    });
+
+    it('computes a negative days-until from a recentlyCompletedSeriesRace with a past dateOfRace', () => {
+        const race = makeSeriesRace({ dateOfRace: '2026-03-13' });
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: race });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBe(-2);
+    });
+
+    it('computes a positive days-until from a recentlyCompletedSeriesRace with a future dateOfRace', () => {
+        const race = makeSeriesRace({ dateOfRace: '2026-03-20' });
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: race });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBe(5);
+    });
+
+    it('returns null when recentlyCompletedSeriesRace has no dateOfRace, ignoring comp.daysUntil', () => {
+        const race = makeSeriesRace({ dateOfRace: null });
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: race });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBeNull();
     });
 });
 
