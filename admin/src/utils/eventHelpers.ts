@@ -1,5 +1,5 @@
 import type { Dayjs } from 'dayjs';
-import type { EventEditionDto } from '../hooks/useEvents';
+import type { EventEditionDto, RaceDto } from '../hooks/useEvents';
 
 export interface YearMonthFilterable {
   hasFutureEdition: boolean;
@@ -119,6 +119,20 @@ export function nextWeekMondayOffset(today: Dayjs): number {
 // Mirrors nextWeekMondayOffset above. See #847.
 export function thisWeekMondayOffset(today: Dayjs): number {
   return (today.day() + 6) % 7;
+}
+
+// #1070: a Series edition's Date/EndDate are derived live from its races' DateOfRace by the
+// backend (EditionStatusHelpers.ComputeEffectiveEditionDates) rather than trusted from the
+// stored columns, so once an existing Series edition has at least one dated race, Start/End date
+// here must show that derived value and stop accepting admin edits the backend would just
+// overrule on the next read. A brand-new Series edition with no races yet has nothing to derive
+// from, and every non-Series edition is unaffected — both stay editable.
+export function getSeriesDatedRaceDates(races: RaceDto[] | undefined): string[] {
+  return (races ?? [])
+    .filter(r => r.status !== 'Cancelled')
+    .map(r => r.dateOfRace)
+    .filter((d): d is string => d != null)
+    .sort();
 }
 
 // Header for the copy-to-clipboard agenda (handleCopyAgenda on EventsListPage) when a week

@@ -114,6 +114,7 @@ import {
   computeClonedRaceDate,
   sortEditions,
   editionsAffectedByEventCancel,
+  getSeriesDatedRaceDates,
 } from '../utils/eventHelpers';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
@@ -359,11 +360,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
   // overrule on the next read. A brand-new Series edition with no races yet has nothing to derive
   // from, and every non-Series edition is unaffected — both stay editable.
   const seriesDatedRaceDates = eventType === 'Series' && !isNew
-    ? (edition?.races ?? [])
-        .filter(r => r.status !== 'Cancelled')
-        .map(r => r.dateOfRace)
-        .filter((d): d is string => d != null)
-        .sort()
+    ? getSeriesDatedRaceDates(edition?.races)
     : [];
   const isDateDerivedFromRaces = seriesDatedRaceDates.length > 0;
   const derivedStartDate = isDateDerivedFromRaces ? seriesDatedRaceDates[0] : null;
