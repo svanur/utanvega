@@ -1417,13 +1417,8 @@ app.MapGet("/api/v1/admin/trails/duplicates", [Authorize(Policy = "AdminOnly")] 
     {
         // Bump the version token so the GetOrCreateAsync below is a guaranteed miss and the
         // fresh result becomes the new shared cached value for this threshold.
-        var currentVersion = cache.GetOrCreate(CacheKeys.TrailDuplicatesVersion, e =>
-        {
-            e.Priority = CacheItemPriority.NeverRemove;
-            return 0;
-        });
-        cache.Set(CacheKeys.TrailDuplicatesVersion, currentVersion + 1,
-            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
+        // #1265: same atomic mechanism as CacheInvalidator.InvalidateTrail — not a separate copy.
+        CacheVersionBumper.Bump(cache, CacheKeys.TrailDuplicatesVersion);
     }
 
     var duplicates = await mediator.Send(new GetDuplicateTrailsQuery(threshold ?? 95));
