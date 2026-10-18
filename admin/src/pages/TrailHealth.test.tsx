@@ -82,50 +82,57 @@ async function assertOtherFiveDisabled(activeFlag: Flag) {
 describe('TrailHealth — six-button disabled matrix (#1263/#1264/#1294 regression)', () => {
   afterEach(cleanup);
 
-  // Each case opens a confirmation dialog, clicks its "run" button, then does six more
-  // findByRole lookups — above the 5000ms default on a loaded machine (MUI + the duplicates
-  // query both need to settle first), so these get an explicit timeout rather than flaking.
+  // #1397's fileParallelism: false fix (admin/vitest.config.ts) removed the cross-file CPU
+  // contention these overrides originally guarded against, so most of this describe block
+  // now runs comfortably under the suite's 5000ms default (see the un-overridden
+  // 'enables all six buttons when idle' case below). But these six cases each open a
+  // confirmation dialog, click its "run" button, then do five more findByRole lookups via
+  // assertOtherFiveDisabled — measured landing right at the 5000ms boundary even running
+  // this file alone and sequentially (one actually clocked in at 5024ms), with a different
+  // one of the six tripping it on different runs rather than the same one each time. That's
+  // real per-test margin, not file-level contention, so each of the six keeps its own
+  // explicit timeout rather than relying on the default.
   it('disables the other five buttons while detectingLocations is in flight', async () => {
     renderTrailHealth();
     await screen.findByRole('button', { name: BUTTON_NAMES.detectingLocations });
     await triggerFlag('detectingLocations');
     await assertOtherFiveDisabled('detectingLocations');
-  }, 15000);
+  }, 10000);
 
   it('disables the other five buttons while detectingTerrain is in flight', async () => {
     renderTrailHealth();
     await screen.findByRole('button', { name: BUTTON_NAMES.detectingTerrain });
     await triggerFlag('detectingTerrain');
     await assertOtherFiveDisabled('detectingTerrain');
-  }, 15000);
+  }, 10000);
 
   it('disables the other five buttons while backfillingProfiles is in flight', async () => {
     renderTrailHealth();
     await screen.findByRole('button', { name: BUTTON_NAMES.backfillingProfiles });
     await triggerFlag('backfillingProfiles');
     await assertOtherFiveDisabled('backfillingProfiles');
-  }, 15000);
+  }, 10000);
 
   it('disables the other five buttons while detecting is in flight', async () => {
     renderTrailHealth();
     await screen.findByRole('button', { name: BUTTON_NAMES.detecting });
     await triggerFlag('detecting');
     await assertOtherFiveDisabled('detecting');
-  }, 15000);
+  }, 10000);
 
   it('disables the other five buttons while recalculating is in flight', async () => {
     renderTrailHealth();
     await screen.findByRole('button', { name: BUTTON_NAMES.recalculating });
     await triggerFlag('recalculating');
     await assertOtherFiveDisabled('recalculating');
-  }, 15000);
+  }, 10000);
 
   it('disables the other five buttons while scanningDuplicates is in flight', async () => {
     renderTrailHealth();
     await screen.findByRole('button', { name: BUTTON_NAMES.scanningDuplicates });
     await triggerFlag('scanningDuplicates');
     await assertOtherFiveDisabled('scanningDuplicates');
-  }, 15000);
+  }, 10000);
 
   it('enables all six buttons when idle', async () => {
     renderTrailHealth();
@@ -133,5 +140,5 @@ describe('TrailHealth — six-button disabled matrix (#1263/#1264/#1294 regressi
       const button = await screen.findByRole<HTMLButtonElement>('button', { name });
       expect(button.disabled).toBe(false);
     }
-  }, 15000);
+  });
 });
