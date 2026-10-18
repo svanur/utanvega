@@ -72,7 +72,7 @@ public class EventEdition
         // NotRequired and Invitational are both deliberate overrides that have nothing to do with
         // a registration window — forcing either to Closed on cancellation would misrepresent a
         // free walk-in or invitation-only event as one whose registration window simply ended.
-        if (RegistrationStatus != RegistrationStatus.NotRequired && RegistrationStatus != RegistrationStatus.Invitational)
+        if (!IsDeliberateOverride(RegistrationStatus))
             RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status != RaceStatus.Cancelled))
         {
@@ -81,7 +81,7 @@ public class EventEdition
             // race level: a race deliberately marked Free or Invitational isn't describing a
             // registration window either, so cancelling the edition shouldn't overwrite it to
             // Closed and misrepresent it as "registration window ended".
-            if (race.TicketStatus != TicketStatus.Free && race.TicketStatus != TicketStatus.Invitational)
+            if (!IsDeliberateOverride(race.TicketStatus))
                 race.TicketStatus = TicketStatus.Closed;
         }
     }
@@ -91,14 +91,26 @@ public class EventEdition
     {
         Status = EditionStatus.Completed;
         // Same NotRequired/Invitational exemption as CancelWithRaces above — see its comment.
-        if (RegistrationStatus != RegistrationStatus.NotRequired && RegistrationStatus != RegistrationStatus.Invitational)
+        if (!IsDeliberateOverride(RegistrationStatus))
             RegistrationStatus = RegistrationStatus.Closed;
         foreach (var race in Races.Where(r => r.Status == RaceStatus.Active))
         {
             race.Status = RaceStatus.Completed;
             // Same Free/Invitational exemption as CancelWithRaces above — see its comment.
-            if (race.TicketStatus != TicketStatus.Free && race.TicketStatus != TicketStatus.Invitational)
+            if (!IsDeliberateOverride(race.TicketStatus))
                 race.TicketStatus = TicketStatus.Closed;
         }
     }
+
+    // Shared by CancelWithRaces/CompleteWithRaces: NotRequired and Invitational are deliberate
+    // overrides unrelated to a registration window, so neither should be force-closed on
+    // cancel/complete. Centralised so a future status added to RegistrationStatus only needs
+    // updating here, not in both call sites.
+    private static bool IsDeliberateOverride(RegistrationStatus status) =>
+        status is RegistrationStatus.NotRequired or RegistrationStatus.Invitational;
+
+    // Race-level counterpart of IsDeliberateOverride(RegistrationStatus) above — same rationale,
+    // for TicketStatus.Free/Invitational instead.
+    private static bool IsDeliberateOverride(TicketStatus status) =>
+        status is TicketStatus.Free or TicketStatus.Invitational;
 }
