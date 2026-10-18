@@ -45,11 +45,10 @@ public class GetEventCalendarQueryHandler : IRequestHandler<GetEventCalendarQuer
 
     public async Task<List<CalendarDayDto>> Handle(GetEventCalendarQuery request, CancellationToken cancellationToken)
     {
-        var version = _cache.GetOrCreate(CacheKeys.EventVersion, e =>
-        {
-            e.Priority = CacheItemPriority.NeverRemove;
-            return 0;
-        });
+        // #1265: goes through CacheVersionBumper (not a raw GetOrCreate) so creation of this
+        // version's cache entry can never race against CacheInvalidator.InvalidateEvent's own
+        // creation path and lose a bump.
+        var version = CacheVersionBumper.Read(_cache, CacheKeys.EventVersion);
         var cacheKey = CacheKeys.Calendar(version, request.From, request.To);
 
         if (_cache.TryGetValue(cacheKey, out List<CalendarDayDto>? cached) && cached is not null)

@@ -1,46 +1,61 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Utanvega.Backend.Application.Caching;
 
 /// <summary>
-/// Makes a version-token cache bump atomic. IMemoryCache has no built-in increment primitive, so
-/// the previous GetOrCreate-then-Set read-modify-write let two concurrent bumps of the same key
-/// both read the same "current" value and silently lose one increment (#1265).
+/// Single creation+read+bump path for version-token cache entries, so every caller — the four
+/// version-reading query handlers (GetEventCalendarQuery, GetEditionsHistoryQuery,
+/// GetDuplicateTrailsQuery, GetTrailLeaderboardHandler) and CacheInvalidator's three bump sites,
+/// plus Program.cs's duplicate-detection force=true branch — converges on exactly one boxed int
+/// per key, created at most once.
 ///
-/// The version is stored as a single boxed int that is created once per key and never replaced —
-/// every reader of that key (here and at every existing version-reading call site, via its own
-/// IMemoryCache.GetOrCreate(key)) keeps returning that same boxed instance once it exists.
-/// <see cref="Unsafe.Unbox{T}"/> gives a ref straight into that box's storage, so
-/// <see cref="Interlocked.Increment(ref int)"/> mutates it lock-free and atomically: N concurrent
-/// bumps of the same key increase the stored version by exactly N, with no separate source of
-/// truth introduced outside the one IMemoryCache entry every reader already trusts.
+/// IMemoryCache.GetOrCreate is NOT atomic for creation: two racing calls that both miss can each
+/// build their own boxed value and both Set it, with the dictionary ending up holding whichever
+/// Set landed last. Before this (#1265 review round 2), the four readers used a plain
+/// IMemoryCache.GetOrCreate independently of this class's own creation path, so a reader and a
+/// Bump racing on a key that had *never* been created yet could each win creation of their own
+/// box — silently orphaning whichever one lost, dropping any increment already applied to it.
+/// EnsureBox is now the only place that ever creates the entry, guarded by a per-key lock, so
+/// there is exactly one creation winner regardless of whether a reader or a bump gets there first.
+///
+/// Once the box exists, Read is lock-free (a plain TryGetValue + unboxing copy) and Bump is
+/// lock-free (<see cref="Unsafe.Unbox{T}"/> + <see cref="Interlocked.Increment(ref int)"/> mutate
+/// the single box in place) — the lock is only ever taken on the one-time-per-key creation path.
 /// </summary>
 public static class CacheVersionBumper
 {
-    // Only ever taken on the rare, once-per-key path where the box doesn't exist yet. Once
-    // created, every subsequent bump of that key is lock-free.
-    private static readonly object CreationLock = new();
+    // Per-key creation lock, not one lock shared by every version key — creating "event:version"
+    // must never block creation of an unrelated "leaderboard:some-trail:version".
+    private static readonly ConcurrentDictionary<string, object> CreationLocks = new();
+
+    /// <summary>Returns the current version for <paramref name="key"/>, creating it (as 0) if it doesn't exist yet.</summary>
+    public static int Read(IMemoryCache cache, string key) => (int)EnsureBox(cache, key);
 
     /// <summary>Atomically increments the version token stored at <paramref name="key"/> and returns the new value.</summary>
     public static int Bump(IMemoryCache cache, string key)
     {
-        if (!cache.TryGetValue(key, out object? boxed) || boxed is not int)
-        {
-            lock (CreationLock)
-            {
-                // Re-check inside the lock: another thread may have created the box while this
-                // one was waiting, in which case it must reuse that same box, not make a second.
-                if (!cache.TryGetValue(key, out boxed) || boxed is not int)
-                {
-                    boxed = 0;
-                    using var entry = cache.CreateEntry(key);
-                    entry.Priority = CacheItemPriority.NeverRemove;
-                    entry.Value = boxed;
-                }
-            }
-        }
+        var boxed = EnsureBox(cache, key);
+        return Interlocked.Increment(ref Unsafe.Unbox<int>(boxed));
+    }
 
-        return Interlocked.Increment(ref Unsafe.Unbox<int>(boxed!));
+    private static object EnsureBox(IMemoryCache cache, string key)
+    {
+        if (cache.TryGetValue(key, out object? boxed) && boxed is int) return boxed;
+
+        lock (CreationLocks.GetOrAdd(key, static _ => new object()))
+        {
+            // Re-check inside the lock: a reader's Read or another thread's Bump may have
+            // created the box while this call was waiting, in which case it must reuse that
+            // same box, never make a second one.
+            if (cache.TryGetValue(key, out boxed) && boxed is int) return boxed;
+
+            boxed = 0;
+            using var entry = cache.CreateEntry(key);
+            entry.Priority = CacheItemPriority.NeverRemove;
+            entry.Value = boxed;
+            return boxed;
+        }
     }
 }
