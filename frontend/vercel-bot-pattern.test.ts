@@ -38,11 +38,34 @@ function toCharClass(word: string): string {
 const BOT_NAMES = extractWordList(BOT_USER_AGENT_PATTERN);
 const EXPECTED_PATTERN = `.*(${BOT_NAMES.map(toCharClass).join('|')}).*`;
 
+/** The one headers rule in vercel.json that pairs the bot-UA `missing` check with `Cache-Control: no-store`. */
+const CACHE_CONTROL_RULE_SOURCE = '/((?!api/|.*\\.[a-zA-Z0-9]+$).*)';
+
+type HeadersRule = {
+  source: string;
+  missing?: { value: string }[];
+  headers?: { key: string }[];
+};
+
+/**
+ * Picks the cache-control headers rule by `source` (plus a `Cache-Control` entry in its
+ * `headers` array), not by bare `missing` presence — a second rule that later gains its
+ * own `missing` block must not be able to hijack this selection. See #1382.
+ */
+function findCacheControlHeaderRule(rules: HeadersRule[]): HeadersRule | undefined {
+  return rules.find(
+    (rule) => rule.source === CACHE_CONTROL_RULE_SOURCE && rule.headers?.some((header) => header.key === 'Cache-Control')
+  );
+}
+
 function extractVercelJsonPatternValues(): { label: string; value: string }[] {
   const config = JSON.parse(readFileSync(VERCEL_JSON_PATH, 'utf-8'));
   const trailsRewrite = config.rewrites.find((r: { source: string }) => r.source === '/trails/:slug');
   const pathRewrite = config.rewrites.find((r: { source: string }) => r.source === '/:path*');
-  const cacheControlHeader = config.headers.find((h: { missing?: unknown }) => h.missing);
+  const cacheControlHeader = findCacheControlHeaderRule(config.headers);
+  if (!cacheControlHeader?.missing) {
+    throw new Error(`No headers rule with source ${CACHE_CONTROL_RULE_SOURCE} and a Cache-Control header found in vercel.json`);
+  }
   return [
     { label: '/trails/:slug rewrite has[0].value', value: trailsRewrite.has[0].value },
     { label: '/:path* rewrite has[0].value', value: pathRewrite.has[0].value },
@@ -61,4 +84,20 @@ describe('vercel.json bot-pattern character-class copies', () => {
       expect(value).toBe(EXPECTED_PATTERN);
     }
   );
+
+  it('does not let a second missing-bearing rule hijack the cache-control rule selection', () => {
+    const decoyRule: HeadersRule = {
+      source: '/some/other/path',
+      missing: [{ value: 'decoy-pattern' }],
+      headers: [{ key: 'X-Decoy-Header' }],
+    };
+    const realRule: HeadersRule = {
+      source: CACHE_CONTROL_RULE_SOURCE,
+      missing: [{ value: 'real-pattern' }],
+      headers: [{ key: 'Cache-Control' }],
+    };
+
+    expect(findCacheControlHeaderRule([decoyRule, realRule])).toBe(realRule);
+    expect(findCacheControlHeaderRule([realRule, decoyRule])).toBe(realRule);
+  });
 });
