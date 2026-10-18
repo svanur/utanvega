@@ -25,7 +25,7 @@ import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 
 const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
 const TICKET_STATUSES: TicketStatus[] = ['Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'NotStarted', 'Free', 'Invitational'];
-const REGISTRATION_STATUSES = ['NotStarted', 'Open', 'Closed'] as const;
+const REGISTRATION_STATUSES = ['NotStarted', 'Open', 'Closed', 'Invitational', 'NotRequired'] as const;
 
 type Mode = 'setup' | 'wrapup';
 
@@ -316,7 +316,10 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
 
     const closeAllRegistrations = () =>
         bulkUpdateEditions(
-            editions.filter(ed => ed.registrationStatus !== 'Closed' && ed.registrationStatus !== 'NotRequired'),
+            // Invitational is excluded the same way NotRequired already is — both are deliberate
+            // per-edition overrides (EventEdition.IsDeliberateOverride) that a bulk action must not
+            // silently overwrite with Closed. See #1388.
+            editions.filter(ed => ed.registrationStatus !== 'Closed' && ed.registrationStatus !== 'NotRequired' && ed.registrationStatus !== 'Invitational'),
             ed => patchRegistrationStatus(ed.id, 'Closed'),
             () => ({ registrationStatus: 'Closed' }),
             n => `Registration closed for ${n} edition${n > 1 ? 's' : ''}`
@@ -344,7 +347,8 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
 
     const openAllRegistrations = () =>
         bulkUpdateEditions(
-            editions.filter(ed => ed.registrationStatus !== 'Open' && ed.registrationStatus !== 'NotRequired'),
+            // Same exclusion as closeAllRegistrations above, mirrored — see #1388.
+            editions.filter(ed => ed.registrationStatus !== 'Open' && ed.registrationStatus !== 'NotRequired' && ed.registrationStatus !== 'Invitational'),
             ed => patchRegistrationStatus(ed.id, 'Open'),
             () => ({ registrationStatus: 'Open' }),
             n => `Registration opened for ${n} edition${n > 1 ? 's' : ''}`
@@ -506,7 +510,14 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
 
     const isBusy = savingRaces.size > 0 || bulkEditions || bulkEvents;
 
-    // Per-edition progress
+    // Per-edition progress. NotRequired/Invitational editions are deliberate overrides
+    // (EventEdition.IsDeliberateOverride) that neither the Open nor the Closed bulk actions touch
+    // (see closeAllRegistrations/openAllRegistrations above) — so neither the "Reg open" nor the
+    // "Reg closed" chip has anything left for the admin to do on them, and both chips treat them
+    // as satisfied rather than showing a permanently-incomplete state. See #1388.
+    const isRegistrationOverride = (ed: RaceDayEdition) =>
+        ed.registrationStatus === 'NotRequired' || ed.registrationStatus === 'Invitational';
+
     const editionProgress = (ed: RaceDayEdition) => {
         const races = ed.races.filter(r => r.status !== 'Cancelled' && r.status !== 'Hidden');
         if (mode === 'setup') {
@@ -514,14 +525,14 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
                 { label: 'Confirmed', done: ed.eventStatus === 'Confirmed' },
                 { label: 'Reg URL', done: (registrationUrls[ed.id] ?? ed.registrationUrl ?? '') !== '' },
                 { label: 'Races active', done: races.length > 0 && races.every(r => r.status === 'Active') },
-                { label: 'Reg open', done: ed.registrationStatus === 'Open' },
+                { label: 'Reg open', done: ed.registrationStatus === 'Open' || isRegistrationOverride(ed) },
             ];
         }
         const nonCancelled = ed.races.filter(r => r.status !== 'Cancelled');
         return [
             { label: `${ed.races.filter(r => r.status === 'Completed').length}/${ed.races.length} done`, done: ed.races.every(r => r.status === 'Completed' || r.status === 'Cancelled') },
             { label: 'Tickets', done: nonCancelled.every(r => r.ticketStatus === 'Closed') },
-            { label: 'Reg closed', done: ed.registrationStatus === 'Closed' },
+            { label: 'Reg closed', done: ed.registrationStatus === 'Closed' || isRegistrationOverride(ed) },
             { label: 'Results URL', done: (resultsUrls[ed.id] ?? ed.resultsUrl ?? '') !== '' },
         ];
     };
