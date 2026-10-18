@@ -496,27 +496,27 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
     const cancelledRaces = allRaces.filter(r => r.status === 'Cancelled').length;
     const activeRaces = allRaces.filter(r => r.status === 'Active').length;
 
+    // NotRequired/Invitational editions are deliberate overrides (EventEdition.IsDeliberateOverride)
+    // that neither the Open nor the Closed bulk actions touch (see closeAllRegistrations/
+    // openAllRegistrations above) — so neither the "Reg open" nor the "Reg closed" condition has
+    // anything left for the admin to do on them, and both treat them as satisfied rather than
+    // showing a permanently-incomplete state. See #1388.
+    const isRegistrationOverride = (ed: RaceDayEdition) =>
+        ed.registrationStatus === 'NotRequired' || ed.registrationStatus === 'Invitational';
+
     const isWrapupDone = editions.length > 0 &&
         allRaces.every(r => r.status === 'Completed' || r.status === 'Cancelled') &&
         allRaces.filter(r => r.status !== 'Cancelled').every(r => r.ticketStatus === 'Closed') &&
-        editions.every(ed => ed.registrationStatus === 'Closed') &&
+        editions.every(ed => ed.registrationStatus === 'Closed' || isRegistrationOverride(ed)) &&
         editions.every(ed => (ed.resultsUrl ?? '') !== '');
 
     const isSetupReady = editions.length > 0 &&
         allRaces.filter(r => r.status !== 'Cancelled' && r.status !== 'Hidden').every(r => r.status === 'Active') &&
-        editions.every(ed => ed.registrationStatus === 'Open') &&
+        editions.every(ed => ed.registrationStatus === 'Open' || isRegistrationOverride(ed)) &&
         editions.every(ed => ed.eventStatus === 'Confirmed') &&
         editions.every(ed => (registrationUrls[ed.id] ?? ed.registrationUrl ?? '') !== '');
 
     const isBusy = savingRaces.size > 0 || bulkEditions || bulkEvents;
-
-    // Per-edition progress. NotRequired/Invitational editions are deliberate overrides
-    // (EventEdition.IsDeliberateOverride) that neither the Open nor the Closed bulk actions touch
-    // (see closeAllRegistrations/openAllRegistrations above) — so neither the "Reg open" nor the
-    // "Reg closed" chip has anything left for the admin to do on them, and both chips treat them
-    // as satisfied rather than showing a permanently-incomplete state. See #1388.
-    const isRegistrationOverride = (ed: RaceDayEdition) =>
-        ed.registrationStatus === 'NotRequired' || ed.registrationStatus === 'Invitational';
 
     const editionProgress = (ed: RaceDayEdition) => {
         const races = ed.races.filter(r => r.status !== 'Cancelled' && r.status !== 'Hidden');

@@ -251,3 +251,67 @@ describe('RaceDayPage registration-status Select gains Invitational/NotRequired 
     await waitFor(() => expect(within(paper).getByText('Reg: NotRequired')).toBeTruthy());
   });
 });
+
+// #1396: isWrapupDone/isSetupReady (RaceDayPage.tsx, page-level readiness flags) required every
+// edition's registrationStatus to be exactly 'Closed'/'Open', so they disagreed with the
+// per-edition "Reg closed"/"Reg open" chips (editionProgress, above) which #1388 already exempted
+// NotRequired/Invitational editions from via isRegistrationOverride. This left the readiness
+// banner permanently hidden for an event made entirely of override editions even once every chip
+// was green. The flags now reuse isRegistrationOverride the same way editionProgress does.
+describe('RaceDayPage page-level readiness flags exempt override editions (#1396)', () => {
+  afterEach(() => {
+    cleanup();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockResolvedValue([]);
+  });
+
+  const completedRace = {
+    name: 'Race A', nameEn: null, distanceLabel: null, distanceLabelEn: null,
+    status: 'Completed', ticketStatus: 'Closed', sortOrder: 0,
+    activityType: null, startTime: null, cutoffMinutes: null, resultType: null,
+  };
+
+  const notRequiredEdition = {
+    id: 'ed-not-required', eventId: 'event-not-required', eventName: 'Not Required Run',
+    eventSlug: 'not-required-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    resultsUrl: 'https://example.com/results', registrationUrl: null, registrationStatus: 'NotRequired',
+    races: [{ ...completedRace, id: 'race-not-required' }],
+  };
+
+  const invitationalEdition2 = {
+    ...notRequiredEdition,
+    id: 'ed-invitational-2', eventId: 'event-invitational-2', eventName: 'Invitational Run 2',
+    eventSlug: 'invitational-run-2', registrationStatus: 'Invitational',
+    races: [{ ...completedRace, id: 'race-invitational-2' }],
+  };
+
+  it('shows the wrap-up readiness banner when every edition is NotRequired/Invitational and all other conditions are met', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([notRequiredEdition, invitationalEdition2]);
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Not Required Run');
+    await screen.findByText('Invitational Run 2');
+
+    // Banner: page-level isWrapupDone now agrees with the per-edition chips below.
+    await screen.findByText(/All done!/);
+
+    // Per-edition chips: both "Reg closed" chips are filled/success, matching the banner.
+    const notRequiredPaper = screen.getByText('Not Required Run').closest('.MuiPaper-root') as HTMLElement;
+    const invitationalPaper2 = screen.getByText('Invitational Run 2').closest('.MuiPaper-root') as HTMLElement;
+    expect(within(notRequiredPaper).getByText('Reg closed').closest('.MuiChip-root')?.className).toContain('MuiChip-colorSuccess');
+    expect(within(invitationalPaper2).getByText('Reg closed').closest('.MuiChip-root')?.className).toContain('MuiChip-colorSuccess');
+  });
+});
