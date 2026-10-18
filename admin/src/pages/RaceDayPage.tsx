@@ -326,9 +326,10 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
         bulkUpdateEditions(
             editions.filter(ed => ed.editionStatus !== 'Completed' && ed.editionStatus !== 'Cancelled'),
             ed => completeEdition(ed.id),
-            // CompleteWithRaces() on the backend closes registration too, unless it's NotRequired —
-            // mirror that here so the optimistic local update matches what actually landed.
-            ed => ({ editionStatus: 'Completed', registrationStatus: ed.registrationStatus === 'NotRequired' ? ed.registrationStatus : 'Closed' }),
+            // CompleteWithRaces() on the backend closes registration too, unless it's NotRequired
+            // or Invitational (see EventEdition.IsDeliberateOverride) — mirror that here so the
+            // optimistic local update matches what actually landed.
+            ed => ({ editionStatus: 'Completed', registrationStatus: (ed.registrationStatus === 'NotRequired' || ed.registrationStatus === 'Invitational') ? ed.registrationStatus : 'Closed' }),
             n => `${n} edition${n > 1 ? 's' : ''} marked as Completed`
         );
 
