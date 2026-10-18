@@ -98,6 +98,16 @@ public static class EditionStatusHelpers
         };
     }
 
+    // Single source of truth for "which of an edition's races count toward its derived Date/EndDate"
+    // (#1292) — previously each of GetEventsQuery/GetAllEventDetailsQuery/GetEventQuery/
+    // UpdateEditionCommand kept its own copy of this same filter. A Cancelled race's date must not
+    // skew the derived min/max (#1261), so it's excluded here exactly like every caller already
+    // excluded it before this helper existed.
+    public static List<DateOnly> SeriesRaceDates(IEnumerable<Race> races) =>
+        races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled)
+            .Select(r => r.DateOfRace!.Value)
+            .ToList();
+
     // Single source of truth for "does this edition's Date/EndDate come from its races rather than
     // its stored columns" — shared by both the read-side derivation (ComputeEffectiveEditionDates
     // below) and the write-side guard (UpdateEditionCommandHandler) that must stop persisting
