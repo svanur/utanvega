@@ -112,10 +112,11 @@ describe('RaceDayPage URL -> state date sync', () => {
 // and Invitational editions (EventEdition.IsDeliberateOverride). The patch here was only updated
 // for NotRequired when Invitational was added (#1245), so an Invitational edition's displayed
 // registrationStatus was being flipped to Closed locally until the next refetch corrected it.
-// The "Reg closed" progress chip (editionProgress, done: ed.registrationStatus === 'Closed') is
-// used as the observable proxy for registrationStatus here, since the registrationStatus <Select>
-// itself only lists NotStarted/Open/Closed as menu items and renders no visible text for a value
-// outside that set.
+// Since #1388, the registrationStatus <Select> itself lists Invitational as a menu item, so its
+// displayed value chip ("Reg: Invitational" vs "Reg: Closed") is now a direct, visible proxy for
+// the field — no need to go via the "Reg closed" progress chip (which, also since #1388, treats
+// NotRequired/Invitational editions as satisfied regardless of the actual value, so it can no
+// longer distinguish "unchanged" from "flipped to Closed" the way it could before).
 describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', () => {
   afterEach(() => {
     cleanup();
@@ -171,14 +172,82 @@ describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', (
     const invitationalPaper = screen.getByText('Invitational Trail Run').closest('.MuiPaper-root') as HTMLElement;
     const openPaper = screen.getByText('Open Registration Run').closest('.MuiPaper-root') as HTMLElement;
 
-    // Invitational stays exempt: the "Reg closed" chip must remain not-done (outlined).
+    // Invitational stays exempt: the registrationStatus Select still shows Invitational, not Closed.
     await waitFor(() => {
-      const regChip = within(invitationalPaper).getByText('Reg closed').closest('.MuiChip-root');
-      expect(regChip?.className).toContain('MuiChip-outlined');
+      expect(within(invitationalPaper).getByText('Reg: Invitational')).toBeTruthy();
     });
 
-    // Regression guard: a plain Open edition still closes as before (filled/done).
-    const openRegChip = within(openPaper).getByText('Reg closed').closest('.MuiChip-root');
-    expect(openRegChip?.className).toContain('MuiChip-filled');
+    // Regression guard: a plain Open edition still closes as before.
+    expect(within(openPaper).getByText('Reg: Closed')).toBeTruthy();
+  });
+});
+
+// #1388: REGISTRATION_STATUSES (RaceDayPage.tsx:28) was missing Invitational and NotRequired even
+// though EventEdition.IsDeliberateOverride treats both as valid, reachable registrationStatus
+// values elsewhere in this file — an admin had no way to select either from the dropdown. These
+// tests drive the registrationStatus <Select> the same way EventDetailPage.test.tsx/
+// EventWizardPage.test.tsx's chooseMenuOption helper does (mousedown to open, click the option's
+// text in the resulting listbox), since this Select carries no aria-label to query by. The edition
+// header renders two unlabelled Selects (eventStatus, then registrationStatus), so the second
+// combobox within the edition's Paper is the one under test.
+describe('RaceDayPage registration-status Select gains Invitational/NotRequired options (#1388)', () => {
+  afterEach(() => {
+    cleanup();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockResolvedValue([]);
+  });
+
+  const notStartedEdition = {
+    id: 'ed-not-started', eventId: 'event-not-started', eventName: 'Not Started Run',
+    eventSlug: 'not-started-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    resultsUrl: null, registrationUrl: null, registrationStatus: 'NotStarted',
+    races: [],
+  };
+
+  function getRegistrationStatusCombobox(paper: HTMLElement) {
+    return within(paper).getAllByRole('combobox')[1];
+  }
+
+  function chooseMenuOption(combobox: HTMLElement, optionText: string) {
+    fireEvent.mouseDown(combobox);
+    const listbox = screen.getByRole('listbox');
+    fireEvent.click(within(listbox).getByText(optionText));
+  }
+
+  it('selects Invitational and NotRequired from the dropdown and PATCHes registration-status with each', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([notStartedEdition]);
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Not Started Run');
+    const paper = screen.getByText('Not Started Run').closest('.MuiPaper-root') as HTMLElement;
+
+    chooseMenuOption(getRegistrationStatusCombobox(paper), 'Reg: Invitational');
+
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      '/api/v1/admin/editions/ed-not-started/registration-status',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ registrationStatus: 'Invitational' }) })
+    ));
+    await waitFor(() => expect(within(paper).getByText('Reg: Invitational')).toBeTruthy());
+
+    chooseMenuOption(getRegistrationStatusCombobox(paper), 'Reg: NotRequired');
+
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      '/api/v1/admin/editions/ed-not-started/registration-status',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ registrationStatus: 'NotRequired' }) })
+    ));
+    await waitFor(() => expect(within(paper).getByText('Reg: NotRequired')).toBeTruthy());
   });
 });
