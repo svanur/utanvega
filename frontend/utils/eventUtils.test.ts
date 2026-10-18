@@ -200,6 +200,20 @@ describe('daysBetween', () => {
         const now = new Date('2026-03-15T23:00:00');
         expect(daysBetween('2026-03-16', now)).toBe(1);
     });
+
+    // #1268: RacesPage's "Nýlokið" card countdown for a just-finished Series race called
+    // daysBetween(recentRace.dateOfRace) with no `now` override, so the chip only moved on a full
+    // reload — not across a midnight crossing while the tab stayed open. The fix threads the
+    // existing nowMs tick (already used by the sibling series-row branch, #1229) into this call
+    // site too. This pins that a race finished "today" rolls to "yesterday" once `now` ticks past
+    // midnight, without any reload — the exact symptom #1268 reports.
+    it('rolls a just-finished race from 0 ("today") to -1 ("yesterday") once `now` crosses midnight', () => {
+        const raceDate = '2026-03-15';
+        const beforeMidnight = new Date('2026-03-15T23:59:00');
+        const afterMidnight = new Date('2026-03-16T00:01:00');
+        expect(daysBetween(raceDate, beforeMidnight)).toBe(0);
+        expect(daysBetween(raceDate, afterMidnight)).toBe(-1);
+    });
 });
 
 // #1308: EventTableView's series-race-row and plain-event-row chips, plus EventMapView's popup
