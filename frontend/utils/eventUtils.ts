@@ -297,6 +297,20 @@ export function getRowDaysUntil(row: FlattenedEventRow, now: Date = new Date()):
     return row.event.daysUntil;
 }
 
+// #1249/#1286: RacesPage's "Nýlokið" card gates its Results button and countdown chip on a dual
+// season/race days-until — extracted from the inline JSX computation so it's unit-testable.
+// When a single race within a still-ongoing season just finished (recentlyCompletedSeriesRace
+// set), the gate must use that race's own days-until, not the edition-level comp.daysUntil — the
+// edition itself hasn't finished. Falls back to comp.daysUntil when there's no such race.
+export function getEffectiveDaysUntil(
+    comp: { daysUntil: number | null; recentlyCompletedSeriesRace?: SeriesRaceDto | null },
+    now: Date = new Date(),
+): number | null {
+    const recentRace = comp.recentlyCompletedSeriesRace;
+    if (!recentRace) return comp.daysUntil;
+    return recentRace.dateOfRace ? daysBetween(recentRace.dateOfRace, now) : null;
+}
+
 // #1305/#1311: RacesPage's "Nýlokið" (recently-completed) section combines plain recently-completed
 // events with Series events carrying a recentlyCompletedSeriesRace — both inherit sortedFiltered's
 // *upcoming* order (date/distance/name), which has nothing to do with how recently each actually

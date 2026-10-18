@@ -74,7 +74,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
 import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -1072,12 +1072,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             // a still-ongoing/upcoming season just finished (recentRace set — name
                                             // and date must point at that specific race, not the event/season).
                                             const recentRace = comp.recentlyCompletedSeriesRace;
-                                            const recentRaceDaysUntil = recentRace?.dateOfRace ? daysBetween(recentRace.dateOfRace, new Date(nowMs)) : null;
-                                            // #1249: when a single race within a still-ongoing season just
+                                            // #1249/#1286: when a single race within a still-ongoing season just
                                             // finished, the Results button gate (and the countdown chip) must
                                             // use that race's own days-until, not the edition-level one — the
-                                            // edition itself hasn't finished.
-                                            const effectiveDaysUntil = recentRace ? recentRaceDaysUntil : comp.daysUntil;
+                                            // edition itself hasn't finished. Extracted to eventUtils.ts so this
+                                            // is unit-tested rather than inline JSX.
+                                            const effectiveDaysUntil = getEffectiveDaysUntil(comp, new Date(nowMs));
                                             // #1305: this section's cards fold a single distance into the date
                                             // line instead of a separate chip row — only fall back to the chip
                                             // row (as the upcoming list does) when there's more than one distance
