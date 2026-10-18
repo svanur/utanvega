@@ -143,7 +143,7 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                 ed => ed.Id,
                 ed => EditionStatusHelpers.ComputeEffectiveEditionDates(
                     ev.Type, ed.Date, ed.EndDate,
-                    ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList()));
+                    EditionStatusHelpers.SeriesRaceDates(ed.Races)));
 
         DateOnly? EffDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].Date : null;
         DateOnly? EffEndDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].EndDate : null;

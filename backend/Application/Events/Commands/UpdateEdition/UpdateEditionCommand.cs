@@ -66,7 +66,7 @@ public class UpdateEditionCommandHandler : IRequestHandler<UpdateEditionCommand,
         // columns stay editable/writable — same fallback the read side picks for that case.
         if (!EditionStatusHelpers.IsEditionDateDerivedFromRaces(
                 edition.Event.Type,
-                edition.Races.Where(r => r.DateOfRace.HasValue && r.Status != RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList()))
+                EditionStatusHelpers.SeriesRaceDates(edition.Races)))
         {
             edition.Date = request.Date;
             edition.EndDate = request.EndDate;

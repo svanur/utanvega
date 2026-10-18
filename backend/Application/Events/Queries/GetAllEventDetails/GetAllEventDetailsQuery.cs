@@ -101,7 +101,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                     // accident of the empty-list path.
                     var (edEffDate, edEffEndDate) = EditionStatusHelpers.ComputeEffectiveEditionDates(
                         ev.Type, ed.Date, ed.EndDate,
-                        ed.Races.Where(r => r.DateOfRace.HasValue && r.Status != Core.Entities.RaceStatus.Cancelled).Select(r => r.DateOfRace!.Value).ToList());
+                        EditionStatusHelpers.SeriesRaceDates(ed.Races));
 
                     // Projected alongside ed so the ordering below can sort on the derived date
                     // without re-running ComputeEffectiveEditionDates a second time (#1262) — the

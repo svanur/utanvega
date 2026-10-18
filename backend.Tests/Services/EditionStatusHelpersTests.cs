@@ -345,6 +345,55 @@ public class EditionStatusHelpersTests
         Assert.Equal(TicketStatus.Free, result);
     }
 
+    // ─── SeriesRaceDates (#1292) ───
+
+    private static Race MakeRace(DateOnly? dateOfRace, RaceStatus status = RaceStatus.Active) =>
+        new() { DateOfRace = dateOfRace, Status = status };
+
+    [Fact]
+    public void SeriesRaceDates_MixOfDatedAndUndatedRaces_ReturnsOnlyDatedOnes()
+    {
+        var races = new[]
+        {
+            MakeRace(new DateOnly(2026, 4, 1)),
+            MakeRace(null),
+            MakeRace(new DateOnly(2026, 8, 20)),
+        };
+
+        var result = EditionStatusHelpers.SeriesRaceDates(races);
+
+        Assert.Equal([new DateOnly(2026, 4, 1), new DateOnly(2026, 8, 20)], result);
+    }
+
+    [Fact]
+    public void SeriesRaceDates_DatedCancelledRace_IsExcluded()
+    {
+        // #1261: a Cancelled race's date must not count toward the derived min/max.
+        var races = new[]
+        {
+            MakeRace(new DateOnly(2026, 4, 1), RaceStatus.Cancelled),
+            MakeRace(new DateOnly(2026, 8, 20)),
+        };
+
+        var result = EditionStatusHelpers.SeriesRaceDates(races);
+
+        Assert.Equal([new DateOnly(2026, 8, 20)], result);
+    }
+
+    [Fact]
+    public void SeriesRaceDates_AllRacesCancelledOrUndated_ReturnsEmpty()
+    {
+        var races = new[]
+        {
+            MakeRace(new DateOnly(2026, 4, 1), RaceStatus.Cancelled),
+            MakeRace(null),
+        };
+
+        var result = EditionStatusHelpers.SeriesRaceDates(races);
+
+        Assert.Empty(result);
+    }
+
     [Fact]
     public void IsEditionDateDerivedFromRaces_SeriesWithDatedRace_ReturnsTrue()
     {
