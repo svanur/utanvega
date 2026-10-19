@@ -578,6 +578,8 @@
         "location": "Staðsetning",
         "approximateLocation": "Áætlað gildi fyrir stórt svæði",
         "startPointLocation": "Við upphafsstað",
+        "atStart": "Við upphafsstað",
+        "atFinish": "Við endamark",
         "date": "Dagsetning",
         "basedOnYears": "Veðurfar viðburðar á þessum stað og tíma síðustu {{years}} ár — ekki veðurspá.",
         "unavailable": "Veðurfarsgögn ekki tiltæk"

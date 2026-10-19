@@ -572,6 +572,16 @@ export interface EventClimate {
     isStartPoint: boolean;
 }
 
+// #1416: wraps one or two EventClimate results — finish is only populated when the event's
+// relevant edition has a long/steep enough PointToPoint primary trail that its start and finish
+// are worth showing as two distinct climate sections (see GetEventClimateQueryHandler.cs's
+// ResolvePointToPointEndpointsAsync). start alone (finish null) is exactly the pre-#1416
+// single-coordinate behavior — nothing else about that case changed.
+export interface EventClimateResult {
+    start: EventClimate;
+    finish: EventClimate | null;
+}
+
 // Historical climate normals for a given (month, day) — an ERA5 reanalysis average going back
 // ~15 years, not a forecast. Much longer staleTime than useTrailWeather since the same (eventSlug,
 // month, day) is effectively immutable data; the backend's own cache TTL is 7 days for the same
@@ -579,12 +589,12 @@ export interface EventClimate {
 // the coordinate from the event's own GpxPointLat/Lng, falling back to its Location, so this
 // works for events without any attached trail.
 export function useEventClimate(eventSlug?: string, month?: number, day?: number) {
-    const { data: climate = null, isPending, error: queryError } = useQuery<EventClimate | null>({
+    const { data: climate = null, isPending, error: queryError } = useQuery<EventClimateResult | null>({
         queryKey: ['climate', eventSlug, month, day],
         queryFn: () => fetch(`${API_URL}/api/v1/events/${eventSlug}/climate?month=${month}&day=${day}`)
             .then(res => {
                 if (!res.ok) throw new Error('Climate data unavailable');
-                return res.json() as Promise<EventClimate>;
+                return res.json() as Promise<EventClimateResult>;
             }),
         enabled: !!eventSlug && !!month && !!day,
         staleTime: 24 * 60 * 60 * 1000,

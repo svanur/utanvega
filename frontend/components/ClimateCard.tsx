@@ -24,6 +24,12 @@ interface ClimateCardProps {
     loading: boolean;
     error: string | null;
     locationName?: string | null;
+    // #1416: set only when this card is one of a start/finish pair (a qualifying PointToPoint
+    // event — see GetEventClimateQueryHandler's ResolvePointToPointEndpointsAsync) — replaces the
+    // generic "Climate normals" header with "At the start"/"At the finish" so the two sections
+    // read as clearly distinct rather than two identical-looking cards. Left undefined for the
+    // ordinary single-card case, which keeps today's unchanged header and behavior.
+    sectionLabel?: 'start' | 'finish';
 }
 
 // Unlike WeatherCard, there's no WMO weatherCode to key off — climate normals are an aggregate
@@ -51,9 +57,15 @@ function formatCoordinate(lat: number, lon: number): string {
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
 // icon, "usually" framing, no condition chip) so a visitor can't mistake a 15-year average for
 // today's forecast when both cards render on the same event-detail page (#1335).
-export default function ClimateCard({ climate, loading, error, locationName }: ClimateCardProps) {
+export default function ClimateCard({ climate, loading, error, locationName, sectionLabel }: ClimateCardProps) {
     const { t } = useTranslation();
     const [expanded, setExpanded] = useState(false);
+
+    // #1416: "At the start — <location>" / "At the finish — <location>" when part of a start/finish
+    // pair; the plain "Climate normals" title otherwise — see the sectionLabel prop doc above.
+    const title = sectionLabel
+        ? `${t(sectionLabel === 'start' ? 'climate.atStart' : 'climate.atFinish')}${locationName ? ` — ${locationName}` : ''}`
+        : t('climate.title');
 
     if (loading) {
         return (
@@ -105,7 +117,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                 <Stack direction="row" alignItems="center" spacing={1}>
                     <HistoryIcon color="secondary" />
                     <Typography variant="h6" fontWeight="bold">
-                        {t('climate.title')}
+                        {title}
                     </Typography>
                     {/* Quick summary when collapsed — mirrors WeatherCard's icon + temp + wind pattern */}
                     {!expanded && (

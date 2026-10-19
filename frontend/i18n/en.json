@@ -578,6 +578,8 @@
         "location": "Location",
         "approximateLocation": "Estimated for a broad area",
         "startPointLocation": "At the start",
+        "atStart": "At the start",
+        "atFinish": "At the finish",
         "date": "Date",
         "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
         "unavailable": "Historical climate data unavailable"

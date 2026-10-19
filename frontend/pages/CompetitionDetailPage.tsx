@@ -1173,10 +1173,29 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 {/* Mount whenever loading, data arrived, or the backend came back with neither
                     data nor an error (#1355) — that's the "no usable climate data" case,
                     which ClimateCard renders as an explicit unavailable message rather than
-                    nothing. A real fetch error still suppresses the card, same as before. */}
+                    nothing. A real fetch error still suppresses the card, same as before.
+                    #1416: climate.finish is only populated for a qualifying long PointToPoint
+                    event — render it as a second, clearly labeled section rather than averaging
+                    the two into one card. Every other event still gets exactly one card, same as
+                    before (climate.finish null, sectionLabel left undefined on that single card). */}
                 {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate || !climateError) && (
                     <Box sx={{ mt: 3 }}>
-                        <ClimateCard climate={climate} loading={climateLoading} error={climateError} locationName={event?.locationName} />
+                        <ClimateCard
+                            climate={climate?.start ?? null}
+                            loading={climateLoading}
+                            error={climateError}
+                            locationName={event?.locationName}
+                            sectionLabel={climate?.finish ? 'start' : undefined}
+                        />
+                        {climate?.finish && (
+                            <ClimateCard
+                                climate={climate.finish}
+                                loading={climateLoading}
+                                error={climateError}
+                                locationName={event?.locationName}
+                                sectionLabel="finish"
+                            />
+                        )}
                     </Box>
                 )}
 

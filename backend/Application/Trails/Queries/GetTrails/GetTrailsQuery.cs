@@ -44,6 +44,10 @@ public record TrailDto(
     string Difficulty,
     double? StartLatitude,
     double? StartLongitude,
+    // #1416: the trail's own end point (GpxData's LineString.EndPoint), alongside the start point
+    // above — GetEventClimateQuery needs both ends of a point-to-point trail, not just the start.
+    double? EndLatitude,
+    double? EndLongitude,
     List<LocationInfoDto> Locations,
     List<TagInfoDto> Tags,
     int ViewCount = 0,
@@ -154,6 +158,8 @@ public class GetTrailsQueryHandler : IRequestHandler<GetTrailsQuery, List<TrailD
             t.Difficulty.ToString(),
             startCoords.TryGetValue(t.Id, out var ls) ? ls?.StartPoint.Y : null,
             startCoords.TryGetValue(t.Id, out var ls2) ? ls2?.StartPoint.X : null,
+            startCoords.TryGetValue(t.Id, out var ls3) ? ls3?.EndPoint.Y : null,
+            startCoords.TryGetValue(t.Id, out var ls4) ? ls4?.EndPoint.X : null,
             t.Locations,
             t.Tags,
             viewCounts.GetValueOrDefault(t.Id, 0),
