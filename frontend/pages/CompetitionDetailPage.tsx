@@ -1187,12 +1187,16 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             locationName={event?.locationName}
                             sectionLabel={climate?.finish ? 'start' : undefined}
                         />
+                        {/* #1416 review fix: no locationName here — event.locationName names the
+                            event's own point (the start, by #1415's convention), not the trail's
+                            finish coordinate. Omitting it lets ClimateCard fall back to a
+                            coordinate string derived from climate.finish's own lat/lon, so the two
+                            sections never show the same place name for two different points. */}
                         {climate?.finish && (
                             <ClimateCard
                                 climate={climate.finish}
                                 loading={climateLoading}
                                 error={climateError}
-                                locationName={event?.locationName}
                                 sectionLabel="finish"
                             />
                         )}

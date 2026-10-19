@@ -61,12 +61,6 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
     const { t } = useTranslation();
     const [expanded, setExpanded] = useState(false);
 
-    // #1416: "At the start — <location>" / "At the finish — <location>" when part of a start/finish
-    // pair; the plain "Climate normals" title otherwise — see the sectionLabel prop doc above.
-    const title = sectionLabel
-        ? `${t(sectionLabel === 'start' ? 'climate.atStart' : 'climate.atFinish')}${locationName ? ` — ${locationName}` : ''}`
-        : t('climate.title');
-
     if (loading) {
         return (
             <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
@@ -103,6 +97,19 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
     // pages already pull from the races namespace rather than duplicating it under climate.
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
     const targetDateLabel = `${climate.targetDay}. ${months[climate.targetMonth - 1]}`;
+
+    // Tied to *this* card's own coordinate — locationName is only trustworthy for the climate it
+    // was resolved for, never copied across a start/finish pair (#1416 review fix): the caller
+    // passes a name only when it actually names this card's coordinate, so the fallback below is
+    // what gives the finish card (which has no reverse-geocoded name of its own) a location string
+    // distinct from the start's, instead of silently inheriting the start's name.
+    const resolvedLocationLabel = locationName || formatCoordinate(climate.lat, climate.lon);
+
+    // #1416: "At the start — <location>" / "At the finish — <location>" when part of a start/finish
+    // pair; the plain "Climate normals" title otherwise — see the sectionLabel prop doc above.
+    const title = sectionLabel
+        ? `${t(sectionLabel === 'start' ? 'climate.atStart' : 'climate.atFinish')} — ${resolvedLocationLabel}`
+        : t('climate.title');
 
     return (
         <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
@@ -202,13 +209,15 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                         </Stack>
                         {/* Name takes priority when both exist. Falls back to the resolved
                             coordinate rather than disappearing when the event has a GPS point
-                            but no linked Location to name it (#1411). */}
+                            but no linked Location to name it (#1411). Uses the same
+                            resolvedLocationLabel as the header above (#1416) — always tied to
+                            this card's own coordinate, never a copy of the other section's name. */}
                         {(locationName || (climate.lat && climate.lon)) && (
                             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                                 <LocationOnIcon fontSize="small" color="action" />
                                 <Box sx={{ minWidth: 0 }}>
                                     <Typography variant="body2" fontWeight="bold" noWrap>
-                                        {locationName || formatCoordinate(climate.lat, climate.lon)}
+                                        {resolvedLocationLabel}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         {t('climate.location')}
