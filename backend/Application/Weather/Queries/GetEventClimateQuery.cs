@@ -105,12 +105,22 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         var currentYear = DateTime.UtcNow.Year;
         // Full past years only — the current year's target date may not have happened yet, which
         // would make the archive API return a short/empty window for it.
-        var years = Enumerable.Range(currentYear - YearsOfHistory, YearsOfHistory);
+        var years = Enumerable.Range(currentYear - YearsOfHistory, YearsOfHistory).ToList();
 
-        var fetchTasks = years.Select(year => FetchArchiveAsync(lat, lon, year, request.TargetMonth, request.TargetDay, cancellationToken));
-        var responses = await Task.WhenAll(fetchTasks);
+        // #1356: one wide call spanning the earliest year's window through the latest year's
+        // window, instead of YearsOfHistory separate narrow calls — Aggregate below does the
+        // ±WindowDays filtering per year client-side, since the response is no longer pre-windowed.
+        var firstYear = years[0];
+        var firstDay = Math.Min(request.TargetDay, DateTime.DaysInMonth(firstYear, request.TargetMonth));
+        var startDate = new DateTime(firstYear, request.TargetMonth, firstDay).AddDays(-WindowDays);
 
-        var result = Aggregate(responses, request.TargetMonth, request.TargetDay, lat, lon, isApproximate);
+        var lastYear = years[^1];
+        var lastDay = Math.Min(request.TargetDay, DateTime.DaysInMonth(lastYear, request.TargetMonth));
+        var endDate = new DateTime(lastYear, request.TargetMonth, lastDay).AddDays(WindowDays);
+
+        var response = await FetchArchiveAsync(lat, lon, startDate, endDate, cancellationToken);
+
+        var result = Aggregate(response, years, request.TargetMonth, request.TargetDay, WindowDays, lat, lon, isApproximate);
         if (result == null)
             return null;
 
@@ -119,13 +129,11 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         return result;
     }
 
-    private async Task<OpenMeteoArchiveResponse?> FetchArchiveAsync(double lat, double lon, int year, int targetMonth, int targetDay, CancellationToken cancellationToken)
+    // #1356: a single wide-range call (startDate..endDate spans every year's ±WindowDays window)
+    // replaces the former YearsOfHistory per-year calls — Aggregate below does the per-year
+    // windowing that FetchArchiveAsync's start_date/end_date used to do per call.
+    private async Task<OpenMeteoArchiveResponse?> FetchArchiveAsync(double lat, double lon, DateTime startDate, DateTime endDate, CancellationToken cancellationToken)
     {
-        var day = Math.Min(targetDay, DateTime.DaysInMonth(year, targetMonth));
-        var targetDate = new DateTime(year, targetMonth, day);
-        var startDate = targetDate.AddDays(-WindowDays);
-        var endDate = targetDate.AddDays(WindowDays);
-
         var client = _httpClientFactory.CreateClient("OpenMeteo");
         var latStr = lat.ToString(CultureInfo.InvariantCulture);
         var lonStr = lon.ToString(CultureInfo.InvariantCulture);
@@ -143,49 +151,69 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Open-Meteo archive API call failed for coordinates ({Lat}, {Lon}), year {Year}", lat, lon, year);
+            _logger.LogWarning(ex, "Open-Meteo archive API call failed for coordinates ({Lat}, {Lon}), range {Start}–{End}", lat, lon, startStr, endStr);
             return null;
         }
     }
 
-    // Flattens every successful year's daily window into running totals. Internal (not private) so
-    // backend.Tests can exercise the aggregation math directly, without mocking HTTP.
-    internal static ClimateDto? Aggregate(IEnumerable<OpenMeteoArchiveResponse?> responses, int targetMonth, int targetDay, double lat, double lon, bool isApproximate = false)
+    // Walks the single wide response's daily.Time array, keeping only the days that fall within
+    // ±windowDays of (targetMonth, targetDay) in at least one of `years` — the response itself is
+    // no longer pre-windowed per year (#1356), so that filtering happens here instead of in
+    // FetchArchiveAsync's start_date/end_date. Internal (not private) so backend.Tests can exercise
+    // the aggregation math directly, without mocking HTTP.
+    internal static ClimateDto? Aggregate(OpenMeteoArchiveResponse? response, IReadOnlyList<int> years, int targetMonth, int targetDay, int windowDays, double lat, double lon, bool isApproximate = false)
     {
+        var daily = response?.Daily;
+        if (daily == null || daily.Time.Count == 0)
+            return null;
+
+        // One ±windowDays anniversary window per year — same day-of-month clamping (e.g. Feb 29
+        // in a non-leap year) FetchArchiveAsync's start/end dates used before #1356.
+        var yearWindows = years
+            .Select(year =>
+            {
+                var day = Math.Min(targetDay, DateTime.DaysInMonth(year, targetMonth));
+                var targetDate = new DateTime(year, targetMonth, day);
+                return (Start: targetDate.AddDays(-windowDays), End: targetDate.AddDays(windowDays));
+            })
+            .ToList();
+
         var highs = new List<double>();
         var lows = new List<double>();
         var precipValues = new List<double>();
         var windValues = new List<double>();
         var wetDays = 0;
-        var yearsWithData = 0;
+        var yearsWithData = new HashSet<int>();
 
-        foreach (var response in responses)
+        for (var i = 0; i < daily.Time.Count; i++)
         {
-            var daily = response?.Daily;
-            if (daily == null || daily.Time.Count == 0)
+            if (!DateTime.TryParse(daily.Time[i], CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
                 continue;
 
-            yearsWithData++;
+            // A day only counts if it falls inside some year's window — the wide response also
+            // includes the days between windows, which belong to no year and must be excluded.
+            var windowIndex = yearWindows.FindIndex(w => date >= w.Start && date <= w.End);
+            if (windowIndex < 0)
+                continue;
 
-            for (var i = 0; i < daily.Time.Count; i++)
+            yearsWithData.Add(windowIndex);
+
+            var hi = daily.Temperature2mMax.ElementAtOrDefault(i);
+            var lo = daily.Temperature2mMin.ElementAtOrDefault(i);
+            var precip = daily.PrecipitationSum.ElementAtOrDefault(i);
+            var wind = daily.WindSpeed10mMax.ElementAtOrDefault(i);
+
+            if (hi.HasValue) highs.Add(hi.Value);
+            if (lo.HasValue) lows.Add(lo.Value);
+            if (wind.HasValue) windValues.Add(wind.Value);
+            if (precip.HasValue)
             {
-                var hi = daily.Temperature2mMax.ElementAtOrDefault(i);
-                var lo = daily.Temperature2mMin.ElementAtOrDefault(i);
-                var precip = daily.PrecipitationSum.ElementAtOrDefault(i);
-                var wind = daily.WindSpeed10mMax.ElementAtOrDefault(i);
-
-                if (hi.HasValue) highs.Add(hi.Value);
-                if (lo.HasValue) lows.Add(lo.Value);
-                if (wind.HasValue) windValues.Add(wind.Value);
-                if (precip.HasValue)
-                {
-                    precipValues.Add(precip.Value);
-                    if (precip.Value >= MeasurablePrecipitationMm) wetDays++;
-                }
+                precipValues.Add(precip.Value);
+                if (precip.Value >= MeasurablePrecipitationMm) wetDays++;
             }
         }
 
-        if (highs.Count == 0 || lows.Count == 0 || yearsWithData == 0)
+        if (highs.Count == 0 || lows.Count == 0 || yearsWithData.Count == 0)
             return null;
 
         return new ClimateDto(
@@ -194,7 +222,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
             Math.Round(precipValues.Count > 0 ? precipValues.Average() : 0, 1),
             Math.Round(precipValues.Count > 0 ? (double)wetDays / precipValues.Count : 0, 2),
             Math.Round(windValues.Count > 0 ? windValues.Average() : 0, 1),
-            yearsWithData,
+            yearsWithData.Count,
             targetMonth,
             targetDay,
             lat,
