@@ -75,7 +75,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
-import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
+import { applyFilters, eventFiltersEqual, eventMonths, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons } from '../utils/activityIcon';
@@ -441,11 +441,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
     // Month pills reflect all active filters except month — so selecting "Trail Run"
     // collapses months with no trail runs, but active month pills don't fight each other.
+    // #1427: a Series event's own displayDate/nextEditionDate only ever names its season's first
+    // race, so collecting months from that alone (as before) never rendered a chip for a later
+    // month even when a real race falls in it — eventMonths also collects every seriesRaces date's
+    // month, mirroring eventHasMonthInSet's two sources.
     const monthsWithEvents = useMemo(() => {
         const q = search.toLowerCase().trim();
         const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
         const result = applyFilters(visible, filters, q, favoriteEvents, includeAllEvents, true);
-        return new Set(result.map(e => e.displayDate ?? e.nextEditionDate).filter(Boolean).map(d => new Date(d! + 'T00:00:00').getMonth()));
+        return new Set(result.flatMap(e => eventMonths(e)));
     }, [events, search, filters, favoriteEvents, includeAllEvents]);
 
     const sortedFiltered = useMemo(() => {

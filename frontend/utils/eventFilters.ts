@@ -81,6 +81,26 @@ export function eventHasMonthInSet(c: EventSummary, months: number[]): boolean {
     return c.seriesRaces.some(race => !!race.dateOfRace && months.includes(new Date(race.dateOfRace + 'T00:00:00').getMonth()));
 }
 
+// #1427: RacesPage's `monthsWithEvents` (which gates which month chips render at all) used to
+// collect only each event's own displayDate/nextEditionDate month — for a multi-month Series
+// event that's the season's *first* month only, so a later month with a real race (e.g. "Nov" for
+// Powerade Vetrarhlaupin) never got a chip, making eventHasMonthInSet/filterRowsByMonths above
+// unreachable from the UI for exactly the scenario #1427 describes. Returns every distinct month
+// an event should contribute a chip for: its own displayDate/nextEditionDate month, plus, for a
+// Series event, every seriesRaces date's month — same two sources eventHasMonthInSet checks,
+// collected rather than tested against a target set.
+export function eventMonths(c: EventSummary): number[] {
+    const months = new Set<number>();
+    const d = c.displayDate ?? c.nextEditionDate;
+    if (d) months.add(new Date(d + 'T00:00:00').getMonth());
+    if (c.type === 'Series' && c.seriesRaces) {
+        for (const race of c.seriesRaces) {
+            if (race.dateOfRace) months.add(new Date(race.dateOfRace + 'T00:00:00').getMonth());
+        }
+    }
+    return [...months];
+}
+
 // Shared filter steps used by RacesPage's `filtered`, `hasMoreEventsIncludingPast`, and
 // `monthsWithEvents`. Add new filter types here — all three consumers pick them up automatically.
 // `favoriteEvents`/`includeAllEvents` are explicit parameters (not closure captures over component
