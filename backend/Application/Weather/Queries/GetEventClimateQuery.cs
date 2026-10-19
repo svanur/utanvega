@@ -11,6 +11,9 @@ namespace Utanvega.Backend.Application.Weather.Queries;
 // DTO returned to the frontend — historical climate normals ("usually"), not a forecast.
 // Distinct from WeatherDto/GetTrailWeatherQuery (live forecast, "forecast") so the two can coexist
 // on event-detail pages without confusing a visitor about which number is which.
+// Lat/Lon are the coordinate the climate was actually resolved from (GpxPointLat/Lng, or
+// Location.Center as fallback — see the Handle method below) so the frontend can fall back to
+// showing coordinates when the event has no linked Location to name (#1411).
 public record ClimateDto(
     double AverageHigh,
     double AverageLow,
@@ -19,7 +22,9 @@ public record ClimateDto(
     double AverageMaxWind,
     int YearsOfData,
     int TargetMonth,
-    int TargetDay
+    int TargetDay,
+    double Lat,
+    double Lon
 );
 
 // MediatR query — TargetMonth/TargetDay are a concrete calendar date already resolved by the
@@ -95,7 +100,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         var fetchTasks = years.Select(year => FetchArchiveAsync(lat, lon, year, request.TargetMonth, request.TargetDay, cancellationToken));
         var responses = await Task.WhenAll(fetchTasks);
 
-        var result = Aggregate(responses, request.TargetMonth, request.TargetDay);
+        var result = Aggregate(responses, request.TargetMonth, request.TargetDay, lat, lon);
         if (result == null)
             return null;
 
@@ -135,7 +140,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
 
     // Flattens every successful year's daily window into running totals. Internal (not private) so
     // backend.Tests can exercise the aggregation math directly, without mocking HTTP.
-    internal static ClimateDto? Aggregate(IEnumerable<OpenMeteoArchiveResponse?> responses, int targetMonth, int targetDay)
+    internal static ClimateDto? Aggregate(IEnumerable<OpenMeteoArchiveResponse?> responses, int targetMonth, int targetDay, double lat, double lon)
     {
         var highs = new List<double>();
         var lows = new List<double>();
@@ -181,7 +186,9 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
             Math.Round(windValues.Count > 0 ? windValues.Average() : 0, 1),
             yearsWithData,
             targetMonth,
-            targetDay
+            targetDay,
+            lat,
+            lon
         );
     }
 }
