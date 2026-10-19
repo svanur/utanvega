@@ -212,7 +212,12 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                             but no linked Location to name it (#1411). Uses the same
                             resolvedLocationLabel as the header above (#1416) — always tied to
                             this card's own coordinate, never a copy of the other section's name. */}
-                        {(locationName || (climate.lat && climate.lon)) && (
+                        {/* #1413: typeof check, not a bare `&&` truthy test — `0 && 0` is falsy
+                            under the old check, hiding this tile for a resolved (0, 0)
+                            coordinate exactly like the bug #1411 fixed. Not reachable with real
+                            Iceland data (lat/lon never cross either axis here), but kept
+                            explicit so this class of bug can't resurface. */}
+                        {(locationName || (typeof climate.lat === 'number' && typeof climate.lon === 'number')) && (
                             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                                 <LocationOnIcon fontSize="small" color="action" />
                                 <Box sx={{ minWidth: 0 }}>
