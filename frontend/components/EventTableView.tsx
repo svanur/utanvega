@@ -23,7 +23,7 @@ import { API_URL } from '../hooks/useTrails';
 import { haversineKm, formatDistanceKm } from '../utils/geo';
 import NearMeIcon from '@mui/icons-material/NearMe';
 import EventDateBadge from './EventDateBadge';
-import { getCountdownColor, getEventTypeColor, formatNextDate, getCountdownLabel, isEffectivelyCancelled, isOngoingPastDayTwo, flattenEventRows, filterRowsByWeekRange, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
+import { getCountdownColor, getEventTypeColor, formatNextDate, getCountdownLabel, isEffectivelyCancelled, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, type FlattenedEventRow } from '../utils/eventUtils';
 import { ActivityIcons } from '../utils/activityIcon';
 import { getActivityIcon } from '../utils/getActivityIcon';
 import { useLocalize } from '../utils/localize';
@@ -43,12 +43,15 @@ interface EventTableViewProps {
     // own list view applies, via the shared filterRowsByWeekRange. null when neither filter is
     // active (no-op).
     weekRange: { start: string; end: string } | null;
+    // #1427: same narrowing as weekRange above, for RacesPage's month-pill filter — empty array
+    // (no month filter active) is a no-op, same shape as filterRowsByMonths itself.
+    months: number[];
 }
 
 type SortField = 'name' | 'daysUntil' | 'nextEditionDate' | 'locationName' | 'activityType' | 'type' | 'distance';
 type SortDir = 'asc' | 'desc';
 
-const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, onToggleFavorite, isFavoriteEvent, weekRange }) => {
+const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, onToggleFavorite, isFavoriteEvent, weekRange, months }) => {
     const { t } = useTranslation();
     const loc = useLocalize();
     const navigate = useNavigate();
@@ -163,8 +166,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
         // `rows` spread above — otherwise the lint rule can't prove this hook's return value is
         // safe, and (surprisingly) flags the unrelated lastYear/lastHolidayDate reassignment
         // further down this component as a purity violation.
-        return [...filterRowsByWeekRange(rows, weekRange)];
-    }, [events, sortField, sortDir, getDistanceKm, loc, weekRange]);
+        // #1427: same narrowing for the month-pill filter, mirroring RacesPage's flattenedUpcoming.
+        return [...filterRowsByMonths(filterRowsByWeekRange(rows, weekRange), months)];
+    }, [events, sortField, sortDir, getDistanceKm, loc, weekRange, months]);
 
     const columns: { field: SortField; label: string; align?: 'left' | 'right' | 'center' }[] = [
         { field: 'daysUntil', label: t('races.table.date', 'Date'), align: 'center' },

@@ -66,6 +66,41 @@ export function eventHasDateInRange(c: EventSummary, start: string, end: string)
     return c.seriesRaces.some(race => !!race.dateOfRace && race.dateOfRace >= start && race.dateOfRace <= end);
 }
 
+// #1427: same shape as eventHasDateInRange above, for the month-pill filter instead of the
+// week-pill filters — true when the event's own representative date (displayDate/
+// nextEditionDate) falls in a selected month, OR, for a Series event, when any of its
+// seriesRaces dates does. Without the seriesRaces branch, a multi-month series (e.g. Powerade
+// Vetrarhlaupin, Oct-Mar) only ever shows up for its season's *first* month, since
+// displayDate/nextEditionDate is pinned to min(raceDates) — see the eventUtils.ts comment on
+// that staleness. Exported for direct unit coverage (see eventFilters.test.ts), mirroring
+// eventHasDateInRange.
+export function eventHasMonthInSet(c: EventSummary, months: number[]): boolean {
+    const d = c.displayDate ?? c.nextEditionDate;
+    if (d && months.includes(new Date(d + 'T00:00:00').getMonth())) return true;
+    if (c.type !== 'Series' || !c.seriesRaces) return false;
+    return c.seriesRaces.some(race => !!race.dateOfRace && months.includes(new Date(race.dateOfRace + 'T00:00:00').getMonth()));
+}
+
+// #1427: RacesPage's `monthsWithEvents` (which gates which month chips render at all) used to
+// collect only each event's own displayDate/nextEditionDate month — for a multi-month Series
+// event that's the season's *first* month only, so a later month with a real race (e.g. "Nov" for
+// Powerade Vetrarhlaupin) never got a chip, making eventHasMonthInSet/filterRowsByMonths above
+// unreachable from the UI for exactly the scenario #1427 describes. Returns every distinct month
+// an event should contribute a chip for: its own displayDate/nextEditionDate month, plus, for a
+// Series event, every seriesRaces date's month — same two sources eventHasMonthInSet checks,
+// collected rather than tested against a target set.
+export function eventMonths(c: EventSummary): number[] {
+    const months = new Set<number>();
+    const d = c.displayDate ?? c.nextEditionDate;
+    if (d) months.add(new Date(d + 'T00:00:00').getMonth());
+    if (c.type === 'Series' && c.seriesRaces) {
+        for (const race of c.seriesRaces) {
+            if (race.dateOfRace) months.add(new Date(race.dateOfRace + 'T00:00:00').getMonth());
+        }
+    }
+    return [...months];
+}
+
 // Shared filter steps used by RacesPage's `filtered`, `hasMoreEventsIncludingPast`, and
 // `monthsWithEvents`. Add new filter types here — all three consumers pick them up automatically.
 // `favoriteEvents`/`includeAllEvents` are explicit parameters (not closure captures over component
@@ -89,7 +124,14 @@ export function applyFilters(
     // owns search-time dateless/past behavior via includeAll above, so leave that untouched.
     if (!q) result = result.filter(c => c.daysUntil !== null);
     if (f.locations.length > 0) result = result.filter(c => c.locationName && f.locations.includes(c.locationName));
-    if (!skipMonth && f.months.length > 0) result = result.filter(c => { const d = c.displayDate ?? c.nextEditionDate; return !!d && f.months.includes(new Date(d + 'T00:00:00').getMonth()); });
+    // #1427: a Series event's displayDate/nextEditionDate only ever names its season's *first*
+    // race (see eventUtils.ts's staleness comment), so the event-level check used to drop the
+    // whole event once a later month was selected even though a later race in the same
+    // seriesRaces list actually falls in that month. eventHasMonthInSet checks seriesRaces too,
+    // keeping the event whenever ANY of its races qualifies — filterRowsByMonths (eventUtils.ts)
+    // then narrows the rendered rows back down to just the race(s) actually in the selected
+    // month(s), same two-pass pattern #1333 already established for thisWeekOnly/nextWeekOnly.
+    if (!skipMonth && f.months.length > 0) result = result.filter(c => eventHasMonthInSet(c, f.months));
     if (f.activityTypes.length > 0) result = result.filter(c => f.activityTypes.includes(c.activityType));
     if (f.itraAny) result = result.filter(c => c.itraPoints && c.itraPoints.length > 0);
     else if (f.itraPoints.length > 0) result = result.filter(c => c.itraPoints?.some(p => f.itraPoints.includes(p)));
