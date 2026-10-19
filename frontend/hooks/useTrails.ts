@@ -557,6 +557,11 @@ export interface EventClimate {
     yearsOfData: number;
     targetMonth: number;
     targetDay: number;
+    // Coordinate the climate was actually resolved from (GpxPointLat/Lng, or Location.Center as
+    // fallback) — lets ClimateCard show coordinates when the event has no linked Location to
+    // name (#1411).
+    lat: number;
+    lon: number;
 }
 
 // Historical climate normals for a given (month, day) — an ERA5 reanalysis average going back

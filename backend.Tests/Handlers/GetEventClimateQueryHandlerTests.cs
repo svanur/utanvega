@@ -168,6 +168,10 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         Assert.Equal(15, result.TargetDay);
         // 1 wet day out of 11 per year, every year — same ratio regardless of year count.
         Assert.Equal(Math.Round(1.0 / 11, 2), result.PrecipitationChance);
+        // #1411: ClimateDto carries the resolved coordinate — the GPX point here, since the
+        // event has no Location attached at all.
+        Assert.Equal(64.13, result.Lat);
+        Assert.Equal(-21.90, result.Lon);
     }
 
     [Fact]
@@ -191,6 +195,10 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal(10, result!.AverageHigh);
         handlerMock.Protected().Verify("SendAsync", Times.AtLeastOnce(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+        // #1411: ClimateDto carries the resolved coordinate — the Location's center here, since
+        // the event has no GPX point of its own.
+        Assert.Equal(64.13, result.Lat);
+        Assert.Equal(-21.90, result.Lon);
     }
 
     [Fact]
@@ -333,7 +341,7 @@ public class GetEventClimateQueryHandlerTests : IDisposable
             YearResponse(12, 2, 2, 6),
         };
 
-        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15, 64.13, -21.90);
 
         Assert.NotNull(result);
         Assert.Equal(11, result!.AverageHigh);
@@ -341,6 +349,9 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         Assert.Equal(1, result.AveragePrecipitation);
         Assert.Equal(5, result.AverageMaxWind);
         Assert.Equal(2, result.YearsOfData);
+        // #1411: the resolved coordinate passes through Aggregate unchanged.
+        Assert.Equal(64.13, result.Lat);
+        Assert.Equal(-21.90, result.Lon);
     }
 
     [Fact]
@@ -353,7 +364,7 @@ public class GetEventClimateQueryHandlerTests : IDisposable
             null,
         };
 
-        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15, 64.13, -21.90);
 
         Assert.NotNull(result);
         Assert.Equal(1, result!.YearsOfData);
@@ -365,7 +376,7 @@ public class GetEventClimateQueryHandlerTests : IDisposable
     {
         var responses = new List<OpenMeteoArchiveResponse?> { null, null, null };
 
-        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15, 64.13, -21.90);
 
         Assert.Null(result);
     }
@@ -389,7 +400,7 @@ public class GetEventClimateQueryHandlerTests : IDisposable
             },
         };
 
-        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15);
+        var result = GetEventClimateQueryHandler.Aggregate(responses, 7, 15, 64.13, -21.90);
 
         Assert.NotNull(result);
         Assert.Equal(Math.Round(2.0 / 3, 2), result!.PrecipitationChance);

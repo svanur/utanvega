@@ -39,6 +39,15 @@ function getClimateIcon(climate: EventClimate): string {
     return '⛅';
 }
 
+// Fallback for events with a GPS point but no linked Location to name (#1411) — e.g. "64.15°N,
+// 21.94°W". Rounded to 2 decimals, which is ~1km of precision, plenty for a "where roughly is
+// this" read; no i18n key needed since the format (degree symbol + N/S/E/W) isn't language text.
+function formatCoordinate(lat: number, lon: number): string {
+    const latHemisphere = lat >= 0 ? 'N' : 'S';
+    const lonHemisphere = lon >= 0 ? 'E' : 'W';
+    return `${Math.abs(lat).toFixed(2)}°${latHemisphere}, ${Math.abs(lon).toFixed(2)}°${lonHemisphere}`;
+}
+
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
 // icon, "usually" framing, no condition chip) so a visitor can't mistake a 15-year average for
 // today's forecast when both cards render on the same event-detail page (#1335).
@@ -179,12 +188,15 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                                 </Typography>
                             </Box>
                         </Stack>
-                        {locationName && (
+                        {/* Name takes priority when both exist. Falls back to the resolved
+                            coordinate rather than disappearing when the event has a GPS point
+                            but no linked Location to name it (#1411). */}
+                        {(locationName || (climate.lat && climate.lon)) && (
                             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                                 <LocationOnIcon fontSize="small" color="action" />
                                 <Box sx={{ minWidth: 0 }}>
                                     <Typography variant="body2" fontWeight="bold" noWrap>
-                                        {locationName}
+                                        {locationName || formatCoordinate(climate.lat, climate.lon)}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         {t('climate.location')}
