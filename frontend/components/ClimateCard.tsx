@@ -24,6 +24,12 @@ interface ClimateCardProps {
     loading: boolean;
     error: string | null;
     locationName?: string | null;
+    // #1416: set only when this card is one of a start/finish pair (a qualifying PointToPoint
+    // event — see GetEventClimateQueryHandler's ResolvePointToPointEndpointsAsync) — replaces the
+    // generic "Climate normals" header with "At the start"/"At the finish" so the two sections
+    // read as clearly distinct rather than two identical-looking cards. Left undefined for the
+    // ordinary single-card case, which keeps today's unchanged header and behavior.
+    sectionLabel?: 'start' | 'finish';
 }
 
 // Unlike WeatherCard, there's no WMO weatherCode to key off — climate normals are an aggregate
@@ -51,7 +57,7 @@ function formatCoordinate(lat: number, lon: number): string {
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
 // icon, "usually" framing, no condition chip) so a visitor can't mistake a 15-year average for
 // today's forecast when both cards render on the same event-detail page (#1335).
-export default function ClimateCard({ climate, loading, error, locationName }: ClimateCardProps) {
+export default function ClimateCard({ climate, loading, error, locationName, sectionLabel }: ClimateCardProps) {
     const { t } = useTranslation();
     const [expanded, setExpanded] = useState(false);
 
@@ -92,6 +98,19 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
     const targetDateLabel = `${climate.targetDay}. ${months[climate.targetMonth - 1]}`;
 
+    // Tied to *this* card's own coordinate — locationName is only trustworthy for the climate it
+    // was resolved for, never copied across a start/finish pair (#1416 review fix): the caller
+    // passes a name only when it actually names this card's coordinate, so the fallback below is
+    // what gives the finish card (which has no reverse-geocoded name of its own) a location string
+    // distinct from the start's, instead of silently inheriting the start's name.
+    const resolvedLocationLabel = locationName || formatCoordinate(climate.lat, climate.lon);
+
+    // #1416: "At the start — <location>" / "At the finish — <location>" when part of a start/finish
+    // pair; the plain "Climate normals" title otherwise — see the sectionLabel prop doc above.
+    const title = sectionLabel
+        ? `${t(sectionLabel === 'start' ? 'climate.atStart' : 'climate.atFinish')} — ${resolvedLocationLabel}`
+        : t('climate.title');
+
     return (
         <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
             {/* Clickable header — always visible */}
@@ -105,7 +124,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                 <Stack direction="row" alignItems="center" spacing={1}>
                     <HistoryIcon color="secondary" />
                     <Typography variant="h6" fontWeight="bold">
-                        {t('climate.title')}
+                        {title}
                     </Typography>
                     {/* Quick summary when collapsed — mirrors WeatherCard's icon + temp + wind pattern */}
                     {!expanded && (
@@ -190,13 +209,15 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         </Stack>
                         {/* Name takes priority when both exist. Falls back to the resolved
                             coordinate rather than disappearing when the event has a GPS point
-                            but no linked Location to name it (#1411). */}
+                            but no linked Location to name it (#1411). Uses the same
+                            resolvedLocationLabel as the header above (#1416) — always tied to
+                            this card's own coordinate, never a copy of the other section's name. */}
                         {(locationName || (climate.lat && climate.lon)) && (
                             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                                 <LocationOnIcon fontSize="small" color="action" />
                                 <Box sx={{ minWidth: 0 }}>
                                     <Typography variant="body2" fontWeight="bold" noWrap>
-                                        {locationName || formatCoordinate(climate.lat, climate.lon)}
+                                        {resolvedLocationLabel}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         {t('climate.location')}

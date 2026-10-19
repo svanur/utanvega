@@ -13,10 +13,14 @@ namespace Utanvega.Backend.Tests.Handlers;
 // #1335: GetEventClimateQuery adds an always-visible "climate normals" section (historical
 // averages, Open-Meteo's archive API) independent of GetTrailWeatherQuery's live 7-day forecast.
 // Climate is event data, not trail data — the coordinate source is the event's own
-// GpxPointLat/Lng, falling back to its Location's center, never a race's attached trail. These
-// tests cover: that coordinate resolution (including "neither exists" -> null), the server-side
-// aggregation math (internal Aggregate, tested directly so no HTTP mocking is needed for the
-// arithmetic), caching, and graceful failure when Open-Meteo is unreachable.
+// GpxPointLat/Lng, falling back to its Location's center, never a race's attached trail (unless
+// the #1416 two-coordinate point-to-point split below applies). These tests cover: that
+// coordinate resolution (including "neither exists" -> null), the server-side aggregation math
+// (internal Aggregate, tested directly so no HTTP mocking is needed for the arithmetic), caching,
+// graceful failure when Open-Meteo is unreachable, and (#1416) the start/finish split for long
+// PointToPoint trails. Handle now returns EventClimateDto (Start + optional Finish) instead of a
+// bare ClimateDto — every assertion below reads through result.Start unless it's specifically
+// exercising the two-coordinate branch.
 public class GetEventClimateQueryHandlerTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
@@ -58,6 +62,43 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         Slug = "test-location-" + Guid.NewGuid(),
         Center = new Point(lng, lat) { SRID = 4326 },
         Type = type,
+    };
+
+    // --- #1416: point-to-point start/finish split fixtures ---
+
+    private static readonly GeometryFactory GeoFactory = new(new PrecisionModel(), 4326);
+
+    private static Trail CreateTestTrail(TrailType type, double lengthMeters, double elevationGainMeters, LineString? gpxData) => new()
+    {
+        Id = Guid.NewGuid(),
+        Name = "Test Trail",
+        Slug = "test-trail-" + Guid.NewGuid(),
+        Length = lengthMeters,
+        ElevationGain = elevationGainMeters,
+        ElevationLoss = elevationGainMeters,
+        ActivityTypeId = ActivityType.TrailRunning,
+        Status = TrailStatus.Published,
+        Type = type,
+        GpxData = gpxData,
+    };
+
+    private static EventEdition CreateTestEdition(Guid eventId, DateOnly date) => new()
+    {
+        Id = Guid.NewGuid(),
+        EventId = eventId,
+        Year = date.Year,
+        Date = date,
+        Status = EditionStatus.Active,
+    };
+
+    private static Race CreateTestRace(Guid editionId, Guid? trailId) => new()
+    {
+        Id = Guid.NewGuid(),
+        EventEditionId = editionId,
+        Name = "The Race",
+        SortOrder = 0,
+        Status = RaceStatus.Active,
+        TrailId = trailId,
     };
 
     // #1356: the handler now makes ONE wide call instead of one per year, so the mocked response
@@ -187,22 +228,25 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(10, result!.AverageHigh);
-        Assert.Equal(2, result.AverageLow);
-        Assert.Equal(5, result.AverageMaxWind);
-        Assert.Equal(15, result.YearsOfData);
-        Assert.Equal(7, result.TargetMonth);
-        Assert.Equal(15, result.TargetDay);
+        var climate = result!.Start;
+        Assert.Equal(10, climate.AverageHigh);
+        Assert.Equal(2, climate.AverageLow);
+        Assert.Equal(5, climate.AverageMaxWind);
+        Assert.Equal(15, climate.YearsOfData);
+        Assert.Equal(7, climate.TargetMonth);
+        Assert.Equal(15, climate.TargetDay);
         // 1 wet day out of 11 per year, every year — same ratio regardless of year count.
-        Assert.Equal(Math.Round(1.0 / 11, 2), result.PrecipitationChance);
+        Assert.Equal(Math.Round(1.0 / 11, 2), climate.PrecipitationChance);
         // #1411: ClimateDto carries the resolved coordinate — the GPX point here, since the
         // event has no Location attached at all.
-        Assert.Equal(64.13, result.Lat);
-        Assert.Equal(-21.90, result.Lon);
+        Assert.Equal(64.13, climate.Lat);
+        Assert.Equal(-21.90, climate.Lon);
         // #1414: the event's own GPX point is always precise, regardless of any linked Location.
-        Assert.False(result.IsApproximate);
+        Assert.False(climate.IsApproximate);
         // #1415: the GPX point is the race's start point, by the TrailStartPicker convention.
-        Assert.True(result.IsStartPoint);
+        Assert.True(climate.IsStartPoint);
+        // #1416: no edition/trail at all for this event, so no start/finish split applies.
+        Assert.Null(result.Finish);
         // #1356: one wide call replaces the former 15 per-year calls on a cache miss.
         handlerMock.Protected().Verify("SendAsync", Times.Exactly(1), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
@@ -226,16 +270,17 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal(10, result!.AverageHigh);
+        var climate = result!.Start;
+        Assert.Equal(10, climate.AverageHigh);
         handlerMock.Protected().Verify("SendAsync", Times.Exactly(1), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
         // #1411: ClimateDto carries the resolved coordinate — the Location's center here, since
         // the event has no GPX point of its own.
-        Assert.Equal(64.13, result.Lat);
-        Assert.Equal(-21.90, result.Lon);
+        Assert.Equal(64.13, climate.Lat);
+        Assert.Equal(-21.90, climate.Lon);
         // #1414: a Municipality/Place-type Location is precise enough — not flagged approximate.
-        Assert.False(result.IsApproximate);
+        Assert.False(climate.IsApproximate);
         // #1415: a Location fallback is never the event's own start point, precise or not.
-        Assert.False(result.IsStartPoint);
+        Assert.False(climate.IsStartPoint);
     }
 
     [Fact]
@@ -257,12 +302,13 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
 
         Assert.NotNull(result);
+        var climate = result!.Start;
         // #1414: a Region-type Location is a broad fallback — the climate estimate must be
         // flagged approximate so the frontend can signal it.
-        Assert.True(result!.IsApproximate);
+        Assert.True(climate.IsApproximate);
         // #1415: approximate and start-point are mutually exclusive — a Location fallback is
         // never the start point, approximate or not.
-        Assert.False(result.IsStartPoint);
+        Assert.False(climate.IsStartPoint);
     }
 
     [Fact]
@@ -288,6 +334,158 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
 
         Assert.NotNull(result);
+    }
+
+    // --- #1416: point-to-point start/finish split ---
+
+    [Fact]
+    public async Task Handle_QualifyingPointToPointPrimaryTrail_ReturnsDistinctStartAndFinishClimate()
+    {
+        var startCoord = new Coordinate(-21.90, 64.13);
+        var endCoord = new Coordinate(-16.00, 65.50); // far enough to be a meaningfully different climate
+        var gpx = GeoFactory.CreateLineString([startCoord, endCoord]);
+
+        // 30 km + 1000 m gain = 40 effort-km, comfortably over MinPointToPointEffortKm (25).
+        var trail = CreateTestTrail(TrailType.PointToPoint, lengthMeters: 30000, elevationGainMeters: 1000, gpxData: gpx);
+        var @event = CreateTestEvent("Long Point To Point Event", gpxLat: startCoord.Y, gpxLng: startCoord.X);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = CreateTestEdition(@event.Id, today); // Date == today -> ongoingEdition
+        var race = CreateTestRace(edition.Id, trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result!.Finish);
+        // Start/Finish come from the trail's own GpxData endpoints, not the event's GpxPointLat/Lng.
+        Assert.Equal(startCoord.Y, result.Start.Lat);
+        Assert.Equal(startCoord.X, result.Start.Lon);
+        Assert.Equal(endCoord.Y, result.Finish!.Lat);
+        Assert.Equal(endCoord.X, result.Finish.Lon);
+        Assert.True(result.Start.IsStartPoint);
+        Assert.False(result.Finish.IsStartPoint);
+        Assert.False(result.Start.IsApproximate);
+        Assert.False(result.Finish.IsApproximate);
+        // One archive call per coordinate.
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_PointToPointPrimaryTrailBelowThreshold_FallsBackToSingleCoordinate()
+    {
+        var gpx = GeoFactory.CreateLineString([new Coordinate(-21.90, 64.13), new Coordinate(-21.80, 64.20)]);
+
+        // 5 km + 200 m gain = 7 effort-km, well under MinPointToPointEffortKm (25).
+        var trail = CreateTestTrail(TrailType.PointToPoint, lengthMeters: 5000, elevationGainMeters: 200, gpxData: gpx);
+        var @event = CreateTestEvent("Short Point To Point Event", gpxLat: 64.13, gpxLng: -21.90);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = CreateTestEdition(@event.Id, today);
+        var race = CreateTestRace(edition.Id, trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.Finish);
+        Assert.True(result.Start.IsStartPoint);
+        // Single archive call — same as today's unchanged single-coordinate behavior.
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(1), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_LoopPrimaryTrailAboveThreshold_FallsBackToSingleCoordinate()
+    {
+        var gpx = GeoFactory.CreateLineString([new Coordinate(-21.90, 64.13), new Coordinate(-16.00, 65.50)]);
+
+        // Same effort distance as the qualifying PointToPoint fixture above — only Type differs.
+        var trail = CreateTestTrail(TrailType.Loop, lengthMeters: 30000, elevationGainMeters: 1000, gpxData: gpx);
+        var @event = CreateTestEvent("Long Loop Event", gpxLat: 64.13, gpxLng: -21.90);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = CreateTestEdition(@event.Id, today);
+        var race = CreateTestRace(edition.Id, trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.Finish);
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(1), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_QualifyingPointToPoint_OneArchiveCallFails_FallsBackToSingleCoordinate()
+    {
+        var gpx = GeoFactory.CreateLineString([new Coordinate(-21.90, 64.13), new Coordinate(-16.00, 65.50)]);
+        var trail = CreateTestTrail(TrailType.PointToPoint, lengthMeters: 30000, elevationGainMeters: 1000, gpxData: gpx);
+        var @event = CreateTestEvent("Flaky Archive Event", gpxLat: 64.13, gpxLng: -21.90);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = CreateTestEdition(@event.Id, today);
+        var race = CreateTestRace(edition.Id, trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        // First two calls (start, finish) are the two-coordinate attempt; the second of those
+        // throws, so neither should be returned — the handler must fall back to a third call for
+        // the single-coordinate path rather than surfacing a partial (start-only) result.
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .SetupSequence<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(FakeArchiveJson, Encoding.UTF8, "application/json") })
+            .ThrowsAsync(new HttpRequestException("transient failure"))
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(FakeArchiveJson, Encoding.UTF8, "application/json") });
+
+        using var ctx2 = _factory.CreateContext();
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.Finish);
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(3), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
     // --- Caching (mirrors GetTrailWeatherQuery's IMemoryCache pattern) ---
