@@ -576,6 +576,7 @@
         "chanceOfRain": "Líkur á úrkomu",
         "avgWind": "Meðal hámarksvindur",
         "location": "Staðsetning",
+        "approximateLocation": "Áætlað gildi fyrir stórt svæði",
         "date": "Dagsetning",
         "basedOnYears": "Veðurfar viðburðar á þessum stað og tíma síðustu {{years}} ár — ekki veðurspá.",
         "unavailable": "Veðurfarsgögn ekki tiltæk"

@@ -86,7 +86,10 @@ public record EventSummaryDto(
     // edition as a whole still reads as "ongoing" (see isOngoingPastDayTwo on the frontend). Null
     // for non-Series events and whenever no race in the series finished that recently. Reuses
     // SeriesRaceDto rather than introducing a new shape.
-    SeriesRaceDto? RecentlyCompletedSeriesRace = null
+    SeriesRaceDto? RecentlyCompletedSeriesRace = null,
+    // #1414: the linked Location's Type (Country/Area/Region/Municipality/Place/Other), surfaced
+    // so admin can flag when climate data will be approximate without a separate lookup.
+    string? LocationType = null
 );
 
 public record RaceDto(

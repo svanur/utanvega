@@ -380,7 +380,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                 AnyEditionNeedsReview: request.IncludeHidden && editionsForCalc.Any(ed => ed.NeedsReview),
                 AnyEditionUnconfirmed: request.IncludeHidden && editionsForCalc.Any(ed => ed.Status == EditionStatus.Unconfirmed),
                 RegistrationCloses: relevantEdition?.RegistrationCloses,
-                RecentlyCompletedSeriesRace: recentlyCompletedSeriesRace
+                RecentlyCompletedSeriesRace: recentlyCompletedSeriesRace,
+                LocationType: e.Location?.Type.ToString()
             );
         }).ToList();
     }

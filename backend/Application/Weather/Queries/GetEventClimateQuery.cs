@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Weather.Queries;
@@ -14,6 +15,9 @@ namespace Utanvega.Backend.Application.Weather.Queries;
 // Lat/Lon are the coordinate the climate was actually resolved from (GpxPointLat/Lng, or
 // Location.Center as fallback — see the Handle method below) so the frontend can fall back to
 // showing coordinates when the event has no linked Location to name (#1411).
+// IsApproximate (#1414) flags when that coordinate came from a broad Location (Country/Area/
+// Region) rather than a precise point — a GPX point, or a Municipality/Place-type Location, is
+// never approximate.
 public record ClimateDto(
     double AverageHigh,
     double AverageLow,
@@ -24,7 +28,8 @@ public record ClimateDto(
     int TargetMonth,
     int TargetDay,
     double Lat,
-    double Lon
+    double Lon,
+    bool IsApproximate
 );
 
 // MediatR query — TargetMonth/TargetDay are a concrete calendar date already resolved by the
@@ -77,15 +82,20 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
 
         // Event's own GPS point first, Location's center as fallback — never a race's trail.
         double lat, lon;
+        bool isApproximate;
         if (@event.GpxPointLat is { } gpxLat && @event.GpxPointLng is { } gpxLng)
         {
             lat = gpxLat;
             lon = gpxLng;
+            isApproximate = false;
         }
         else if (@event.Location?.Center is { } center)
         {
             lat = center.Y;
             lon = center.X;
+            // #1414: only a broad Location (whole country/area/region) makes the climate an
+            // estimate — a Municipality/Place-type Location is precise enough to trust as-is.
+            isApproximate = @event.Location.Type is LocationType.Country or LocationType.Area or LocationType.Region;
         }
         else
         {
@@ -100,7 +110,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         var fetchTasks = years.Select(year => FetchArchiveAsync(lat, lon, year, request.TargetMonth, request.TargetDay, cancellationToken));
         var responses = await Task.WhenAll(fetchTasks);
 
-        var result = Aggregate(responses, request.TargetMonth, request.TargetDay, lat, lon);
+        var result = Aggregate(responses, request.TargetMonth, request.TargetDay, lat, lon, isApproximate);
         if (result == null)
             return null;
 
@@ -140,7 +150,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
 
     // Flattens every successful year's daily window into running totals. Internal (not private) so
     // backend.Tests can exercise the aggregation math directly, without mocking HTTP.
-    internal static ClimateDto? Aggregate(IEnumerable<OpenMeteoArchiveResponse?> responses, int targetMonth, int targetDay, double lat, double lon)
+    internal static ClimateDto? Aggregate(IEnumerable<OpenMeteoArchiveResponse?> responses, int targetMonth, int targetDay, double lat, double lon, bool isApproximate = false)
     {
         var highs = new List<double>();
         var lows = new List<double>();
@@ -188,7 +198,8 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
             targetMonth,
             targetDay,
             lat,
-            lon
+            lon,
+            isApproximate
         );
     }
 }

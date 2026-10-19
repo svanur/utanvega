@@ -30,7 +30,7 @@ import LockOpenIcon from '@mui/icons-material/LockOpen';
 import MapIcon from '@mui/icons-material/Map';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import TranslateIcon from '@mui/icons-material/Translate';
-import { useLocations } from '../../hooks/useLocations';
+import { useLocations, type LocationType } from '../../hooks/useLocations';
 import { useOrganizers } from '../../hooks/useOrganizers';
 import GpxMapPicker from '../GpxMapPicker';
 import type {
@@ -64,6 +64,9 @@ const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   Unlisted: 'Unlisted — view by URL',
 };
 const ALERT_SEVERITIES: AlertSeverity[] = ['info', 'success', 'warning', 'error'];
+// #1414: Location types broad enough that climate data resolved from their Center is an
+// estimate, not tied to an event's exact spot — mirrors GetEventClimateQuery.cs's IsApproximate.
+const BROAD_LOCATION_TYPES: LocationType[] = ['Country', 'Area', 'Region'];
 const DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -227,6 +230,13 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
   const { translate, translating } = useTranslate(msg => onNotify(msg, 'error'));
   const { locations } = useLocations();
   const sortedLocations = useMemo(() => [...locations].sort((a, b) => a.name.localeCompare(b.name)), [locations]);
+  const selectedLocation = useMemo(() => sortedLocations.find(l => l.id === form.locationId), [sortedLocations, form.locationId]);
+  // #1414: Country/Area/Region are "broad" Location types — climate for an event stuck with one
+  // of these (and no precise GPX pin) falls back to GetEventClimateQuery.cs's Location.Center,
+  // which is an estimate, not this event's exact spot.
+  const isBroadLocationWithoutPin = !!selectedLocation
+    && BROAD_LOCATION_TYPES.includes(selectedLocation.type)
+    && !form.gpxPointLat && !form.gpxPointLng;
   const { organizers } = useOrganizers();
   const [showMapPicker, setShowMapPicker] = useState(false);
 
@@ -416,12 +426,20 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
           <Autocomplete
             size="small"
             options={sortedLocations}
-            value={sortedLocations.find(l => l.id === form.locationId) ?? null}
+            value={selectedLocation ?? null}
             onChange={(_, value) => set('locationId', value?.id ?? '')}
             getOptionLabel={o => o.name}
             isOptionEqualToValue={(o, v) => o.id === v.id}
             renderInput={params => <TextField {...params} label="Location" sx={{ mb: 1.5 }} />}
           />
+          {/* #1414: a Country/Area/Region-type Location with no precise GPX pin means
+              GetEventClimateQuery.cs will fall back to that broad Location's center for climate
+              data — flag it here so admins know to add a pin for accuracy. */}
+          {isBroadLocationWithoutPin && (
+            <Alert severity="info" sx={{ mb: 1.5 }}>
+              Climate data will be approximate for this broad area — add a precise point for accuracy.
+            </Alert>
+          )}
 
           <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
             <Typography variant="caption" fontWeight={600} letterSpacing={0.6} textTransform="uppercase" color="text.secondary">

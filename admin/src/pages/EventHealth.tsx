@@ -15,6 +15,12 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../hooks/api';
 import { useEvents, EVENTS_QUERY_KEY, type EventSummaryDto } from '../hooks/useEvents';
+import type { LocationType } from '../hooks/useLocations';
+
+// #1414: Location types broad enough that climate data resolved from their Center is an
+// estimate, not tied to an event's exact spot — mirrors GetEventClimateQuery.cs's IsApproximate
+// and EventFormCard.tsx's BROAD_LOCATION_TYPES. Other/Municipality/Place are precise enough.
+const BROAD_LOCATION_TYPES: LocationType[] = ['Country', 'Area', 'Region'];
 
 interface HealthCheck {
   label: string;
@@ -61,6 +67,24 @@ function getHealthChecks(event: EventSummaryDto): HealthCheck[] {
         ? `${event.gpxPointLat.toFixed(4)}, ${event.gpxPointLng?.toFixed(4)}`
         : 'No GPX pin set',
       na: isAd,
+    },
+    {
+      // #1414: sibling to "GPX Pin" above — that check is a blanket presence check, this one
+      // means "climate will be precise". passed whenever a GPX pin exists (regardless of
+      // location) or the linked Location's type isn't broad (Country/Area/Region); na when
+      // there's no location at all (already covered by the "Location" check above, so don't
+      // double-flag).
+      label: 'Climate Precision',
+      passed: (event.gpxPointLat != null && event.gpxPointLng != null)
+        || (!!event.locationType && !BROAD_LOCATION_TYPES.includes(event.locationType)),
+      tooltip: event.gpxPointLat != null
+        ? 'GPX pin set — climate is precise'
+        : event.locationType && !BROAD_LOCATION_TYPES.includes(event.locationType)
+          ? `Location type "${event.locationType}" is precise enough`
+          : event.locationId
+            ? `Location type "${event.locationType ?? 'Other'}" is broad — climate will be approximate`
+            : 'No location linked',
+      na: isAd || !event.locationId,
     },
     {
       label: 'Organizer',
