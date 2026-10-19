@@ -64,7 +64,7 @@ import RaceProgressBar from '../components/RaceProgressBar';
 import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
-import WeatherCard from '../components/WeatherCard';
+import ClimateCard from '../components/ClimateCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
 import LinkifiedText from '../components/LinkifiedText';
@@ -74,7 +74,7 @@ import { useFavoriteEvents } from '../hooks/useFavoriteEvents';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useLocalize } from '../utils/localize';
-import { useTrailWeather, useTrailsBySlugs } from '../hooks/useTrails';
+import { useTrailWeather, useEventClimate, useTrailsBySlugs } from '../hooks/useTrails';
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { TrailMapView } from '../components/TrailMapView';
@@ -93,7 +93,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday } from '../utils/eventUtils';
 import { getTicketStatusColor, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -187,18 +187,23 @@ function EditionMeta({
     now,
     showHeader,
     hideMeta,
+    isSeries,
 }: {
     edition: EventEditionDto;
     t: (key: string, opts?: Record<string, unknown>) => string;
     now: Date;
     showHeader?: boolean;
     hideMeta?: boolean;
+    // #1357: a Series edition's date..endDate span is the whole season, not a continuous event —
+    // getMultiDayEditionProgress's "Day X of Y" is only meaningful for a genuine multi-day edition,
+    // so skip computing it entirely for a Series edition rather than letting it read mid-season.
+    isSeries?: boolean;
 }) {
     const loc = useLocalize();
     const heading = loc(edition.title?.trim() || null, edition.titleEn) ?? String(edition.year);
     const dayProgress = useMemo(
-        () => getMultiDayEditionProgress(edition.date, edition.endDate, now),
-        [edition.date, edition.endDate, now],
+        () => resolveEditionDayProgress(!!isSeries, edition.date, edition.endDate, now),
+        [isSeries, edition.date, edition.endDate, now],
     );
 
     return (
@@ -328,6 +333,15 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const isRaceDay = !eventOrEditionCancelled && !!raceDayFlags?.isRaceDay;
     const isRaceWeek = !eventOrEditionCancelled && !!raceDayFlags?.isRaceWeek;
     const isPostRace = !eventOrEditionCancelled && event?.daysUntil != null && event.daysUntil < 0 && event.daysUntil >= -3;
+
+    // #1357: the hero fallback pill (rendered once isRaceDay/isPostRace/cancelled/unconfirmed have
+    // all already been ruled out) would otherwise read event.daysUntil directly — pinned to 0 for
+    // a Series event's whole season span — and pulse "Today" for months mid-season. See
+    // resolveHeroDaysUntil for the Series-aware derivation.
+    const heroDaysUntil = useMemo(
+        () => (event ? resolveHeroDaysUntil(event, seriesRaceDates) : null),
+        [event, seriesRaceDates],
+    );
 
     // Ticking clock for race-day phase transitions and progress bar
     const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -520,6 +534,35 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
 
+    // #1335: climate is event data, not trail data — the backend resolves the coordinate from the
+    // event's own GpxPointLat/Lng, falling back to its Location, so this needs only the event's
+    // slug (no trail-resolution tiers, unlike weatherTrailSlug) and works for events with no
+    // attached trail at all. Historical averages are also useful at any distance from the event
+    // date, unlike a live forecast, so there's no daysUntil gate either.
+    const climateEventSlug = event?.slug;
+
+    // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
+    // ScheduleRule client-side (that's the backend's job). For a Series event, displayDate/
+    // nextEditionDate is the season's min(raceDates) — its *first* race — for as long as the
+    // season is "ongoing" (e.g. Powerade Vetrarhlaupin's whole Oct-Mar span), the same staleness
+    // computeRaceDayFlags above already works around — so climate would otherwise show October's
+    // normals in February. Use the specific current/next individual race's own date instead.
+    const climateTarget = useMemo(() => {
+        const dateStr = event?.type === 'Series'
+            ? resolveSeriesClimateDate(seriesRaceDates)
+            : (event?.displayDate ?? event?.nextEditionDate);
+        if (!dateStr) return null;
+        const date = new Date(dateStr + 'T00:00:00');
+        if (Number.isNaN(date.getTime())) return null;
+        return { month: date.getMonth() + 1, day: date.getDate() };
+    }, [event, seriesRaceDates]);
+
+    const { climate, loading: climateLoading, error: climateError } = useEventClimate(
+        climateEventSlug,
+        climateTarget?.month,
+        climateTarget?.day,
+    );
+
     // Collects every distinct trail referenced by the current edition — mirroring weatherTrailSlug's
     // fallback tiers above (edition-level trailSlug, then primaryEdition's races, then the broader
     // visibleRaces) but gathering all distinct slugs across those tiers instead of stopping at the
@@ -687,8 +730,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
                             ) : (
                                 <Chip
-                                    label={getCountdownLabel(event.daysUntil, t)}
-                                    color={getCountdownColor(event.daysUntil)}
+                                    label={getCountdownLabel(heroDaysUntil, t)}
+                                    color={getCountdownColor(heroDaysUntil)}
                                     variant="filled"
                                     sx={{
                                         fontWeight: 700,
@@ -697,7 +740,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                         py: 0.5,
                                         height: 'auto',
                                         flexShrink: 0,
-                                        ...(event.daysUntil === 0 && {
+                                        ...(heroDaysUntil === 0 && {
                                             animation: 'pulse 1.5s ease-in-out infinite',
                                             '@keyframes pulse': {
                                                 '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
@@ -951,7 +994,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
                     {!showEditionSections && primaryEdition && (
                         <Box sx={{ mt: 2.5 }}>
-                            <EditionMeta edition={primaryEdition} t={t} now={currentTime} hideMeta />
+                            <EditionMeta edition={primaryEdition} t={t} now={currentTime} hideMeta isSeries={event.type === 'Series'} />
                         </Box>
                     )}
                 </Paper>
@@ -1017,7 +1060,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Stack spacing={3}>
                         {currentEditions.map(edition => (
                             <Paper key={edition.id} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2.5 }}>
-                                <EditionMeta edition={edition} t={t} now={currentTime} showHeader />
+                                <EditionMeta edition={edition} t={t} now={currentTime} showHeader isSeries={event.type === 'Series'} />
                                 {edition.visibleRaces.length === 0 ? (
                                     (event.type === 'Race' || event.type === 'Series') && <Alert severity="info" sx={{ mt: 2 }}>{t('races.noRaces')}</Alert>
                                 ) : (
@@ -1127,15 +1170,36 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Box>
                 )}
 
-                {isEnabled('weather_forecast') && weatherTrailSlug && (
+                {/* Mount whenever loading, data arrived, or the backend came back with neither
+                    data nor an error (#1355) — that's the "no usable climate data" case,
+                    which ClimateCard renders as an explicit unavailable message rather than
+                    nothing. A real fetch error still suppresses the card, same as before.
+                    #1416: climate.finish is only populated for a qualifying long PointToPoint
+                    event — render it as a second, clearly labeled section rather than averaging
+                    the two into one card. Every other event still gets exactly one card, same as
+                    before (climate.finish null, sectionLabel left undefined on that single card). */}
+                {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate || !climateError) && (
                     <Box sx={{ mt: 3 }}>
-                        <Typography variant="h5" fontWeight={700} sx={{ mb: 0.5 }}>
-                            {t('races.raceDayWeather')}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                            {t('races.raceDayWeatherDesc')}
-                        </Typography>
-                        <WeatherCard weather={weather} loading={weatherLoading} error={weatherError} raceDate={nextRaceDate} />
+                        <ClimateCard
+                            climate={climate?.start ?? null}
+                            loading={climateLoading}
+                            error={climateError}
+                            locationName={event?.locationName}
+                            sectionLabel={climate?.finish ? 'start' : undefined}
+                        />
+                        {/* #1416 review fix: no locationName here — event.locationName names the
+                            event's own point (the start, by #1415's convention), not the trail's
+                            finish coordinate. Omitting it lets ClimateCard fall back to a
+                            coordinate string derived from climate.finish's own lat/lon, so the two
+                            sections never show the same place name for two different points. */}
+                        {climate?.finish && (
+                            <ClimateCard
+                                climate={climate.finish}
+                                loading={climateLoading}
+                                error={climateError}
+                                sectionLabel="finish"
+                            />
+                        )}
                     </Box>
                 )}
 
@@ -1334,7 +1398,12 @@ function RaceCard({
     // True when this race belongs to a multi-day edition that is currently ongoing (see
     // getMultiDayEditionProgress) — narrows the race-day progress bar down to the one race
     // whose dateOfRace is today, instead of every race in an edition whose daysUntil is pinned
-    // to 0 for its entire span.
+    // to 0 for its entire span. Also true for an ongoing Series season (#1357): a Series
+    // edition's date/endDate are derived from its races' min/max dateOfRace
+    // (EditionStatusHelpers.ComputeEffectiveEditionDates), so the whole season reads as
+    // "ongoing" here too — the same narrowing this prop already does for a genuine multi-day
+    // edition is exactly what's needed to stop every other race in the season from also reading
+    // as "today".
     isMultiDayOngoingEdition?: boolean;
 }) {
     const theme = useTheme();
@@ -1342,6 +1411,10 @@ function RaceCard({
     const { isEnabled } = useFeatureFlags();
     const raceDateTime = formatRaceDateTime(race.dateOfRace, race.startTime, t);
     const isLiveStageToday = !!isMultiDayOngoingEdition && race.dateOfRace === toDateOnlyString(now);
+    // #1357: see isRaceHappeningToday — mirrors the compound condition the progress bar below
+    // already uses, so racePhase/pastStart stop reading every race in a Series/multi-day span as
+    // "today" just because daysUntil is pinned to 0 for the whole span.
+    const isRaceToday = isRaceHappeningToday(daysUntil, isMultiDayOngoingEdition, race.dateOfRace, now);
 
     // Carries the event as breadcrumb context so the trail page can render
     // Events > {Event} > {Trail} instead of its default Trails > {Trail}.
@@ -1360,7 +1433,7 @@ function RaceCard({
     // Race phase: determine if race is in progress (started but not finished)
     const racePhase = useMemo(() => {
         if (race.status === 'Cancelled') return 'pre';
-        if (daysUntil !== 0 || !race.dateOfRace || !race.startTime) return 'pre';
+        if (!isRaceToday || !race.dateOfRace || !race.startTime) return 'pre';
         const parts = race.startTime.split(':').map(Number);
         const [h, m, s = 0] = parts;
         const start = new Date(race.dateOfRace + 'T00:00:00');
@@ -1370,17 +1443,17 @@ function RaceCard({
         const cutoffMs = race.cutoffMinutes * 60 * 1000;
         if (now.getTime() - start.getTime() < cutoffMs) return 'in-progress';
         return 'finished';
-    }, [daysUntil, race.status, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
+    }, [isRaceToday, race.status, race.dateOfRace, race.startTime, race.cutoffMinutes, now]);
 
     // Independent of cutoffMinutes: true as soon as the race starts (or all day if no startTime).
     // Used only to control RaceFinishCard / RaceShareCard visibility.
     const pastStart = useMemo(() => {
-        if (daysUntil !== 0 || !race.dateOfRace) return false;
+        if (!isRaceToday || !race.dateOfRace) return false;
         const [h, m, s = 0] = race.startTime ? race.startTime.split(':').map(Number) : [12, 0, 0];
         const start = new Date(race.dateOfRace + 'T00:00:00');
         start.setHours(h, m, s, 0);
         return now >= start;
-    }, [daysUntil, race.dateOfRace, race.startTime, now]);
+    }, [isRaceToday, race.dateOfRace, race.startTime, now]);
 
     return (
         <Card id={anchor} variant="outlined" sx={{

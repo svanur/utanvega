@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
+import type { LocationType } from './useLocations';
 
 export type DayOfWeek = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
 export type ScheduleType = 'Yearly' | 'Seasonal' | 'Fixed' | 'Approximate';
@@ -133,6 +134,9 @@ export interface EventSummaryDto {
     alertSeverity: AlertSeverity | null;
     locationId: string | null;
     locationName: string | null;
+    // #1414: the linked Location's Type (Country/Area/Region/Municipality/Place/Other) — lets
+    // admin flag when climate data will be approximate without a separate locations fetch.
+    locationType: LocationType | null;
     scheduleRule: ScheduleRule | null;
     socialLinks: SocialLink[] | null;
     nextEditionDate: string | null;

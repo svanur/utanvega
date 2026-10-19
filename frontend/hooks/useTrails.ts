@@ -321,30 +321,15 @@ export function useTrails(disableGeolocation = false) {
     };
 }
 
-export function useTrail(id?: string) {
-    const { data: trail = null, isPending, error: queryError } = useQuery<Trail | null>({
-        queryKey: ['trail', id],
-        queryFn: () => fetch(`${API_URL}/api/v1/trails/${id}`)
-            .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch trail');
-                return res.json() as Promise<Trail>;
-            }),
-        enabled: !!id,
-        staleTime: 5 * 60 * 1000,
-    });
-    const loading = isPending && !!id;
-    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
-    return { trail, loading, error };
-}
-
 // Fetches each of `slugs` individually against the per-trail endpoint, in parallel — unlike
 // useTrails(true)'s bulk GET /api/v1/trails, this surfaces EventOnly-status trails too, since the
 // per-trail endpoint serves them while the bulk/search list excludes them by design (#1321). Meant
 // for small slug counts (an event's linked trails), not as a general trail-browsing data source.
 //
 // Deliberately namespaced under its own 'event-trail' key rather than reusing ['trail', slug] —
-// that key is already shared (collision-prone in its own right, see useTrail below) between
-// useTrail (raw Trail) and useTrailBySlug (`{trail, isFromCache}`), and since there's a single
+// that key was previously shared (collision-prone in its own right) between the now-deleted,
+// zero-call-site useTrail(id) hook (raw Trail) and useTrailBySlug (`{trail, isFromCache}`);
+// useTrail was removed in #1329 for exactly that reason. Since there's a single
 // app-wide QueryClient (frontend/main.tsx), writing a third, differently-shaped value under the
 // same key would let same-session navigation between a trail's own page and its event page serve
 // the wrong cached shape to whichever hook reads second — concretely, TrailDetailsPage/
@@ -561,4 +546,60 @@ export function useTrailWeather(slug?: string) {
     const loading = isPending && !!slug;
     const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
     return { weather, loading, error };
+}
+
+export interface EventClimate {
+    averageHigh: number;
+    averageLow: number;
+    averagePrecipitation: number;
+    precipitationChance: number;
+    averageMaxWind: number;
+    yearsOfData: number;
+    targetMonth: number;
+    targetDay: number;
+    // Coordinate the climate was actually resolved from (GpxPointLat/Lng, or Location.Center as
+    // fallback) — lets ClimateCard show coordinates when the event has no linked Location to
+    // name (#1411).
+    lat: number;
+    lon: number;
+    // #1414: true when the above coordinate came from a broad Location (Country/Area/Region)
+    // rather than a precise point — the event's own GPS point, or a Municipality/Place-type
+    // Location, is never approximate.
+    isApproximate: boolean;
+    // #1415: true when the above coordinate came from the event's own GpxPointLat/Lng — by the
+    // TrailStartPicker convention that's the race's start point, not a route-wide point. Mutually
+    // exclusive with isApproximate: only one of the two qualifiers applies per event.
+    isStartPoint: boolean;
+}
+
+// #1416: wraps one or two EventClimate results — finish is only populated when the event's
+// relevant edition has a long/steep enough PointToPoint primary trail that its start and finish
+// are worth showing as two distinct climate sections (see GetEventClimateQueryHandler.cs's
+// ResolvePointToPointEndpointsAsync). start alone (finish null) is exactly the pre-#1416
+// single-coordinate behavior — nothing else about that case changed.
+export interface EventClimateResult {
+    start: EventClimate;
+    finish: EventClimate | null;
+}
+
+// Historical climate normals for a given (month, day) — an ERA5 reanalysis average going back
+// ~15 years, not a forecast. Much longer staleTime than useTrailWeather since the same (eventSlug,
+// month, day) is effectively immutable data; the backend's own cache TTL is 7 days for the same
+// reason (GetEventClimateQuery.cs). Climate is event data, not trail data — the backend resolves
+// the coordinate from the event's own GpxPointLat/Lng, falling back to its Location, so this
+// works for events without any attached trail.
+export function useEventClimate(eventSlug?: string, month?: number, day?: number) {
+    const { data: climate = null, isPending, error: queryError } = useQuery<EventClimateResult | null>({
+        queryKey: ['climate', eventSlug, month, day],
+        queryFn: () => fetch(`${API_URL}/api/v1/events/${eventSlug}/climate?month=${month}&day=${day}`)
+            .then(res => {
+                if (!res.ok) throw new Error('Climate data unavailable');
+                return res.json() as Promise<EventClimateResult>;
+            }),
+        enabled: !!eventSlug && !!month && !!day,
+        staleTime: 24 * 60 * 60 * 1000,
+    });
+    const loading = isPending && !!eventSlug && !!month && !!day;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
+    return { climate, loading, error };
 }

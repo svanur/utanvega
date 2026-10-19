@@ -90,11 +90,12 @@ export function isOngoingPastDayTwo(
     daysUntil: number | null,
     displayDate: string | null,
     endDisplayDate: string | null | undefined,
+    now: Date = new Date(),
 ): boolean {
     if (daysUntil !== 0) return false;
     if (!displayDate || !endDisplayDate || endDisplayDate === displayDate) return false;
     const start = new Date(displayDate + 'T00:00:00');
-    const today = new Date();
+    const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     const elapsedDays = Math.round((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     return elapsedDays >= 2;
@@ -282,6 +283,21 @@ export function filterRowsByWeekRange(
     return rows.filter(row => !!row.rowDate && row.rowDate >= range.start && row.rowDate <= range.end);
 }
 
+// #1427: same shape and purpose as filterRowsByWeekRange above, for the month-pill filter —
+// eventHasMonthInSet (eventFilters.ts) decides whether a Series event survives at all once any
+// one seriesRaces entry matches a selected month, but keeps the *whole* event, so
+// flattenEventRows still explodes every race into its own row regardless of month. This narrows
+// back down to just the row(s) whose own rowDate's month is actually in `months`. An empty
+// `months` array (no month filter active) is a no-op, so callers can pass it unconditionally
+// rather than branching.
+export function filterRowsByMonths(
+    rows: FlattenedEventRow[],
+    months: number[],
+): FlattenedEventRow[] {
+    if (months.length === 0) return rows;
+    return rows.filter(row => !!row.rowDate && months.includes(new Date(row.rowDate + 'T00:00:00').getMonth()));
+}
+
 // Per-row "days until" for a flattened row — a series-race row has its own dateOfRace (the
 // #1223/#1226 bug was exactly this ternary computed inconsistently in two places), while a plain
 // event row already carries a backend-precomputed daysUntil that must keep being used as-is.
@@ -294,6 +310,20 @@ export function getRowDaysUntil(row: FlattenedEventRow, now: Date = new Date()):
     // so this branch is unreached today. Kept so the function stays total over FlattenedEventRow
     // rather than assuming a caller never passes a plain 'event' row.
     return row.event.daysUntil;
+}
+
+// #1249/#1286: RacesPage's "Nýlokið" card gates its Results button and countdown chip on a dual
+// season/race days-until — extracted from the inline JSX computation so it's unit-testable.
+// When a single race within a still-ongoing season just finished (recentlyCompletedSeriesRace
+// set), the gate must use that race's own days-until, not the edition-level comp.daysUntil — the
+// edition itself hasn't finished. Falls back to comp.daysUntil when there's no such race.
+export function getEffectiveDaysUntil(
+    comp: { daysUntil: number | null; recentlyCompletedSeriesRace?: SeriesRaceDto | null },
+    now: Date = new Date(),
+): number | null {
+    const recentRace = comp.recentlyCompletedSeriesRace;
+    if (!recentRace) return comp.daysUntil;
+    return recentRace.dateOfRace ? daysBetween(recentRace.dateOfRace, now) : null;
 }
 
 // #1305/#1311: RacesPage's "Nýlokið" (recently-completed) section combines plain recently-completed
@@ -379,9 +409,82 @@ export function computeRaceDayFlags(
         };
     }
     return {
-        isRaceDay: event.daysUntil === 0 && !isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate),
+        isRaceDay: event.daysUntil === 0 && !isOngoingPastDayTwo(event.daysUntil, event.displayDate, event.endDisplayDate, now),
         isRaceWeek: event.daysUntil !== null && event.daysUntil >= 0 && event.daysUntil <= 7,
     };
+}
+
+// A Series event's season can span many months (e.g. Powerade Vetrarhlaupin, Oct-Mar, one race per
+// month) at a single fixed location — so the calendar date relevant for climate normals is
+// whichever individual race is current/next, not the season's own displayDate/nextEditionDate
+// (which GetEventQuery.cs derives as min(raceDates), i.e. the season's *first* race, same
+// staleness computeRaceDayFlags above already had to work around for daysUntil). Prefers the
+// earliest race on or after today; falls back to the most recently passed race once the whole
+// season is over, mirroring the backend's own ongoing/recentlyCompleted/next priority for
+// non-Series events.
+export function resolveSeriesClimateDate(raceDates: string[], now: Date = new Date()): string | null {
+    if (raceDates.length === 0) return null;
+
+    const upcoming = raceDates
+        .filter(d => daysBetween(d, now) >= 0)
+        .sort((a, b) => daysBetween(a, now) - daysBetween(b, now));
+    if (upcoming.length > 0) return upcoming[0];
+
+    const past = raceDates
+        .filter(d => daysBetween(d, now) < 0)
+        .sort((a, b) => daysBetween(b, now) - daysBetween(a, now));
+    return past[0] ?? null;
+}
+
+// #1357: pulls CompetitionDetailPage's hero pill fallback countdown out into a pure function —
+// the page has no render-level test harness (see CompetitionDetailPage.test.tsx), so logic that
+// needs covering lives here instead, same as computeRaceDayFlags/resolveSeriesClimateDate above.
+// A Series event's own daysUntil is pinned to 0 for its entire season span (see the comment on
+// daysUntil pinning above), so once isRaceDay has already ruled out "today is an actual race",
+// the pill must derive its countdown from the nearest individual race date instead — reusing
+// resolveSeriesClimateDate, the same resolution climate normals already use for this reason.
+export function resolveHeroDaysUntil(
+    event: { type: string; daysUntil: number | null },
+    seriesRaceDates: string[],
+    now: Date = new Date(),
+): number | null {
+    if (event.type !== 'Series') return event.daysUntil;
+    const targetDate = resolveSeriesClimateDate(seriesRaceDates, now);
+    return targetDate ? daysBetween(targetDate, now) : null;
+}
+
+// #1357: EditionMeta's "Day X of Y" chip is only meaningful for a genuine multi-day edition. A
+// Series edition's date/endDate span the whole season (EditionStatusHelpers.
+// ComputeEffectiveEditionDates derives them from the min/max dateOfRace across its races), not a
+// continuous event, so the chip must never compute/render for one. Extracted for the same reason
+// getMultiDayEditionProgress itself is extracted: unit-testable without rendering EditionMeta.
+export function resolveEditionDayProgress(
+    isSeries: boolean,
+    date: string | null | undefined,
+    endDate: string | null | undefined,
+    now: Date = new Date(),
+): { day: number; totalDays: number } | null {
+    if (isSeries) return null;
+    return getMultiDayEditionProgress(date, endDate, now);
+}
+
+// #1357: a race only counts as "happening today" — and so only it may read 'in-progress'/draw a
+// green border in RaceCard — when either the edition isn't a multi-day/Series span, or this
+// specific race's own dateOfRace matches today. Without this, daysUntil === 0 alone (pinned for
+// a Series event's whole season, or a long multi-day edition's whole date..endDate span, per the
+// daysUntil-pinning comment above) would mark every other race in that span as "today" too — in
+// particular a past race with no cutoffMinutes set would then read 'in-progress' forever, since
+// nothing would ever time it out. Mirrors the compound condition the race progress bar already
+// applies (`!isMultiDayOngoingEdition || isLiveStageToday`), extracted so racePhase/pastStart can
+// share and unit-test it rather than re-deriving isLiveStageToday inline.
+export function isRaceHappeningToday(
+    daysUntil: number | null | undefined,
+    isMultiDayOngoingEdition: boolean | undefined,
+    dateOfRace: string | null | undefined,
+    now: Date = new Date(),
+): boolean {
+    const isLiveStageToday = !!isMultiDayOngoingEdition && dateOfRace === toDateOnlyString(now);
+    return daysUntil === 0 && (!isMultiDayOngoingEdition || isLiveStageToday);
 }
 
 export function formatRaceDateTime(

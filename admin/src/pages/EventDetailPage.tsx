@@ -114,6 +114,7 @@ import {
   computeClonedRaceDate,
   sortEditions,
   editionsAffectedByEventCancel,
+  getSeriesDatedRaceDates,
 } from '../utils/eventHelpers';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
@@ -126,10 +127,10 @@ const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string)
 // is what still exposes that arm-state change to assistive tech.
 const VISUALLY_HIDDEN_SX = {
   position: 'absolute',
-  width: 1,
-  height: 1,
+  width: '1px',
+  height: '1px',
   padding: 0,
-  margin: -1,
+  margin: '-1px',
   overflow: 'hidden',
   clip: 'rect(0, 0, 0, 0)',
   whiteSpace: 'nowrap',
@@ -352,18 +353,9 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
       })
     : undefined;
 
-  // #1070: a Series edition's Date/EndDate are derived live from its races' DateOfRace by the
-  // backend (EditionStatusHelpers.ComputeEffectiveEditionDates) rather than trusted from the
-  // stored columns, so once an existing Series edition has at least one dated race, Start/End date
-  // here must show that derived value and stop accepting admin edits the backend would just
-  // overrule on the next read. A brand-new Series edition with no races yet has nothing to derive
-  // from, and every non-Series edition is unaffected — both stay editable.
+  // #1070: see getSeriesDatedRaceDates in eventHelpers.ts for the derivation rationale.
   const seriesDatedRaceDates = eventType === 'Series' && !isNew
-    ? (edition?.races ?? [])
-        .filter(r => r.status !== 'Cancelled')
-        .map(r => r.dateOfRace)
-        .filter((d): d is string => d != null)
-        .sort()
+    ? getSeriesDatedRaceDates(edition?.races)
     : [];
   const isDateDerivedFromRaces = seriesDatedRaceDates.length > 0;
   const derivedStartDate = isDateDerivedFromRaces ? seriesDatedRaceDates[0] : null;

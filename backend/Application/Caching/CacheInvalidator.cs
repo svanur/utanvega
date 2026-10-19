@@ -21,13 +21,8 @@ public class CacheInvalidator : ICacheInvalidator
         _cache.Remove(CacheKeys.LocationTree);
 
         // Bump the version token so all cached duplicate-scan responses are effectively invalidated.
-        var currentDuplicatesVersion = _cache.GetOrCreate(CacheKeys.TrailDuplicatesVersion, e =>
-        {
-            e.Priority = CacheItemPriority.NeverRemove;
-            return 0;
-        });
-        _cache.Set(CacheKeys.TrailDuplicatesVersion, currentDuplicatesVersion + 1,
-            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
+        // #1265: atomic bump — see CacheVersionBumper for why the old read-then-write lost increments.
+        CacheVersionBumper.Bump(_cache, CacheKeys.TrailDuplicatesVersion);
 
         if (slug is not null)
         {
@@ -61,13 +56,8 @@ public class CacheInvalidator : ICacheInvalidator
         _cache.Remove(CacheKeys.EditionsHistoryYears);
 
         // Bump the version token so all cached calendar entries are effectively invalidated.
-        var current = _cache.GetOrCreate(CacheKeys.EventVersion, e =>
-        {
-            e.Priority = CacheItemPriority.NeverRemove;
-            return 0;
-        });
-        _cache.Set(CacheKeys.EventVersion, current + 1,
-            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
+        // #1265: atomic bump — see CacheVersionBumper for why the old read-then-write lost increments.
+        CacheVersionBumper.Bump(_cache, CacheKeys.EventVersion);
 
         if (slug is not null)
         {
@@ -85,12 +75,7 @@ public class CacheInvalidator : ICacheInvalidator
     {
         var normalizedSlug = slug.Trim().ToLowerInvariant();
         var versionKey = CacheKeys.LeaderboardVersion(normalizedSlug);
-        var current = _cache.GetOrCreate(versionKey, e =>
-        {
-            e.Priority = CacheItemPriority.NeverRemove;
-            return 0;
-        });
-        _cache.Set(versionKey, current + 1,
-            new MemoryCacheEntryOptions { Priority = CacheItemPriority.NeverRemove });
+        // #1265: atomic bump — see CacheVersionBumper for why the old read-then-write lost increments.
+        CacheVersionBumper.Bump(_cache, versionKey);
     }
 }

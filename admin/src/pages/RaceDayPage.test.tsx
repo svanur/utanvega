@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -104,5 +104,266 @@ describe('RaceDayPage URL -> state date sync', () => {
     fireEvent.click(screen.getByText('jump-to-date'));
 
     await waitFor(() => expect(datesRequested()).toContain('2026-11-05'));
+  });
+});
+
+// #1288: markEditionsCompleted's optimistic local patch (RaceDayPage.tsx:325-333) mirrors the
+// backend's CompleteWithRaces(), which leaves registrationStatus untouched for both NotRequired
+// and Invitational editions (EventEdition.IsDeliberateOverride). The patch here was only updated
+// for NotRequired when Invitational was added (#1245), so an Invitational edition's displayed
+// registrationStatus was being flipped to Closed locally until the next refetch corrected it.
+// Since #1388, the registrationStatus <Select> itself lists Invitational as a menu item, so its
+// displayed value chip ("Reg: Invitational" vs "Reg: Closed") is now a direct, visible proxy for
+// the field — no need to go via the "Reg closed" progress chip (which, also since #1388, treats
+// NotRequired/Invitational editions as satisfied regardless of the actual value, so it can no
+// longer distinguish "unchanged" from "flipped to Closed" the way it could before).
+describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', () => {
+  afterEach(() => {
+    cleanup();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockResolvedValue([]);
+  });
+
+  const baseRace = {
+    name: 'Race A', nameEn: null, distanceLabel: null, distanceLabelEn: null,
+    status: 'Completed', ticketStatus: 'Closed', sortOrder: 0,
+    activityType: null, startTime: null, cutoffMinutes: null, resultType: null,
+  };
+
+  const invitationalEdition = {
+    id: 'ed-invitational', eventId: 'event-invitational', eventName: 'Invitational Trail Run',
+    eventSlug: 'invitational-trail-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    resultsUrl: null, registrationUrl: null, registrationStatus: 'Invitational',
+    races: [{ ...baseRace, id: 'race-invitational' }],
+  };
+
+  const openEdition = {
+    ...invitationalEdition,
+    id: 'ed-open', eventId: 'event-open', eventName: 'Open Registration Run',
+    eventSlug: 'open-registration-run', registrationStatus: 'Open',
+    races: [{ ...baseRace, id: 'race-open' }],
+  };
+
+  it("leaves an Invitational edition's registrationStatus unchanged while an Open one closes, after Mark Editions Completed", async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([invitationalEdition, openEdition]);
+      }
+      if (endpoint.includes('/complete')) {
+        return Promise.resolve({});
+      }
+      return Promise.resolve(null);
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Invitational Trail Run');
+    await screen.findByText('Open Registration Run');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark Editions Completed' }));
+
+    const invitationalPaper = screen.getByText('Invitational Trail Run').closest('.MuiPaper-root') as HTMLElement;
+    const openPaper = screen.getByText('Open Registration Run').closest('.MuiPaper-root') as HTMLElement;
+
+    // Invitational stays exempt: the registrationStatus Select still shows Invitational, not Closed.
+    await waitFor(() => {
+      expect(within(invitationalPaper).getByText('Reg: Invitational')).toBeTruthy();
+    });
+
+    // Regression guard: a plain Open edition still closes as before.
+    expect(within(openPaper).getByText('Reg: Closed')).toBeTruthy();
+  });
+});
+
+// #1388: REGISTRATION_STATUSES (RaceDayPage.tsx:28) was missing Invitational and NotRequired even
+// though EventEdition.IsDeliberateOverride treats both as valid, reachable registrationStatus
+// values elsewhere in this file — an admin had no way to select either from the dropdown. These
+// tests drive the registrationStatus <Select> the same way EventDetailPage.test.tsx/
+// EventWizardPage.test.tsx's chooseMenuOption helper does (mousedown to open, click the option's
+// text in the resulting listbox), since this Select carries no aria-label to query by. The edition
+// header renders two unlabelled Selects (eventStatus, then registrationStatus), so the second
+// combobox within the edition's Paper is the one under test.
+describe('RaceDayPage registration-status Select gains Invitational/NotRequired options (#1388)', () => {
+  afterEach(() => {
+    cleanup();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockResolvedValue([]);
+  });
+
+  const notStartedEdition = {
+    id: 'ed-not-started', eventId: 'event-not-started', eventName: 'Not Started Run',
+    eventSlug: 'not-started-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    resultsUrl: null, registrationUrl: null, registrationStatus: 'NotStarted',
+    races: [],
+  };
+
+  function getRegistrationStatusCombobox(paper: HTMLElement) {
+    return within(paper).getAllByRole('combobox')[1];
+  }
+
+  function chooseMenuOption(combobox: HTMLElement, optionText: string) {
+    fireEvent.mouseDown(combobox);
+    const listbox = screen.getByRole('listbox');
+    fireEvent.click(within(listbox).getByText(optionText));
+  }
+
+  it('selects Invitational and NotRequired from the dropdown and PATCHes registration-status with each', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([notStartedEdition]);
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Not Started Run');
+    const paper = screen.getByText('Not Started Run').closest('.MuiPaper-root') as HTMLElement;
+
+    chooseMenuOption(getRegistrationStatusCombobox(paper), 'Reg: Invitational');
+
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      '/api/v1/admin/editions/ed-not-started/registration-status',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ registrationStatus: 'Invitational' }) })
+    ));
+    await waitFor(() => expect(within(paper).getByText('Reg: Invitational')).toBeTruthy());
+
+    chooseMenuOption(getRegistrationStatusCombobox(paper), 'Reg: NotRequired');
+
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledWith(
+      '/api/v1/admin/editions/ed-not-started/registration-status',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ registrationStatus: 'NotRequired' }) })
+    ));
+    await waitFor(() => expect(within(paper).getByText('Reg: NotRequired')).toBeTruthy());
+  });
+});
+
+// #1396: isWrapupDone/isSetupReady (RaceDayPage.tsx, page-level readiness flags) required every
+// edition's registrationStatus to be exactly 'Closed'/'Open', so they disagreed with the
+// per-edition "Reg closed"/"Reg open" chips (editionProgress, above) which #1388 already exempted
+// NotRequired/Invitational editions from via isRegistrationOverride. This left the readiness
+// banner permanently hidden for an event made entirely of override editions even once every chip
+// was green. The flags now reuse isRegistrationOverride the same way editionProgress does.
+describe('RaceDayPage page-level readiness flags exempt override editions (#1396)', () => {
+  afterEach(() => {
+    cleanup();
+    apiFetchMock.mockReset();
+    apiFetchMock.mockResolvedValue([]);
+  });
+
+  const completedRace = {
+    name: 'Race A', nameEn: null, distanceLabel: null, distanceLabelEn: null,
+    status: 'Completed', ticketStatus: 'Closed', sortOrder: 0,
+    activityType: null, startTime: null, cutoffMinutes: null, resultType: null,
+  };
+
+  const notRequiredEdition = {
+    id: 'ed-not-required', eventId: 'event-not-required', eventName: 'Not Required Run',
+    eventSlug: 'not-required-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    resultsUrl: 'https://example.com/results', registrationUrl: null, registrationStatus: 'NotRequired',
+    races: [{ ...completedRace, id: 'race-not-required' }],
+  };
+
+  const invitationalEdition2 = {
+    ...notRequiredEdition,
+    id: 'ed-invitational-2', eventId: 'event-invitational-2', eventName: 'Invitational Run 2',
+    eventSlug: 'invitational-run-2', registrationStatus: 'Invitational',
+    races: [{ ...completedRace, id: 'race-invitational-2' }],
+  };
+
+  it('shows the wrap-up readiness banner when every edition is NotRequired/Invitational and all other conditions are met', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([notRequiredEdition, invitationalEdition2]);
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Not Required Run');
+    await screen.findByText('Invitational Run 2');
+
+    // Banner: page-level isWrapupDone now agrees with the per-edition chips below.
+    await screen.findByText(/All done!/);
+
+    // Per-edition chips: both "Reg closed" chips are filled/success, matching the banner.
+    const notRequiredPaper = screen.getByText('Not Required Run').closest('.MuiPaper-root') as HTMLElement;
+    const invitationalPaper2 = screen.getByText('Invitational Run 2').closest('.MuiPaper-root') as HTMLElement;
+    expect(within(notRequiredPaper).getByText('Reg closed').closest('.MuiChip-root')?.className).toContain('MuiChip-colorSuccess');
+    expect(within(invitationalPaper2).getByText('Reg closed').closest('.MuiChip-root')?.className).toContain('MuiChip-colorSuccess');
+  });
+
+  // #1406: the #1396 fix made isWrapupDone and isSetupReady (RaceDayPage.tsx:507-517) both exempt
+  // NotRequired/Invitational editions via isRegistrationOverride, but the regression test above
+  // only exercised mode === 'wrapup'. This test covers the setup-mode mirror (isSetupReady, the
+  // "Ready to go!" banner) with the same override editions, switched to the conditions isSetupReady
+  // actually checks: races Active (not Completed), eventStatus Confirmed, and a non-empty
+  // registrationUrl — registrationStatus itself stays NotRequired/Invitational throughout, which is
+  // exactly the case isRegistrationOverride exists to exempt from the plain 'Open' check.
+  const activeRace = {
+    name: 'Race A', nameEn: null, distanceLabel: null, distanceLabelEn: null,
+    status: 'Active', ticketStatus: 'Open', sortOrder: 0,
+    activityType: null, startTime: null, cutoffMinutes: null, resultType: null,
+  };
+
+  const notRequiredEditionSetup = {
+    ...notRequiredEdition,
+    registrationUrl: 'https://example.com/register',
+    races: [{ ...activeRace, id: 'race-not-required-setup' }],
+  };
+
+  const invitationalEditionSetup = {
+    ...invitationalEdition2,
+    registrationUrl: 'https://example.com/register',
+    races: [{ ...activeRace, id: 'race-invitational-setup' }],
+  };
+
+  it('shows the setup readiness banner when every edition is NotRequired/Invitational and all other conditions are met', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([notRequiredEditionSetup, invitationalEditionSetup]);
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Not Required Run');
+    await screen.findByText('Invitational Run 2');
+
+    // Force setup mode directly rather than relying on defaultMode's date-vs-today comparison,
+    // which would make this test's pass/fail depend on the system clock at run time.
+    fireEvent.click(screen.getByRole('button', { name: 'Setup' }));
+
+    // Banner: page-level isSetupReady agrees with the per-edition "Races active"/"Reg open" chips.
+    await screen.findByText(/Ready to go!/);
   });
 });

@@ -73,9 +73,9 @@ import { API_URL } from '../hooks/useTrails';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { daysBetween, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
-import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
+import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
+import { applyFilters, eventFiltersEqual, eventMonths, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
 import { ActivityIcons } from '../utils/activityIcon';
@@ -441,11 +441,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
     // Month pills reflect all active filters except month — so selecting "Trail Run"
     // collapses months with no trail runs, but active month pills don't fight each other.
+    // #1427: a Series event's own displayDate/nextEditionDate only ever names its season's first
+    // race, so collecting months from that alone (as before) never rendered a chip for a later
+    // month even when a real race falls in it — eventMonths also collects every seriesRaces date's
+    // month, mirroring eventHasMonthInSet's two sources.
     const monthsWithEvents = useMemo(() => {
         const q = search.toLowerCase().trim();
         const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
         const result = applyFilters(visible, filters, q, favoriteEvents, includeAllEvents, true);
-        return new Set(result.map(e => e.displayDate ?? e.nextEditionDate).filter(Boolean).map(d => new Date(d! + 'T00:00:00').getMonth()));
+        return new Set(result.flatMap(e => eventMonths(e)));
     }, [events, search, filters, favoriteEvents, includeAllEvents]);
 
     const sortedFiltered = useMemo(() => {
@@ -513,8 +517,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         // #1333: `upcoming` kept a Series event whole once any one seriesRaces entry qualified for
         // thisWeekOnly/nextWeekOnly, so flattenEventRows above still explodes every race into its
         // own row — narrow back down to just the row(s) actually in the selected week.
-        return filterRowsByWeekRange(rows, weekRange);
-    }, [upcoming, sortBy, weekRange]);
+        // #1427: same narrowing for the month-pill filter — eventHasMonthInSet (eventFilters.ts)
+        // kept a Series event whole once any one seriesRaces entry matched a selected month.
+        return filterRowsByMonths(filterRowsByWeekRange(rows, weekRange), filters.months);
+    }, [upcoming, sortBy, weekRange, filters.months]);
 
     if (loading) {
         return (
@@ -1072,38 +1078,17 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             // a still-ongoing/upcoming season just finished (recentRace set — name
                                             // and date must point at that specific race, not the event/season).
                                             const recentRace = comp.recentlyCompletedSeriesRace;
-                                            const recentRaceDaysUntil = recentRace?.dateOfRace ? daysBetween(recentRace.dateOfRace) : null;
-                                            // #1249: when a single race within a still-ongoing season just
+                                            // #1249/#1286: when a single race within a still-ongoing season just
                                             // finished, the Results button gate (and the countdown chip) must
                                             // use that race's own days-until, not the edition-level one — the
-                                            // edition itself hasn't finished.
-                                            const effectiveDaysUntil = recentRace ? recentRaceDaysUntil : comp.daysUntil;
-                                            // #1305: this section's cards fold a single distance into the date
-                                            // line instead of a separate chip row — only fall back to the chip
-                                            // row (as the upcoming list does) when there's more than one distance
-                                            // to show, so no information is silently lost.
-                                            // #1312: recentRace's own distanceLabel can legitimately be null (no
-                                            // length on the race or its linked trail — GetEventsQuery.cs). In that
-                                            // case there's nothing to fold into the date line, so fall back to the
-                                            // season's other races (comp.distances) for the chip row instead of
-                                            // showing no distance info at all. The inline label itself must stay
-                                            // sourced from recentRace.distanceLabel only — never substituted.
-                                            const recentRaceHasDistanceLabel = !!recentRace?.distanceLabel;
-                                            const groupedDistances = (!recentRace || !recentRaceHasDistanceLabel) && comp.distances
-                                                ? groupDistances(comp.distances)
-                                                : [];
-                                            const singleDistanceLabel = recentRace
-                                                ? recentRace.distanceLabel
-                                                : groupedDistances.length === 1
-                                                    ? groupedDistances[0].label
-                                                    : null;
-                                            // Non-recentRace single distance is already shown inline above (via
-                                            // singleDistanceLabel), so the chip row there only fires above 1. The
-                                            // recentRace-with-no-distanceLabel fallback has shown nothing inline,
-                                            // so even a single grouped distance needs the chip row to surface it.
-                                            const showDistanceChips = recentRace
-                                                ? groupedDistances.length > 0
-                                                : groupedDistances.length > 1;
+                                            // edition itself hasn't finished. Extracted to eventUtils.ts so this
+                                            // is unit-tested rather than inline JSX.
+                                            const effectiveDaysUntil = getEffectiveDaysUntil(comp, new Date(nowMs));
+                                            // #1305/#1312/#1317: distance/chip-row fallback branching — see
+                                            // getRecentRaceDistanceDisplay in ticketStatus.ts for the reasoning
+                                            // (now unit-tested there rather than inline here).
+                                            const { groupedDistances, singleDistanceLabel, showDistanceChips } =
+                                                getRecentRaceDistanceDisplay(recentRace, comp.distances);
                                             return (
                                             <SwipeableCard
                                                 key={comp.id}
@@ -1720,7 +1705,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} weekRange={weekRange} />
+                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} weekRange={weekRange} months={filters.months} />
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>

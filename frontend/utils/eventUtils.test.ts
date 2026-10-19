@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getRowDaysUntil, getWeekRange, msUntilNextMidnight, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -200,6 +200,20 @@ describe('daysBetween', () => {
         const now = new Date('2026-03-15T23:00:00');
         expect(daysBetween('2026-03-16', now)).toBe(1);
     });
+
+    // #1268: RacesPage's "Nýlokið" card countdown for a just-finished Series race called
+    // daysBetween(recentRace.dateOfRace) with no `now` override, so the chip only moved on a full
+    // reload — not across a midnight crossing while the tab stayed open. The fix threads the
+    // existing nowMs tick (already used by the sibling series-row branch, #1229) into this call
+    // site too. This pins that a race finished "today" rolls to "yesterday" once `now` ticks past
+    // midnight, without any reload — the exact symptom #1268 reports.
+    it('rolls a just-finished race from 0 ("today") to -1 ("yesterday") once `now` crosses midnight', () => {
+        const raceDate = '2026-03-15';
+        const beforeMidnight = new Date('2026-03-15T23:59:00');
+        const afterMidnight = new Date('2026-03-16T00:01:00');
+        expect(daysBetween(raceDate, beforeMidnight)).toBe(0);
+        expect(daysBetween(raceDate, afterMidnight)).toBe(-1);
+    });
 });
 
 // #1308: EventTableView's series-race-row and plain-event-row chips, plus EventMapView's popup
@@ -393,6 +407,56 @@ describe('filterRowsByWeekRange', () => {
     });
 });
 
+// #1427: same two-pass pattern as filterRowsByWeekRange above, for the month-pill filter — the
+// event-level check (eventFilters.ts's eventHasMonthInSet) only decides whether to keep the event
+// at all, so without this second pass a Series event kept for one matching month still rendered
+// every other race's row too (e.g. Powerade Vetrarhlaupin's "Nov" filter rendering all 6 Oct-Mar
+// rows instead of just the November one).
+describe('filterRowsByMonths', () => {
+    it('is a no-op when months is empty', () => {
+        const event = makeEvent({ type: 'Race', displayDate: '2026-06-15' });
+        const rows = flattenEventRows([event]);
+        expect(filterRowsByMonths(rows, [])).toEqual(rows);
+    });
+
+    it('discards series-race rows outside the selected months, keeping only the one(s) inside', () => {
+        const october = makeSeriesRace({ raceId: 'oct', dateOfRace: '2026-10-15' });
+        const november = makeSeriesRace({ raceId: 'nov', dateOfRace: '2026-11-15' });
+        const december = makeSeriesRace({ raceId: 'dec', dateOfRace: '2026-12-15' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [october, november, december] });
+        const rows = flattenEventRows([event]);
+        // November = 10
+        const result = filterRowsByMonths(rows, [10]);
+        expect(result).toEqual([{ kind: 'series-race', event, race: november, rowDate: '2026-11-15' }]);
+    });
+
+    it('keeps multiple selected months together, discarding the rest', () => {
+        const october = makeSeriesRace({ raceId: 'oct', dateOfRace: '2026-10-15' });
+        const november = makeSeriesRace({ raceId: 'nov', dateOfRace: '2026-11-15' });
+        const december = makeSeriesRace({ raceId: 'dec', dateOfRace: '2026-12-15' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [october, november, december] });
+        const rows = flattenEventRows([event]);
+        // November = 10, December = 11
+        const result = filterRowsByMonths(rows, [10, 11]);
+        expect(result.map(r => (r.kind === 'series-race' ? r.race.raceId : null))).toEqual(['nov', 'dec']);
+    });
+
+    it('keeps a non-Series event row when its rowDate month is selected, drops it when not', () => {
+        const inMonth = makeEvent({ slug: 'in', type: 'Race', displayDate: '2026-10-20' });
+        const outOfMonth = makeEvent({ slug: 'out', type: 'Race', displayDate: '2026-11-01' });
+        const rows = flattenEventRows([inMonth, outOfMonth]);
+        // October = 9
+        const result = filterRowsByMonths(rows, [9]);
+        expect(result.map(r => r.event.slug)).toEqual(['in']);
+    });
+
+    it('discards a row with a null rowDate', () => {
+        const event = makeEvent({ type: 'Race', displayDate: null, nextEditionDate: null });
+        const rows = flattenEventRows([event]);
+        expect(filterRowsByMonths(rows, [9])).toEqual([]);
+    });
+});
+
 // #1223/#1226/#1227: this ternary (dateOfRace ? daysBetween(...) : null) drifted between
 // EventTableView and RacesPage once already — getRowDaysUntil is the single place it's computed
 // now. A plain "event" row keeps using the backend-precomputed daysUntil as-is, never recomputing
@@ -426,6 +490,34 @@ describe('getRowDaysUntil', () => {
         const race = makeSeriesRace({ dateOfRace: today });
         const row = { kind: 'series-race' as const, event, race, rowDate: race.dateOfRace };
         expect(getRowDaysUntil(row)).toBe(0);
+    });
+});
+
+// #1249/#1286: extracted from RacesPage's "Nýlokið" card JSX — gates the Results button and the
+// countdown chip on a dual season/race days-until, favoring a single still-ongoing-season race's
+// own completion date over the edition-level comp.daysUntil.
+describe('getEffectiveDaysUntil', () => {
+    it('falls back to comp.daysUntil when there is no recentlyCompletedSeriesRace', () => {
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: null });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBe(10);
+    });
+
+    it('computes a negative days-until from a recentlyCompletedSeriesRace with a past dateOfRace', () => {
+        const race = makeSeriesRace({ dateOfRace: '2026-03-13' });
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: race });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBe(-2);
+    });
+
+    it('computes a positive days-until from a recentlyCompletedSeriesRace with a future dateOfRace', () => {
+        const race = makeSeriesRace({ dateOfRace: '2026-03-20' });
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: race });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBe(5);
+    });
+
+    it('returns null when recentlyCompletedSeriesRace has no dateOfRace, ignoring comp.daysUntil', () => {
+        const race = makeSeriesRace({ dateOfRace: null });
+        const comp = makeEvent({ daysUntil: 10, recentlyCompletedSeriesRace: race });
+        expect(getEffectiveDaysUntil(comp, new Date('2026-03-15T00:00:00'))).toBeNull();
     });
 });
 
@@ -544,6 +636,50 @@ describe('getWeekRange', () => {
         const now = new Date('2026-03-16T09:00:00'); // Monday
         expect(getWeekRange('this', now)).toEqual({ start: '2026-03-16', end: '2026-03-22' });
         expect(getWeekRange('next', now)).toEqual({ start: '2026-03-23', end: '2026-03-29' });
+    });
+});
+
+// #1325: isOngoingPastDayTwo previously read `new Date()` internally instead of taking an
+// injectable `now` like every other function in this file — these cases isolate its own boundary
+// behavior directly, rather than only indirectly via computeRaceDayFlags's non-Series tests.
+describe('isOngoingPastDayTwo', () => {
+    it('is false whenever daysUntil is not 0, regardless of display dates', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(1, '2026-11-12', '2026-11-15', now)).toBe(false);
+        expect(isOngoingPastDayTwo(-1, '2026-11-12', '2026-11-15', now)).toBe(false);
+        expect(isOngoingPastDayTwo(null, '2026-11-12', '2026-11-15', now)).toBe(false);
+    });
+
+    it('is false when displayDate or endDisplayDate is missing', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(0, null, '2026-11-15', now)).toBe(false);
+        expect(isOngoingPastDayTwo(0, '2026-11-12', null, now)).toBe(false);
+        expect(isOngoingPastDayTwo(0, '2026-11-12', undefined, now)).toBe(false);
+    });
+
+    it('is false for a single-day edition, where endDisplayDate equals displayDate', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-12', now)).toBe(false);
+    });
+
+    it('is false on day 0 (the edition\'s own start date)', () => {
+        const now = new Date('2026-11-12T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(false);
+    });
+
+    it('is false on day 1 elapsed (still "just started")', () => {
+        const now = new Date('2026-11-13T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(false);
+    });
+
+    it('is true on day 2 elapsed', () => {
+        const now = new Date('2026-11-14T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(true);
+    });
+
+    it('is true past day 2, for as long as the edition keeps daysUntil pinned to 0', () => {
+        const now = new Date('2026-11-15T09:00:00');
+        expect(isOngoingPastDayTwo(0, '2026-11-12', '2026-11-15', now)).toBe(true);
     });
 });
 
@@ -669,6 +805,36 @@ describe('computeRaceDayFlags', () => {
     });
 });
 
+describe('resolveSeriesClimateDate', () => {
+    it('returns null for an empty raceDates list (a brand-new Series edition with no races yet)', () => {
+        expect(resolveSeriesClimateDate([], new Date('2026-11-07T00:00:00'))).toBeNull();
+    });
+
+    it('prefers the nearest upcoming race date over a later one', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(resolveSeriesClimateDate(['2026-12-12', '2026-11-12', '2027-01-15'], now)).toBe('2026-11-12');
+    });
+
+    it('treats today itself as upcoming (not past)', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(resolveSeriesClimateDate(['2026-09-14', '2026-11-12'], now)).toBe('2026-11-12');
+    });
+
+    it('falls back to the most recently passed race once the whole season is over', () => {
+        const now = new Date('2027-04-01T00:00:00');
+        expect(resolveSeriesClimateDate(['2026-10-10', '2026-11-12', '2027-03-11'], now)).toBe('2027-03-11');
+    });
+
+    // The regression this guards against: Powerade Vetrarhlaupin's Oct-Mar season reading its
+    // displayDate as October (the season's min(raceDates)) for the whole ongoing span — climate
+    // in February must resolve to February's own race, not October's.
+    it('resolves to the in-season upcoming race, not the season\'s first race', () => {
+        const now = new Date('2027-02-20T00:00:00');
+        const powerade = ['2026-10-08', '2026-11-12', '2026-12-10', '2027-01-14', '2027-02-25', '2027-03-11'];
+        expect(resolveSeriesClimateDate(powerade, now)).toBe('2027-02-25');
+    });
+});
+
 describe('deriveEventTrailSlugs', () => {
     it('resolves the edition-level trailSlug when no race has one', () => {
         const primaryEdition = { trailSlug: 'edition-trail', visibleRaces: [makeRace(null), makeRace(null)] };
@@ -694,5 +860,87 @@ describe('deriveEventTrailSlugs', () => {
     it('returns an empty set when primaryEdition is null/undefined and visibleRaces has no trailSlugs', () => {
         expect(deriveEventTrailSlugs(null, [makeRace(null)])).toEqual(new Set());
         expect(deriveEventTrailSlugs(undefined, [])).toEqual(new Set());
+    });
+});
+
+// #1357: CompetitionDetailPage's hero pill, mid-season, must not read the backend-pinned
+// event.daysUntil (0 for the whole Series season) as "Today" — it should derive a real countdown
+// from the nearest individual race date, same resolution resolveSeriesClimateDate already uses.
+describe('resolveHeroDaysUntil', () => {
+    it('returns the real days-until the nearest upcoming race for a Series event mid-season (not 0)', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        const powerade = ['2026-09-14', '2026-11-12', '2027-01-14'];
+        expect(resolveHeroDaysUntil({ type: 'Series', daysUntil: 0 }, powerade, now)).toBe(5);
+    });
+
+    it('returns 0 when a Series race date is exactly today', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(resolveHeroDaysUntil({ type: 'Series', daysUntil: 0 }, ['2026-09-14', '2026-11-12'], now)).toBe(0);
+    });
+
+    it('returns null for a Series event with no race dates at all', () => {
+        expect(resolveHeroDaysUntil({ type: 'Series', daysUntil: 0 }, [], new Date('2026-11-07T00:00:00'))).toBeNull();
+    });
+
+    it('passes a non-Series event\'s daysUntil through unchanged', () => {
+        expect(resolveHeroDaysUntil({ type: 'Race', daysUntil: 3 }, [], new Date('2026-11-07T00:00:00'))).toBe(3);
+    });
+});
+
+// #1357: EditionMeta's "Day X of Y" chip must never compute/render for a Series edition — its
+// date/endDate span the whole season (derived from min/max race date on the backend), not a
+// continuous multi-day event.
+describe('resolveEditionDayProgress', () => {
+    it('returns null for a Series edition even when today falls within its season-spanning date/endDate', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(resolveEditionDayProgress(true, '2026-09-14', '2027-03-11', now)).toBeNull();
+    });
+
+    it('still computes the day/total for a genuine (non-Series) multi-day edition currently in progress', () => {
+        const now = new Date('2026-03-16T00:00:00');
+        expect(resolveEditionDayProgress(false, '2026-03-14', '2026-03-18', now)).toEqual({ day: 3, totalDays: 5 });
+    });
+});
+
+// #1357: a race only counts as "happening today" — and so only it may show the 'in-progress'
+// chip/green border — when either the edition isn't a multi-day/Series span, or this specific
+// race's own dateOfRace matches today. Mirrors the compound condition the race progress bar
+// already applies, extended to racePhase/pastStart.
+describe('isRaceHappeningToday', () => {
+    it('is true for a single-day, non-multi-day race on its actual race day (unchanged behavior)', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(isRaceHappeningToday(0, false, '2026-11-12', now)).toBe(true);
+    });
+
+    it('is false for a single-day race when daysUntil is not 0', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(isRaceHappeningToday(1, false, '2026-11-13', now)).toBe(false);
+    });
+
+    it('is true for the one stage of a genuine multi-day edition whose dateOfRace is today', () => {
+        const now = new Date('2026-03-16T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-03-16', now)).toBe(true);
+    });
+
+    it('is false for a past stage of a genuine multi-day edition even though daysUntil is still pinned to 0', () => {
+        const now = new Date('2026-03-17T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-03-15', now)).toBe(false);
+    });
+
+    // The exact Series mid-season regression: daysUntil stays pinned to 0 for the whole season,
+    // so a past race in the same edition must not read as "today" just because of that pinning.
+    it('is false for a past Series race mid-season even though daysUntil is pinned to 0 for the whole season', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-09-14', now)).toBe(false);
+    });
+
+    it('is true for the specific Series race whose dateOfRace is today', () => {
+        const now = new Date('2026-11-12T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2026-11-12', now)).toBe(true);
+    });
+
+    it('is false for a future Series race not yet reached, even with daysUntil pinned to 0', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceHappeningToday(0, true, '2027-01-14', now)).toBe(false);
     });
 });

@@ -27,11 +27,10 @@ public class GetDuplicateTrailsQueryHandler : IRequestHandler<GetDuplicateTrails
 
     public async Task<List<DuplicatePair>> Handle(GetDuplicateTrailsQuery request, CancellationToken cancellationToken)
     {
-        var version = _cache.GetOrCreate(CacheKeys.TrailDuplicatesVersion, e =>
-        {
-            e.Priority = CacheItemPriority.NeverRemove;
-            return 0;
-        });
+        // #1265: goes through CacheVersionBumper (not a raw GetOrCreate) so creation of this
+        // version's cache entry can never race against CacheInvalidator.InvalidateTrail's own
+        // creation path and lose a bump.
+        var version = CacheVersionBumper.Read(_cache, CacheKeys.TrailDuplicatesVersion);
         var cacheKey = CacheKeys.TrailDuplicates(version, request.Threshold);
 
         return await _cache.GetOrCreateAsync(cacheKey, async entry =>

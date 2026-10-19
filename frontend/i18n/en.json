@@ -337,6 +337,7 @@
         "followLocation": "Follow my location",
         "stopFollowing": "Stop following my location",
         "youAreHere": "You are here",
+        "eventLocation": "Event location",
         "viewDetails": "View Details",
         "showTracks": "Show trail tracks",
         "hideTracks": "Hide trail tracks",
@@ -567,6 +568,21 @@
             "96": "Thunderstorm with hail",
             "99": "Severe thunderstorm"
         }
+    },
+    "climate": {
+        "title": "Climate Normals",
+        "avgHighLow": "Average high / low",
+        "avgPrecipitation": "Avg. precipitation",
+        "chanceOfRain": "Chance of rain",
+        "avgWind": "Avg. max wind",
+        "location": "Location",
+        "approximateLocation": "Estimated for a broad area",
+        "startPointLocation": "At the start",
+        "atStart": "At the start",
+        "atFinish": "At the finish",
+        "date": "Date",
+        "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
+        "unavailable": "Historical climate data unavailable"
     },
     "privacy": {
         "title": "Privacy Policy",
@@ -799,6 +815,10 @@
             }
         },
         "changelog": {
+            "v1_17_0": {
+                "title": "Historical climate data for races, brand-matched favicons, and a fixed week filter for race series",
+                "description": "Event pages now show historical climate normals — average temperature, precipitation and wind for the race date — with a separate reading for the start and finish of long point-to-point races. The browser tab icon now matches each site's brand (Hlaupadagskra.is or 360Runs.com) instead of a shared one. The \"This week\"/\"Next week\" filter was fixed to check each race in a series individually again, after a regression let a far-future series flood the list. Race-day registration status can now be set to Invitational or Not required, and PWA icons no longer show a white background."
+            },
             "v1_16_3": {
                 "title": "Per-host brand icons, a fixed weekly filter for race series, and a new podcast episode",
                 "description": "Hlaupadagskra.is and 360Runs.com now each show their own icon and logo in the PWA install banner, home-screen icon, social share images, and admin dashboard, instead of a shared placeholder. The \"This week\"/\"Next week\" filter now checks each race in a series individually, so a series far in the future no longer floods the list just because its next race happens to be coming up soon. The Media page also gained a second podcast episode and a promo banner for it."
@@ -1479,8 +1499,6 @@
         "ticketStatusLabel": "Registration status",
         "maxParticipants": "Max participants",
         "statusUpcoming": "Unconfirmed",
-        "raceDayWeather": "Trail Weather – Race Forecast",
-        "raceDayWeatherDesc": "Current conditions and 7-day forecast at the race route. Race day is highlighted.",
         "checklistTitle": "Race day checklist",
         "checklistWeatherReady": "Current snapshot: {{temperature}}°C and {{wind}} m/s wind.",
         "checklistWeatherFallback": "Quick prep before heading out:",

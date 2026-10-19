@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import dayjs from 'dayjs';
-import { matchesYearMonthFilter, nextWeekMondayOffset, thisWeekMondayOffset, formatAgendaHeader, computeClonedRaceDate, type YearMonthFilterable } from './eventHelpers';
+import { matchesYearMonthFilter, nextWeekMondayOffset, thisWeekMondayOffset, formatAgendaHeader, computeClonedRaceDate, getSeriesDatedRaceDates, type YearMonthFilterable } from './eventHelpers';
+import type { RaceDto, RaceStatus } from '../hooks/useEvents';
 
 // #734: the Month <Select> on the events list is disabled whenever yearFilter === 'all', and
 // the Year <Select>'s onChange resets monthFilter back to 'all' the moment Year changes — so
@@ -132,6 +133,70 @@ describe('computeClonedRaceDate', () => {
 
   it('returns null when the new edition has no date (e.g. an Approximate-schedule clone left it blank, #912)', () => {
     expect(computeClonedRaceDate('2026-09-01', '2026-09-03', null)).toBeNull();
+  });
+});
+
+// #1070: a Series edition's Date/EndDate are derived from its races' DateOfRace, excluding
+// Cancelled races and races without a date of their own, then sorted ascending so the earliest
+// dated race becomes the derived Start date and the latest becomes the derived End date.
+describe('getSeriesDatedRaceDates', () => {
+  const race = (overrides: Partial<RaceDto> & { status: RaceStatus; dateOfRace: string | null }): RaceDto => ({
+    id: 'race-id',
+    eventEditionId: 'edition-id',
+    trailId: null,
+    trailName: null,
+    trailSlug: null,
+    name: 'Race',
+    nameEn: null,
+    distanceLabel: null,
+    distanceLabelEn: null,
+    cutoffMinutes: null,
+    description: null,
+    descriptionEn: null,
+    sortOrder: 0,
+    ticketStatus: 'Available',
+    resultType: 'Time',
+    maxParticipants: null,
+    itraPoints: null,
+    certifiedBy: null,
+    certifiedByEn: null,
+    prizeMoney: 0,
+    championshipCategory: null,
+    championshipCategoryEn: null,
+    startTime: null,
+    trailDistanceMeters: null,
+    trailElevationGain: null,
+    activityType: null,
+    ...overrides,
+  });
+
+  it('returns an empty array when races is undefined', () => {
+    expect(getSeriesDatedRaceDates(undefined)).toEqual([]);
+  });
+
+  it('excludes a Cancelled race even if it has a date', () => {
+    const races = [
+      race({ status: 'Active', dateOfRace: '2026-09-01' }),
+      race({ status: 'Cancelled', dateOfRace: '2026-09-15' }),
+    ];
+    expect(getSeriesDatedRaceDates(races)).toEqual(['2026-09-01']);
+  });
+
+  it('excludes a race with a null dateOfRace', () => {
+    const races = [
+      race({ status: 'Active', dateOfRace: '2026-09-01' }),
+      race({ status: 'Active', dateOfRace: null }),
+    ];
+    expect(getSeriesDatedRaceDates(races)).toEqual(['2026-09-01']);
+  });
+
+  it('sorts the remaining dates ascending, regardless of input order', () => {
+    const races = [
+      race({ status: 'Active', dateOfRace: '2026-11-01' }),
+      race({ status: 'Active', dateOfRace: '2026-09-01' }),
+      race({ status: 'Active', dateOfRace: '2026-10-01' }),
+    ];
+    expect(getSeriesDatedRaceDates(races)).toEqual(['2026-09-01', '2026-10-01', '2026-11-01']);
   });
 });
 

@@ -21,11 +21,10 @@ public class GetTrailLeaderboardHandler : IRequestHandler<GetTrailLeaderboardQue
     {
         var normalizedSlug = request.TrailSlug.Trim().ToLowerInvariant();
         var limit = Math.Clamp(request.Limit, 1, 1000);
-        var version = _cache.GetOrCreate(CacheKeys.LeaderboardVersion(normalizedSlug), e =>
-        {
-            e.Priority = CacheItemPriority.NeverRemove;
-            return 0;
-        });
+        // #1265: goes through CacheVersionBumper (not a raw GetOrCreate) so creation of this
+        // version's cache entry can never race against CacheInvalidator.InvalidateLeaderboard's
+        // own creation path and lose a bump.
+        var version = CacheVersionBumper.Read(_cache, CacheKeys.LeaderboardVersion(normalizedSlug));
         var cacheKey = CacheKeys.Leaderboard(normalizedSlug, version, limit);
 
         if (_cache.TryGetValue(cacheKey, out GetTrailLeaderboardResponse? cached) && cached is not null)

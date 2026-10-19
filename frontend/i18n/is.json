@@ -337,6 +337,7 @@
         "followLocation": "Fylgja staðsetningu",
         "stopFollowing": "Hætta að fylgja staðsetningu",
         "youAreHere": "Þú ert hér",
+        "eventLocation": "Staðsetning viðburðar",
         "viewDetails": "Skoða nánar",
         "showTracks": "Sýna leiðir á korti",
         "hideTracks": "Fela leiðir á korti",
@@ -567,6 +568,21 @@
             "96": "Þrumuveður með hagli",
             "99": "Ofsaveður"
         }
+    },
+    "climate": {
+        "title": "Veðurfar viðburðar",
+        "avgHighLow": "Meðalhámark / meðallágmark",
+        "avgPrecipitation": "Meðalúrkoma",
+        "chanceOfRain": "Líkur á úrkomu",
+        "avgWind": "Meðal hámarksvindur",
+        "location": "Staðsetning",
+        "approximateLocation": "Áætlað gildi fyrir stórt svæði",
+        "startPointLocation": "Við upphafsstað",
+        "atStart": "Við upphafsstað",
+        "atFinish": "Við endamark",
+        "date": "Dagsetning",
+        "basedOnYears": "Veðurfar viðburðar á þessum stað og tíma síðustu {{years}} ár — ekki veðurspá.",
+        "unavailable": "Veðurfarsgögn ekki tiltæk"
     },
     "privacy": {
         "title": "Persónuverndarstefna",
@@ -799,6 +815,10 @@
             }
         },
         "changelog": {
+            "v1_17_0": {
+                "title": "Veðurfarsgögn fyrir viðburði, lagfæring á mánaðarsíu o.fl",
+                "description": "Viðburðasíður sýna nú veðurfarsgögn — meðalhita, úrkomu og vind fyrir keppnisdaginn — með sérstökum gildum fyrir start og endamark í löngum hlaupum milli tveggja staða. Icon í flipum vafra birtist skv. hlaupadagskra.is eða 360Runs.com. Villa í 'mánaðar-síum' löguð, seríu-hlaup voru ekki að birtast rétt skv. mánuði. Nýtt gildi fyrir RegistrationStatus: 'Invitational' fyrir viðburði þar sem útvaldir taka þátt, s.s. í bakgarðs-heimsmeistaramótinu. Margar aðrar lagfæringar og test-viðbætur."
+            },
             "v1_16_3": {
                 "title": "Nýr podcast-þáttur, ný logo, nýr banner og lagfæring á vikusíu",
                 "description": "Hlaupadagskra.is og 360Runs.com birta nú sitt eigið logo í uppsetningarborða PWA-forritsins, á heimaskjá, í samfélagsmiðlamyndum og í stjórnborði. Sían \"Þessa viku\"/\"Næstu viku\" skoðar nú hvert hlaup í hlaupaseríu fyrir sig, svo sería langt fram í tímann birtist ekki í viku-síðunni. Nýr podcastþáttur kominn á fjölmiðlasíðu og nýr 900*120 banner með feature flag sem hægt er að birta á vefnum"
@@ -1479,8 +1499,6 @@
         "ticketStatusLabel": "Skráningarstaða",
         "maxParticipants": "Hámarksfjöldi þátttakenda",
         "statusUpcoming": "Óstaðfest",
-        "raceDayWeather": "Veður á leiðinni",
-        "raceDayWeatherDesc": "Núverandi veður og 7 daga spá. Keppnisdagurinn er auðkenndur.",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
         "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
@@ -1648,7 +1666,7 @@
             "AlmostSoldOut": "Skráning: næstum uppselt",
             "SoldOut": "Skráning: fullt",
             "Closed": "Skráning: lokuð",
-            "Invitational": "Skráning: eingöngu eftir boði"
+            "Invitational": "Boðsgestir eingöngu - engin skráning"
         }
     },
     "calendar": {

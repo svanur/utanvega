@@ -110,6 +110,7 @@ function makeDetail(races: RaceDto[]): EventDetailDto {
     alertSeverity: null,
     locationId: null,
     locationName: null,
+    locationType: null,
     scheduleRule: null,
     socialLinks: null,
     nextEditionDate: null,

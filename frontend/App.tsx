@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from '
 import { createAppTheme } from './theme';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useEasterEggs } from './hooks/useEasterEggs';
+import { useFavicon } from './hooks/useFavicon';
 import { useKeepWarm } from './hooks/useKeepWarm';
 import { EasterEggs } from './components/EasterEggs';
 import SpotlightSearch from './components/SpotlightSearch';
@@ -108,6 +109,7 @@ export default function App() {
     const { isEnabled } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
     useKeepWarm();
+    useFavicon();
 
     return (
         <ThemeProvider theme={theme}>

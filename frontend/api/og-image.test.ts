@@ -82,12 +82,12 @@ async function render(request: Request): Promise<{ text: string[]; imgSrcs: stri
  * request (logoUrl()'s preflight) is handled separately from the backend
  * trail request, since a single test often exercises both.
  */
-function stubFetch(responder: (url: string) => Promise<Response> | Response) {
+function stubFetch(responder: (url: string, init?: RequestInit) => Promise<Response> | Response) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      return responder(url);
+      return responder(url, init);
     })
   );
 }
@@ -142,6 +142,19 @@ describe('og-image.ts locale-aware branding', () => {
       expect(imgSrcs).toContain('https://some-preview.vercel.app/icons/hlaupadagskra-icon-512.png');
     });
 
+    it('preflights the logo with a HEAD request, not GET, to avoid downloading the full PNG body', async () => {
+      const methods: (string | undefined)[] = [];
+      stubFetch((url, init) => {
+        if (isLogoRequest(url)) {
+          methods.push(init?.method);
+          return new Response(null, { status: 200 });
+        }
+        return new Response(JSON.stringify(trail), { status: 200 });
+      });
+      await render(makeRequest('slug=esjan-hringur', '360runs.com'));
+      expect(methods).toEqual(['HEAD']);
+    });
+
     it('falls back to the 🏃 emoji, with no img element, when the logo preflight fetch fails', async () => {
       stubFetch((url) =>
         isLogoRequest(url)
@@ -188,6 +201,17 @@ describe('og-image.ts locale-aware branding', () => {
       expect(text).toContain('360Runs');
       expect(text).toContain('All running events in one place');
       expect(imgSrcs).toContain('https://360runs.com/icons/360runs-icon-512.png');
+    });
+
+    it('failed backend fetch (non-ok response): reuses handler()\'s already-resolved logo rather than fetching it again (#1340)', async () => {
+      stubFetch((url) => (isLogoRequest(url) ? new Response(null, { status: 200 }) : new Response(null, { status: 500 })));
+      await render(makeRequest('slug=missing-trail', '360runs.com'));
+      const logoFetchCalls = (fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls
+        .filter(([input]) => {
+          const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url;
+          return isLogoRequest(url);
+        });
+      expect(logoFetchCalls.length).toBeLessThanOrEqual(1);
     });
 
     it('thrown fetch error: degrades gracefully to the 🏃 emoji rather than throwing', async () => {

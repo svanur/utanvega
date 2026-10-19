@@ -42,6 +42,18 @@ export const BRAND_NAME: Record<Locale, string> = {
 };
 
 /**
+ * Favicon path per locale — the real per-host PNGs already used by the PWA
+ * manifest (#1080). frontend/index.html's static `<link rel="icon">` can
+ * only serve one of these as a build-time default (the `is` one, since the
+ * Icelandic host is canonical); useFavicon() swaps it client-side for
+ * visitors on the English host (#1368).
+ */
+export const FAVICON_PATH: Record<Locale, string> = {
+  is: '/icons/hlaupadagskra-icon-192.png',
+  en: '/icons/360runs-icon-192.png',
+};
+
+/**
  * Base tagline per locale, with no brand/URL decoration applied. Single
  * source of truth: og-image.ts's defaultImage() tagline, manifest.ts's
  * IDENTITY.*.description and calendarLinks.ts's SITE_TAGLINE_* each wrap this

@@ -172,6 +172,9 @@ describe('TrailMapView fallbackCenter marker (#1309)', () => {
         // Must reuse the distinct trailIcon (className 'trail-marker'), not silently fall back to
         // userLocationIcon — which means something different to the user (#1309 acceptance).
         expect(markers[0].getAttribute('data-icon-class')).toBe('trail-marker');
+        // #1315: unlike the bare marker this started as, it must carry a Popup identifying the pin
+        // (same shape as the userLocation marker's Popup above) rather than giving no click feedback.
+        expect(markers[0].textContent).toBe('map.eventLocation');
     });
 
     it('does not render a fallback marker when trails is non-empty', () => {

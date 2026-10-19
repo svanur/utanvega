@@ -345,6 +345,55 @@ public class EditionStatusHelpersTests
         Assert.Equal(TicketStatus.Free, result);
     }
 
+    // ─── SeriesRaceDates (#1292) ───
+
+    private static Race MakeRace(DateOnly? dateOfRace, RaceStatus status = RaceStatus.Active) =>
+        new() { DateOfRace = dateOfRace, Status = status };
+
+    [Fact]
+    public void SeriesRaceDates_MixOfDatedAndUndatedRaces_ReturnsOnlyDatedOnes()
+    {
+        var races = new[]
+        {
+            MakeRace(new DateOnly(2026, 4, 1)),
+            MakeRace(null),
+            MakeRace(new DateOnly(2026, 8, 20)),
+        };
+
+        var result = EditionStatusHelpers.SeriesRaceDates(races);
+
+        Assert.Equal([new DateOnly(2026, 4, 1), new DateOnly(2026, 8, 20)], result);
+    }
+
+    [Fact]
+    public void SeriesRaceDates_DatedCancelledRace_IsExcluded()
+    {
+        // #1261: a Cancelled race's date must not count toward the derived min/max.
+        var races = new[]
+        {
+            MakeRace(new DateOnly(2026, 4, 1), RaceStatus.Cancelled),
+            MakeRace(new DateOnly(2026, 8, 20)),
+        };
+
+        var result = EditionStatusHelpers.SeriesRaceDates(races);
+
+        Assert.Equal([new DateOnly(2026, 8, 20)], result);
+    }
+
+    [Fact]
+    public void SeriesRaceDates_AllRacesCancelledOrUndated_ReturnsEmpty()
+    {
+        var races = new[]
+        {
+            MakeRace(new DateOnly(2026, 4, 1), RaceStatus.Cancelled),
+            MakeRace(null),
+        };
+
+        var result = EditionStatusHelpers.SeriesRaceDates(races);
+
+        Assert.Empty(result);
+    }
+
     [Fact]
     public void IsEditionDateDerivedFromRaces_SeriesWithDatedRace_ReturnsTrue()
     {
@@ -536,6 +585,36 @@ public class EditionStatusHelpersTests
             [ongoing, upcoming], today, EffDate, EffEndDate, null, ScheduleEngine);
 
         Assert.Equal(new DateOnly(2026, 10, 20), result);
+    }
+
+    [Fact]
+    public void ResolveNextEditionDate_DatelessEditionWithFutureEndDate_FallsBackToScheduleRule()
+    {
+        // #1327: an edition with Date == null but a future EndDate must not qualify as "next" —
+        // every other edition-scoped field (ongoingEdition/relevantEdition) ignores it because it
+        // has no Date at all, so NextEditionDate must agree and fall through to the ScheduleRule.
+        var today = new DateOnly(2026, 10, 12);
+        var edition = MakeEdition(null, new DateOnly(2026, 10, 31));
+        var scheduleRule = new ScheduleRule { Type = ScheduleType.Fixed, Date = new DateOnly(2027, 9, 25) };
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [edition], today, EffDate, EffEndDate, scheduleRule, ScheduleEngine);
+
+        Assert.Equal(new DateOnly(2027, 9, 25), result);
+    }
+
+    [Fact]
+    public void ResolveNextEditionDate_DatelessEditionWithFutureEndDateAndNoScheduleRule_ReturnsNull()
+    {
+        // Same as above, but with no ScheduleRule to fall back to — the dateless edition must
+        // still be excluded, so the overall result is null rather than its EndDate.
+        var today = new DateOnly(2026, 10, 12);
+        var edition = MakeEdition(null, new DateOnly(2026, 10, 31));
+
+        var result = EditionStatusHelpers.ResolveNextEditionDate(
+            [edition], today, EffDate, EffEndDate, null, ScheduleEngine);
+
+        Assert.Null(result);
     }
 
     [Fact]
