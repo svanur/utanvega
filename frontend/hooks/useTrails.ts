@@ -566,6 +566,10 @@ export interface EventClimate {
     // rather than a precise point — the event's own GPS point, or a Municipality/Place-type
     // Location, is never approximate.
     isApproximate: boolean;
+    // #1415: true when the above coordinate came from the event's own GpxPointLat/Lng — by the
+    // TrailStartPicker convention that's the race's start point, not a route-wide point. Mutually
+    // exclusive with isApproximate: only one of the two qualifiers applies per event.
+    isStartPoint: boolean;
 }
 
 // Historical climate normals for a given (month, day) — an ERA5 reanalysis average going back

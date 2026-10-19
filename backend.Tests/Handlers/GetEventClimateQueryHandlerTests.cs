@@ -201,6 +201,8 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         Assert.Equal(-21.90, result.Lon);
         // #1414: the event's own GPX point is always precise, regardless of any linked Location.
         Assert.False(result.IsApproximate);
+        // #1415: the GPX point is the race's start point, by the TrailStartPicker convention.
+        Assert.True(result.IsStartPoint);
         // #1356: one wide call replaces the former 15 per-year calls on a cache miss.
         handlerMock.Protected().Verify("SendAsync", Times.Exactly(1), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
@@ -232,6 +234,8 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         Assert.Equal(-21.90, result.Lon);
         // #1414: a Municipality/Place-type Location is precise enough — not flagged approximate.
         Assert.False(result.IsApproximate);
+        // #1415: a Location fallback is never the event's own start point, precise or not.
+        Assert.False(result.IsStartPoint);
     }
 
     [Fact]
@@ -256,6 +260,9 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         // #1414: a Region-type Location is a broad fallback — the climate estimate must be
         // flagged approximate so the frontend can signal it.
         Assert.True(result!.IsApproximate);
+        // #1415: approximate and start-point are mutually exclusive — a Location fallback is
+        // never the start point, approximate or not.
+        Assert.False(result.IsStartPoint);
     }
 
     [Fact]
@@ -431,6 +438,22 @@ public class GetEventClimateQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public void Aggregate_IsStartPointParameter_PassesThroughToTheDto()
+    {
+        // #1415: Aggregate doesn't compute isStartPoint itself — it just threads the caller's
+        // value through to the DTO, the same way it already does for isApproximate.
+        var response = MergedResponse(("2024-07-15", 10, 2, 0, 4));
+
+        var defaulted = GetEventClimateQueryHandler.Aggregate(response, [2024], 7, 15, TestWindowDays, 64.13, -21.90);
+        var explicitTrue = GetEventClimateQueryHandler.Aggregate(response, [2024], 7, 15, TestWindowDays, 64.13, -21.90, isApproximate: false, isStartPoint: true);
+
+        Assert.NotNull(defaulted);
+        Assert.False(defaulted!.IsStartPoint);
+        Assert.NotNull(explicitTrue);
+        Assert.True(explicitTrue!.IsStartPoint);
+    }
+
+    [Fact]
     public void Aggregate_NoDataAtAll_ReturnsNull()
     {
         var result = GetEventClimateQueryHandler.Aggregate(null, [2022, 2023, 2024], 7, 15, TestWindowDays, 64.13, -21.90);
@@ -509,6 +532,7 @@ public class GetEventClimateQueryHandlerTests : IDisposable
             targetDay,
             lat,
             lon,
+            false,
             false
         );
     }

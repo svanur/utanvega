@@ -18,6 +18,11 @@ namespace Utanvega.Backend.Application.Weather.Queries;
 // IsApproximate (#1414) flags when that coordinate came from a broad Location (Country/Area/
 // Region) rather than a precise point — a GPX point, or a Municipality/Place-type Location, is
 // never approximate.
+// IsStartPoint (#1415) flags when that coordinate came from the event's own GpxPointLat/Lng — by
+// the TrailStartPicker convention that field is the race's start point, not a route-wide point, so
+// the frontend can label the climate as "at the start" rather than implying it covers the whole
+// trail. Mutually exclusive with IsApproximate: the GPX-pin branch is never approximate, and the
+// Location-fallback branch (approximate or not) is never the start point.
 public record ClimateDto(
     double AverageHigh,
     double AverageLow,
@@ -29,7 +34,8 @@ public record ClimateDto(
     int TargetDay,
     double Lat,
     double Lon,
-    bool IsApproximate
+    bool IsApproximate,
+    bool IsStartPoint
 );
 
 // MediatR query — TargetMonth/TargetDay are a concrete calendar date already resolved by the
@@ -83,11 +89,13 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         // Event's own GPS point first, Location's center as fallback — never a race's trail.
         double lat, lon;
         bool isApproximate;
+        bool isStartPoint;
         if (@event.GpxPointLat is { } gpxLat && @event.GpxPointLng is { } gpxLng)
         {
             lat = gpxLat;
             lon = gpxLng;
             isApproximate = false;
+            isStartPoint = true;
         }
         else if (@event.Location?.Center is { } center)
         {
@@ -96,6 +104,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
             // #1414: only a broad Location (whole country/area/region) makes the climate an
             // estimate — a Municipality/Place-type Location is precise enough to trust as-is.
             isApproximate = @event.Location.Type is LocationType.Country or LocationType.Area or LocationType.Region;
+            isStartPoint = false;
         }
         else
         {
@@ -120,7 +129,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
 
         var response = await FetchArchiveAsync(lat, lon, startDate, endDate, cancellationToken);
 
-        var result = Aggregate(response, years, request.TargetMonth, request.TargetDay, WindowDays, lat, lon, isApproximate);
+        var result = Aggregate(response, years, request.TargetMonth, request.TargetDay, WindowDays, lat, lon, isApproximate, isStartPoint);
         if (result == null)
             return null;
 
@@ -161,7 +170,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
     // no longer pre-windowed per year (#1356), so that filtering happens here instead of in
     // FetchArchiveAsync's start_date/end_date. Internal (not private) so backend.Tests can exercise
     // the aggregation math directly, without mocking HTTP.
-    internal static ClimateDto? Aggregate(OpenMeteoArchiveResponse? response, IReadOnlyList<int> years, int targetMonth, int targetDay, int windowDays, double lat, double lon, bool isApproximate = false)
+    internal static ClimateDto? Aggregate(OpenMeteoArchiveResponse? response, IReadOnlyList<int> years, int targetMonth, int targetDay, int windowDays, double lat, double lon, bool isApproximate = false, bool isStartPoint = false)
     {
         var daily = response?.Daily;
         if (daily == null || daily.Time.Count == 0)
@@ -227,7 +236,8 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
             targetDay,
             lat,
             lon,
-            isApproximate
+            isApproximate,
+            isStartPoint
         );
     }
 }
