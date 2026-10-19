@@ -300,6 +300,7 @@ function buildEventDetailFixture(): EventDetailDto {
     alertSeverity: null,
     locationId: null,
     locationName: null,
+    locationType: null,
     scheduleRule: null,
     socialLinks: null,
     nextEditionDate: null,

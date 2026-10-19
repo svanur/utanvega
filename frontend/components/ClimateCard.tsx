@@ -201,6 +201,14 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                                     <Typography variant="caption" color="text.secondary">
                                         {t('climate.location')}
                                     </Typography>
+                                    {/* #1414: the resolved coordinate came from a broad Location
+                                        (Country/Area/Region) — signal that the numbers above are
+                                        an estimate, not tied to this event's exact spot. */}
+                                    {climate.isApproximate && (
+                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontStyle: 'italic' }}>
+                                            {t('climate.approximateLocation')}
+                                        </Typography>
+                                    )}
                                 </Box>
                             </Stack>
                         )}

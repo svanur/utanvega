@@ -63,6 +63,23 @@ function getHealthChecks(event: EventSummaryDto): HealthCheck[] {
       na: isAd,
     },
     {
+      // #1414: sibling to "GPX Pin" above — that check is a blanket presence check, this one
+      // means "climate will be precise". passed whenever a GPX pin exists (regardless of
+      // location) or the linked Location is a precise Municipality/Place type; na when there's
+      // no location at all (already covered by the "Location" check above, so don't double-flag).
+      label: 'Climate Precision',
+      passed: (event.gpxPointLat != null && event.gpxPointLng != null)
+        || event.locationType === 'Municipality' || event.locationType === 'Place',
+      tooltip: event.gpxPointLat != null
+        ? 'GPX pin set — climate is precise'
+        : event.locationType === 'Municipality' || event.locationType === 'Place'
+          ? `Location type "${event.locationType}" is precise enough`
+          : event.locationId
+            ? `Location type "${event.locationType ?? 'Other'}" is broad — climate will be approximate`
+            : 'No location linked',
+      na: isAd || !event.locationId,
+    },
+    {
       label: 'Organizer',
       passed: !!(event.organizerName || event.organizerWebsite),
       tooltip: event.organizerName

@@ -51,12 +51,13 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         };
     }
 
-    private static Core.Entities.Location CreateTestLocation(double lat, double lng) => new()
+    private static Core.Entities.Location CreateTestLocation(double lat, double lng, LocationType type = LocationType.Place) => new()
     {
         Id = Guid.NewGuid(),
         Name = "Test Location",
         Slug = "test-location-" + Guid.NewGuid(),
         Center = new Point(lng, lat) { SRID = 4326 },
+        Type = type,
     };
 
     // 11 identical days (±5 day window) per year — every mocked HTTP call returns this same body
@@ -172,12 +173,14 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         // event has no Location attached at all.
         Assert.Equal(64.13, result.Lat);
         Assert.Equal(-21.90, result.Lon);
+        // #1414: the event's own GPX point is always precise, regardless of any linked Location.
+        Assert.False(result.IsApproximate);
     }
 
     [Fact]
-    public async Task Handle_EventWithNoGpxPointButLocation_FallsBackToLocationCenter()
+    public async Task Handle_EventWithNoGpxPointButMunicipalityLocation_FallsBackToLocationCenter()
     {
-        var location = CreateTestLocation(64.13, -21.90);
+        var location = CreateTestLocation(64.13, -21.90, LocationType.Municipality);
         var @event = CreateTestEvent("Location Fallback Event", location: location);
         using (var ctx = _factory.CreateContext())
         {
@@ -199,6 +202,32 @@ public class GetEventClimateQueryHandlerTests : IDisposable
         // the event has no GPX point of its own.
         Assert.Equal(64.13, result.Lat);
         Assert.Equal(-21.90, result.Lon);
+        // #1414: a Municipality/Place-type Location is precise enough — not flagged approximate.
+        Assert.False(result.IsApproximate);
+    }
+
+    [Fact]
+    public async Task Handle_EventWithNoGpxPointButRegionLocation_IsFlaggedApproximate()
+    {
+        var location = CreateTestLocation(64.13, -21.90, LocationType.Region);
+        var @event = CreateTestEvent("Broad Location Event", location: location);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Events.Add(@event);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        // #1414: a Region-type Location is a broad fallback — the climate estimate must be
+        // flagged approximate so the frontend can signal it.
+        Assert.True(result!.IsApproximate);
     }
 
     [Fact]

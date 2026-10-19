@@ -562,6 +562,10 @@ export interface EventClimate {
     // name (#1411).
     lat: number;
     lon: number;
+    // #1414: true when the above coordinate came from a broad Location (Country/Area/Region)
+    // rather than a precise point — the event's own GPS point, or a Municipality/Place-type
+    // Location, is never approximate.
+    isApproximate: boolean;
 }
 
 // Historical climate normals for a given (month, day) — an ERA5 reanalysis average going back
