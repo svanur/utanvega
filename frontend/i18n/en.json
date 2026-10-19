@@ -577,6 +577,7 @@
         "avgWind": "Avg. max wind",
         "location": "Location",
         "approximateLocation": "Estimated for a broad area",
+        "startPointLocation": "At the start",
         "date": "Date",
         "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
         "unavailable": "Historical climate data unavailable"
