@@ -815,6 +815,10 @@
             }
         },
         "changelog": {
+            "v1_17_0": {
+                "title": "Veðurfarsgögn fyrir hlaup, vörumerkt táknmynd í flipa og lagfæring á vikusíu",
+                "description": "Viðburðasíður sýna nú veðurfarsgögn — meðalhita, úrkomu og vind fyrir keppnisdaginn — með sérstökum gildum fyrir start og endamark í löngum hlaupum milli tveggja staða. Táknmyndin í vafraflipanum er nú í stíl hvers vefs (Hlaupadagskra.is eða 360Runs.com) í stað sameiginlegrar táknmyndar. Sían \"Þessa viku\"/\"Næstu viku\" var löguð þannig að hún skoðar hvert hlaup í seríu fyrir sig, eftir að galli lét fjarlægar seríur flæða yfir listann. Skráningarstöðu keppnisdags er nú hægt að stilla á \"Boðshlaup\" eða \"Ekki krafist\", og PWA-táknmyndir eru ekki lengur með hvítum bakgrunni."
+            },
             "v1_16_3": {
                 "title": "Nýr podcast-þáttur, ný logo, nýr banner og lagfæring á vikusíu",
                 "description": "Hlaupadagskra.is og 360Runs.com birta nú sitt eigið logo í uppsetningarborða PWA-forritsins, á heimaskjá, í samfélagsmiðlamyndum og í stjórnborði. Sían \"Þessa viku\"/\"Næstu viku\" skoðar nú hvert hlaup í hlaupaseríu fyrir sig, svo sería langt fram í tímann birtist ekki í viku-síðunni. Nýr podcastþáttur kominn á fjölmiðlasíðu og nýr 900*120 banner með feature flag sem hægt er að birta á vefnum"
