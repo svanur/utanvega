@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyFilters, eventFiltersEqual, matchesDistanceBucket, parseDistanceKm, type EventFilters } from './eventFilters';
+import { applyFilters, eventFiltersEqual, eventHasMonthInSet, matchesDistanceBucket, parseDistanceKm, type EventFilters } from './eventFilters';
 import { getWeekRange } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
@@ -157,6 +157,74 @@ describe('applyFilters — month filter', () => {
         ];
         const result = applyFilters(events, { ...DEFAULT_FILTERS, months: [5] }, '', [], false, true);
         expect(result.map(e => e.slug).sort()).toEqual(['july', 'june']);
+    });
+});
+
+// #1427: a Series event's displayDate/nextEditionDate only ever names its season's first race, so
+// the month filter must also consult seriesRaces or it false-negatives on a later month/
+// false-positives every race row for the first month alone (the row-level narrowing itself is
+// covered by filterRowsByMonths in eventUtils.test.ts).
+describe('applyFilters — #1427 Series month filter also consults seriesRaces', () => {
+    it('keeps a Series event whose displayDate is outside the selected month but a seriesRaces date is inside it', () => {
+        const events = [
+            makeEvent({
+                slug: 'series', type: 'Series', displayDate: '2026-10-01', nextEditionDate: null,
+                seriesRaces: [makeSeriesRace({ raceId: 'r1', dateOfRace: '2026-10-01' }), makeSeriesRace({ raceId: 'r2', dateOfRace: '2026-11-15' })],
+            }),
+        ];
+        // November = 10
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, months: [10] }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual(['series']);
+    });
+
+    it('drops a Series event whose displayDate and every seriesRaces date are outside the selected month', () => {
+        const events = [
+            makeEvent({
+                slug: 'series', type: 'Series', displayDate: '2026-10-01', nextEditionDate: null,
+                seriesRaces: [makeSeriesRace({ dateOfRace: '2026-10-01' })],
+            }),
+        ];
+        // December = 11
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, months: [11] }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual([]);
+    });
+
+    it('ignores seriesRaces for a non-Series event — only its own displayDate decides, as before', () => {
+        const events = [
+            makeEvent({ slug: 'race', type: 'Race', displayDate: '2026-10-01', seriesRaces: [makeSeriesRace({ dateOfRace: '2026-11-15' })] }),
+        ];
+        // November = 10
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, months: [10] }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual([]);
+    });
+});
+
+describe('eventHasMonthInSet', () => {
+    it('matches on the event-level displayDate/nextEditionDate month alone for a non-Series event', () => {
+        const event = makeEvent({ type: 'Race', displayDate: '2026-10-01' });
+        expect(eventHasMonthInSet(event, [9])).toBe(true); // October = 9
+        expect(eventHasMonthInSet(event, [10])).toBe(false);
+    });
+
+    it('also matches a Series event via any seriesRaces date', () => {
+        const event = makeEvent({
+            type: 'Series', displayDate: '2026-10-01', nextEditionDate: null,
+            seriesRaces: [makeSeriesRace({ raceId: 'r1', dateOfRace: '2026-10-01' }), makeSeriesRace({ raceId: 'r2', dateOfRace: '2026-12-01' })],
+        });
+        expect(eventHasMonthInSet(event, [11])).toBe(true); // December = 11
+    });
+
+    it('returns false for a Series event with no matching date at all', () => {
+        const event = makeEvent({
+            type: 'Series', displayDate: '2026-10-01', nextEditionDate: null,
+            seriesRaces: [makeSeriesRace({ dateOfRace: '2026-10-01' })],
+        });
+        expect(eventHasMonthInSet(event, [11])).toBe(false);
+    });
+
+    it('returns false when there is no date at all to check', () => {
+        const event = makeEvent({ displayDate: null, nextEditionDate: null });
+        expect(eventHasMonthInSet(event, [0])).toBe(false);
     });
 });
 

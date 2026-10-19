@@ -283,6 +283,21 @@ export function filterRowsByWeekRange(
     return rows.filter(row => !!row.rowDate && row.rowDate >= range.start && row.rowDate <= range.end);
 }
 
+// #1427: same shape and purpose as filterRowsByWeekRange above, for the month-pill filter —
+// eventHasMonthInSet (eventFilters.ts) decides whether a Series event survives at all once any
+// one seriesRaces entry matches a selected month, but keeps the *whole* event, so
+// flattenEventRows still explodes every race into its own row regardless of month. This narrows
+// back down to just the row(s) whose own rowDate's month is actually in `months`. An empty
+// `months` array (no month filter active) is a no-op, so callers can pass it unconditionally
+// rather than branching.
+export function filterRowsByMonths(
+    rows: FlattenedEventRow[],
+    months: number[],
+): FlattenedEventRow[] {
+    if (months.length === 0) return rows;
+    return rows.filter(row => !!row.rowDate && months.includes(new Date(row.rowDate + 'T00:00:00').getMonth()));
+}
+
 // Per-row "days until" for a flattened row — a series-race row has its own dateOfRace (the
 // #1223/#1226 bug was exactly this ternary computed inconsistently in two places), while a plain
 // event row already carries a backend-precomputed daysUntil that must keep being used as-is.

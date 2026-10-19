@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -404,6 +404,56 @@ describe('filterRowsByWeekRange', () => {
         const event = makeEvent({ type: 'Race', displayDate: null, nextEditionDate: null });
         const rows = flattenEventRows([event]);
         expect(filterRowsByWeekRange(rows, { start: '2026-10-19', end: '2026-10-25' })).toEqual([]);
+    });
+});
+
+// #1427: same two-pass pattern as filterRowsByWeekRange above, for the month-pill filter — the
+// event-level check (eventFilters.ts's eventHasMonthInSet) only decides whether to keep the event
+// at all, so without this second pass a Series event kept for one matching month still rendered
+// every other race's row too (e.g. Powerade Vetrarhlaupin's "Nov" filter rendering all 6 Oct-Mar
+// rows instead of just the November one).
+describe('filterRowsByMonths', () => {
+    it('is a no-op when months is empty', () => {
+        const event = makeEvent({ type: 'Race', displayDate: '2026-06-15' });
+        const rows = flattenEventRows([event]);
+        expect(filterRowsByMonths(rows, [])).toEqual(rows);
+    });
+
+    it('discards series-race rows outside the selected months, keeping only the one(s) inside', () => {
+        const october = makeSeriesRace({ raceId: 'oct', dateOfRace: '2026-10-15' });
+        const november = makeSeriesRace({ raceId: 'nov', dateOfRace: '2026-11-15' });
+        const december = makeSeriesRace({ raceId: 'dec', dateOfRace: '2026-12-15' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [october, november, december] });
+        const rows = flattenEventRows([event]);
+        // November = 10
+        const result = filterRowsByMonths(rows, [10]);
+        expect(result).toEqual([{ kind: 'series-race', event, race: november, rowDate: '2026-11-15' }]);
+    });
+
+    it('keeps multiple selected months together, discarding the rest', () => {
+        const october = makeSeriesRace({ raceId: 'oct', dateOfRace: '2026-10-15' });
+        const november = makeSeriesRace({ raceId: 'nov', dateOfRace: '2026-11-15' });
+        const december = makeSeriesRace({ raceId: 'dec', dateOfRace: '2026-12-15' });
+        const event = makeEvent({ type: 'Series', seriesRaces: [october, november, december] });
+        const rows = flattenEventRows([event]);
+        // November = 10, December = 11
+        const result = filterRowsByMonths(rows, [10, 11]);
+        expect(result.map(r => (r.kind === 'series-race' ? r.race.raceId : null))).toEqual(['nov', 'dec']);
+    });
+
+    it('keeps a non-Series event row when its rowDate month is selected, drops it when not', () => {
+        const inMonth = makeEvent({ slug: 'in', type: 'Race', displayDate: '2026-10-20' });
+        const outOfMonth = makeEvent({ slug: 'out', type: 'Race', displayDate: '2026-11-01' });
+        const rows = flattenEventRows([inMonth, outOfMonth]);
+        // October = 9
+        const result = filterRowsByMonths(rows, [9]);
+        expect(result.map(r => r.event.slug)).toEqual(['in']);
+    });
+
+    it('discards a row with a null rowDate', () => {
+        const event = makeEvent({ type: 'Race', displayDate: null, nextEditionDate: null });
+        const rows = flattenEventRows([event]);
+        expect(filterRowsByMonths(rows, [9])).toEqual([]);
     });
 });
 

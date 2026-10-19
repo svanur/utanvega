@@ -74,7 +74,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
 import { applyFilters, eventFiltersEqual, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -513,8 +513,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         // #1333: `upcoming` kept a Series event whole once any one seriesRaces entry qualified for
         // thisWeekOnly/nextWeekOnly, so flattenEventRows above still explodes every race into its
         // own row — narrow back down to just the row(s) actually in the selected week.
-        return filterRowsByWeekRange(rows, weekRange);
-    }, [upcoming, sortBy, weekRange]);
+        // #1427: same narrowing for the month-pill filter — eventHasMonthInSet (eventFilters.ts)
+        // kept a Series event whole once any one seriesRaces entry matched a selected month.
+        return filterRowsByMonths(filterRowsByWeekRange(rows, weekRange), filters.months);
+    }, [upcoming, sortBy, weekRange, filters.months]);
 
     if (loading) {
         return (
@@ -1699,7 +1701,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                     )
                 ) : viewMode === 'table' ? (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
-                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} weekRange={weekRange} />
+                        <EventTableView events={sortedFiltered} userLocation={userLocation} onToggleFavorite={toggleFavoriteEvent} isFavoriteEvent={isFavoriteEvent} weekRange={weekRange} months={filters.months} />
                     </Suspense>
                 ) : (
                     <Suspense fallback={<Box display="flex" justifyContent="center" py={4}><CircularProgress /></Box>}>
