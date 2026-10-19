@@ -816,8 +816,8 @@
         },
         "changelog": {
             "v1_17_0": {
-                "title": "Veðurfarsgögn fyrir hlaup, vörumerkt táknmynd í flipa og lagfæring á vikusíu",
-                "description": "Viðburðasíður sýna nú veðurfarsgögn — meðalhita, úrkomu og vind fyrir keppnisdaginn — með sérstökum gildum fyrir start og endamark í löngum hlaupum milli tveggja staða. Táknmyndin í vafraflipanum er nú í stíl hvers vefs (Hlaupadagskra.is eða 360Runs.com) í stað sameiginlegrar táknmyndar. Sían \"Þessa viku\"/\"Næstu viku\" var löguð þannig að hún skoðar hvert hlaup í seríu fyrir sig, eftir að galli lét fjarlægar seríur flæða yfir listann. Skráningarstöðu keppnisdags er nú hægt að stilla á \"Boðshlaup\" eða \"Ekki krafist\", og PWA-táknmyndir eru ekki lengur með hvítum bakgrunni."
+                "title": "Veðurfarsgögn fyrir viðburði, lagfæring á mánaðarsíu o.fl",
+                "description": "Viðburðasíður sýna nú veðurfarsgögn — meðalhita, úrkomu og vind fyrir keppnisdaginn — með sérstökum gildum fyrir start og endamark í löngum hlaupum milli tveggja staða. Icon í flipum vafra birtist skv. hlaupadagskra.is eða 360Runs.com. Villa í 'mánaðar-síum' löguð, seríu-hlaup voru ekki að birtast rétt skv. mánuði. Nýtt gildi fyrir RegistrationStatus: 'Invitational' fyrir viðburði þar sem útvaldir taka þátt, s.s. í bakgarðs-heimsmeistaramótinu. Margar aðrar lagfæringar og test-viðbætur."
             },
             "v1_16_3": {
                 "title": "Nýr podcast-þáttur, ný logo, nýr banner og lagfæring á vikusíu",
