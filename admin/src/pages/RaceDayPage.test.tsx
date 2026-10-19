@@ -314,4 +314,56 @@ describe('RaceDayPage page-level readiness flags exempt override editions (#1396
     expect(within(notRequiredPaper).getByText('Reg closed').closest('.MuiChip-root')?.className).toContain('MuiChip-colorSuccess');
     expect(within(invitationalPaper2).getByText('Reg closed').closest('.MuiChip-root')?.className).toContain('MuiChip-colorSuccess');
   });
+
+  // #1406: the #1396 fix made isWrapupDone and isSetupReady (RaceDayPage.tsx:507-517) both exempt
+  // NotRequired/Invitational editions via isRegistrationOverride, but the regression test above
+  // only exercised mode === 'wrapup'. This test covers the setup-mode mirror (isSetupReady, the
+  // "Ready to go!" banner) with the same override editions, switched to the conditions isSetupReady
+  // actually checks: races Active (not Completed), eventStatus Confirmed, and a non-empty
+  // registrationUrl — registrationStatus itself stays NotRequired/Invitational throughout, which is
+  // exactly the case isRegistrationOverride exists to exempt from the plain 'Open' check.
+  const activeRace = {
+    name: 'Race A', nameEn: null, distanceLabel: null, distanceLabelEn: null,
+    status: 'Active', ticketStatus: 'Open', sortOrder: 0,
+    activityType: null, startTime: null, cutoffMinutes: null, resultType: null,
+  };
+
+  const notRequiredEditionSetup = {
+    ...notRequiredEdition,
+    registrationUrl: 'https://example.com/register',
+    races: [{ ...activeRace, id: 'race-not-required-setup' }],
+  };
+
+  const invitationalEditionSetup = {
+    ...invitationalEdition2,
+    registrationUrl: 'https://example.com/register',
+    races: [{ ...activeRace, id: 'race-invitational-setup' }],
+  };
+
+  it('shows the setup readiness banner when every edition is NotRequired/Invitational and all other conditions are met', async () => {
+    apiFetchMock.mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('/api/v1/admin/race-day?date=')) {
+        return Promise.resolve([notRequiredEditionSetup, invitationalEditionSetup]);
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/race-day']}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <RaceDayPage onNotify={() => {}} />
+        </LocalizationProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Not Required Run');
+    await screen.findByText('Invitational Run 2');
+
+    // Force setup mode directly rather than relying on defaultMode's date-vs-today comparison,
+    // which would make this test's pass/fail depend on the system clock at run time.
+    fireEvent.click(screen.getByRole('button', { name: 'Setup' }));
+
+    // Banner: page-level isSetupReady agrees with the per-edition "Races active"/"Reg open" chips.
+    await screen.findByText(/Ready to go!/);
+  });
 });
