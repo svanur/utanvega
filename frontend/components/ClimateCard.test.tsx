@@ -11,8 +11,9 @@
 // directly (without react-i18next's HttpBackend/I18nextProvider ceremony) — cheaper than wiring up
 // the app's actual i18n.ts, and sufficient since this test only asserts on the coordinate fallback
 // string and structural presence/absence of the tile, never on translated copy.
-import { describe, it, expect, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { Profiler } from 'react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ClimateCard from './ClimateCard';
@@ -158,6 +159,58 @@ describe('ClimateCard activeTab reset on prop identity change (#1435)', () => {
         );
 
         // activeTab reset to 'start' rather than persisting the old event's "finish" selection.
+        expect(screen.getByText('climate.atStart — Vík')).toBeTruthy();
+        expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
+    });
+});
+
+// #1440: hardens the above reset to happen at render time (an "adjust state during render" bail
+// before commit), not inside a useEffect that fires after an initial commit. React's Profiler
+// onRender fires once per *committed* render of its subtree — a setState call during render
+// (this fix) discards the in-progress render and restarts before ever committing, so the
+// corrected frame is the *only* commit; a useEffect-based reset instead commits once with the
+// stale tab + new data, then a second time after the effect's setState fires. Asserting exactly
+// one onRender call after the prop-identity change is therefore direct evidence that no
+// intermediate render ever pairs the old activeTab with the new climate/finish data.
+describe('ClimateCard activeTab reset happens at render time, not via useEffect (#1440)', () => {
+    it('commits exactly once when climate/finish identity changes on a mounted instance', () => {
+        const onRender = vi.fn();
+        const renderWithProfiler = (climate: EventClimate, finish: EventClimate, locationName: string) => (
+            <Profiler id="climate-card" onRender={onRender}>
+                <ClimateCard
+                    climate={climate}
+                    finish={finish}
+                    loading={false}
+                    error={null}
+                    locationName={locationName}
+                />
+            </Profiler>
+        );
+
+        const { rerender } = render(
+            renderWithProfiler(
+                makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 }),
+                makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 }),
+                'Reykjavík'
+            )
+        );
+
+        fireEvent.click(screen.getByText('climate.atFinish'));
+        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
+        onRender.mockClear();
+
+        // Same instance (no unmount) — new EventClimate objects standing in for a different event.
+        rerender(
+            renderWithProfiler(
+                makeClimate({ averageHigh: 20, lat: 63.4, lon: -19.0 }),
+                makeClimate({ averageHigh: 1, lat: 66.0, lon: -17.0 }),
+                'Vík'
+            )
+        );
+
+        // Exactly one commit — no separate, earlier commit existed where the stale "finish" tab
+        // was paired with Vík's new data before being corrected back to "start".
+        expect(onRender).toHaveBeenCalledTimes(1);
         expect(screen.getByText('climate.atStart — Vík')).toBeTruthy();
         expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
     });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -72,9 +72,20 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
     // client-side transition that reuses the mounted component across events). Reset on prop
     // *identity* change (not deep-equality) so a visitor who switched to "Finish" for event A
     // doesn't see that selection silently carried over onto event B's climate data.
-    useEffect(() => {
-        setActiveTab('start');
-    }, [climate, finish]);
+    // #1440: this reset is done during render ("adjusting state during render", not useEffect —
+    // https://react.dev/reference/react/useState#storing-information-from-previous-renders) so
+    // there is no committed render where the *old* activeTab pairs with the *new* climate/finish.
+    // A useEffect-based reset would still paint that stale-tab frame for one tick before the
+    // effect fires and triggers a second render. Deliberately `useState`, not `useRef`, to store
+    // the previous identity — reading/writing a ref's `.current` during render is unsupported
+    // (react-hooks/refs) and can silently fail to trigger the re-render this depends on.
+    const [prevIdentity, setPrevIdentity] = useState({ climate, finish });
+    if (prevIdentity.climate !== climate || prevIdentity.finish !== finish) {
+        setPrevIdentity({ climate, finish });
+        if (activeTab !== 'start') {
+            setActiveTab('start');
+        }
+    }
 
     if (loading) {
         return (
