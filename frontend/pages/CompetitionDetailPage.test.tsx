@@ -159,6 +159,7 @@ function makeClimate(overrides: Partial<EventClimate> = {}): EventClimate {
         averagePrecipitation: 3.2,
         precipitationChance: 0.3,
         averageMaxWind: 8,
+        averageSunshineHours: 5,
         yearsOfData: 15,
         targetMonth: 11,
         targetDay: 15,

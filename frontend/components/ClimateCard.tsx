@@ -15,6 +15,7 @@ import {
 import HistoryIcon from '@mui/icons-material/History';
 import AirIcon from '@mui/icons-material/Air';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -46,6 +47,22 @@ function getClimateIcon(climate: EventClimate): string {
     if (climate.precipitationChance >= 0.2) return '🌦️';
     if (climate.averageHigh >= 15) return '☀️';
     return '⛅';
+}
+
+// #1446: short qualitative reads for the precipitation-chance and sunshine stats, so a visitor
+// isn't left to interpret "42%" or "6.3 h" on their own — bands mirror getClimateIcon's own
+// precipitationChance thresholds (0.5/0.2) above, for the same "rainy" cutoffs throughout the
+// card. Sunshine bands (8h/4h) are independent, since there's no existing icon threshold for it.
+function getPrecipitationLabelKey(precipitationChance: number): string {
+    if (precipitationChance >= 0.5) return 'climate.rainHeavy';
+    if (precipitationChance >= 0.2) return 'climate.rainModerate';
+    return 'climate.rainLight';
+}
+
+function getSunshineLabelKey(averageSunshineHours: number): string {
+    if (averageSunshineHours >= 8) return 'climate.sunshineHigh';
+    if (averageSunshineHours >= 4) return 'climate.sunshineModerate';
+    return 'climate.sunshineLow';
 }
 
 // Fallback for events with a GPS point but no linked Location to name (#1411) — e.g. "64.15°N,
@@ -123,6 +140,8 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
 
     const precipitationChancePct = Math.round(activeClimate.precipitationChance * 100);
     const icon = getClimateIcon(activeClimate);
+    const precipitationLabelKey = getPrecipitationLabelKey(activeClimate.precipitationChance);
+    const sunshineLabelKey = getSunshineLabelKey(activeClimate.averageSunshineHours);
     // Climate normals have no year of their own (averaged across ~15 past years), so this is
     // deliberately "15. júlí", not a dated "15. júlí 2027" — reusing the same months array other
     // pages already pull from the races namespace rather than duplicating it under climate.
@@ -229,6 +248,20 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
                             rowGap: 1.5,
                         }}
                     >
+                        {/* #1446: sunshine tile positioned before the rain tiles below — a
+                            positive counterbalance stat shouldn't be buried last, where a
+                            visitor skimming the grid would see only rain numbers first. */}
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <WbSunnyIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                            <Box>
+                                <Typography variant="body2" fontWeight="bold">
+                                    {activeClimate.averageSunshineHours.toFixed(1)} h · {t(sunshineLabelKey)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {t('climate.avgSunshine')}
+                                </Typography>
+                            </Box>
+                        </Stack>
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                             <WaterDropIcon fontSize="small" color="action" />
                             <Box>
@@ -244,7 +277,7 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
                             <WaterDropIcon fontSize="small" color="info" />
                             <Box>
                                 <Typography variant="body2" fontWeight="bold">
-                                    {precipitationChancePct}%
+                                    {precipitationChancePct}% · {t(precipitationLabelKey)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.chanceOfRain')}
