@@ -126,3 +126,39 @@ describe('ClimateCard Start/Finish tab (#1430)', () => {
         expect(screen.queryByText('climate.atStart — Reykjavík')).toBeNull();
     });
 });
+
+// #1435: today's single call site (CompetitionDetailPage) remounts ClimateCard between events,
+// so this was unreachable in practice — hardens the assumption for a future client-side
+// transition that could reuse the mounted instance instead of remounting it.
+describe('ClimateCard activeTab reset on prop identity change (#1435)', () => {
+    it('resets activeTab back to "start" when climate/finish props are replaced without unmounting', () => {
+        const { rerender } = render(
+            <ClimateCard
+                climate={makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 })}
+                finish={makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        fireEvent.click(screen.getByText('climate.atFinish'));
+        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
+
+        // Same component instance (no unmount) — new EventClimate objects (different identity,
+        // standing in for a different event's data) via rerender, not a fresh render() call.
+        rerender(
+            <ClimateCard
+                climate={makeClimate({ averageHigh: 20, lat: 63.4, lon: -19.0 })}
+                finish={makeClimate({ averageHigh: 1, lat: 66.0, lon: -17.0 })}
+                loading={false}
+                error={null}
+                locationName="Vík"
+            />
+        );
+
+        // activeTab reset to 'start' rather than persisting the old event's "finish" selection.
+        expect(screen.getByText('climate.atStart — Vík')).toBeTruthy();
+        expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
+    });
+});
