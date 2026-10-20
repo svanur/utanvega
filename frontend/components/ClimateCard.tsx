@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
@@ -66,6 +66,15 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
     // #1430: which point's stats are showing — only switchable when finish is non-null (the
     // start/finish split case). Defaults to 'start', matching the pre-#1430 single-card data.
     const [activeTab, setActiveTab] = useState<'start' | 'finish'>('start');
+
+    // #1435: today's only call site remounts ClimateCard between events, so activeTab never
+    // needs resetting in practice — but nothing guarantees that stays true (e.g. a future
+    // client-side transition that reuses the mounted component across events). Reset on prop
+    // *identity* change (not deep-equality) so a visitor who switched to "Finish" for event A
+    // doesn't see that selection silently carried over onto event B's climate data.
+    useEffect(() => {
+        setActiveTab('start');
+    }, [climate, finish]);
 
     if (loading) {
         return (
