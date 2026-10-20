@@ -79,7 +79,7 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
     // effect fires and triggers a second render. Deliberately `useState`, not `useRef`, to store
     // the previous identity — reading/writing a ref's `.current` during render is unsupported
     // (react-hooks/refs) and can silently fail to trigger the re-render this depends on.
-    const [prevIdentity, setPrevIdentity] = useState({ climate, finish });
+    const [prevIdentity, setPrevIdentity] = useState(() => ({ climate, finish }));
     if (prevIdentity.climate !== climate || prevIdentity.finish !== finish) {
         setPrevIdentity({ climate, finish });
         if (activeTab !== 'start') {
