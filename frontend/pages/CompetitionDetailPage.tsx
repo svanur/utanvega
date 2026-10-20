@@ -1178,7 +1178,12 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     PointToPoint event — a single ClimateCard now takes both points and renders
                     a Start/Finish tab itself rather than this page mounting two Paper instances.
                     Every other event still gets exactly today's single-point card (climate.finish
-                    null, finish prop omitted below, no tab control rendered). */}
+                    null, finish prop omitted below, no tab control rendered).
+                    #1432: when a split exists, the start point comes from the trail's own GPX
+                    start (GetEventClimateQuery's line.StartPoint), not event.GpxPointLat/Lng —
+                    so event.locationName no longer describes it and is omitted, letting
+                    ClimateCard fall back to the formatted start coordinate. Unsplit events keep
+                    locationName unchanged. */}
                 {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate || !climateError) && (
                     <Box sx={{ mt: 3 }}>
                         <ClimateCard
@@ -1186,7 +1191,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             finish={climate?.finish ?? null}
                             loading={climateLoading}
                             error={climateError}
-                            locationName={event?.locationName}
+                            locationName={climate?.finish ? null : event?.locationName}
                         />
                     </Box>
                 )}
