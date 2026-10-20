@@ -823,8 +823,8 @@
         },
         "changelog": {
             "v1_17_1": {
-                "title": "Endurhönnun á veðurkorti: flipar fyrir start/endamark, litað eftir veðri og nýtt sólskinsgildi",
-                "description": "Veðurkortið fyrir hlaup milli tveggja staða sýnir nú veður á start og endamarki í flipum á einu korti í stað tveggja aðskilinna korta, og skiptir þeim aðeins upp þegar hlaupið liggur raunverulega milli tveggja aðskilda staða. Bakgrunnur kortsins er nú litaður eftir veðurflokki dagsins, nýtt sólskinsstundagildi var bætt við og of hátt metin úrkomulíkur löguð. Lagfæringar á útliti koma einnig í veg fyrir að sólskins- og úrkomureitir flæði yfir á litlum skjám."
+                "title": "Uppfærsla á 'Veðurfari viðburðar': flipar fyrir start/endamark, litað eftir veðri og nýtt sólskinsgildi",
+                "description": "Veðurkortið fyrir hlaup milli tveggja staða sýnir nú veður á byrjunarreit og endamarki í flipum á einu korti. Bakgrunnur kortsins er litaður eftir veðurflokki dagsins, nýtt sólskinsstundagildi bætt við og of háar úrkomulíkur lagaðar. Lagfæringar á útliti koma einnig í veg fyrir að sólskins- og úrkomureitir flæði yfir á litlum skjám."
             },
             "v1_17_0": {
                 "title": "Veðurfarsgögn fyrir viðburði, lagfæring á mánaðarsíu o.fl",
