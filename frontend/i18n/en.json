@@ -822,6 +822,10 @@
             }
         },
         "changelog": {
+            "v1_17_1": {
+                "title": "Climate card redesign: start/finish tabs, weather-tinted background, and a sunshine stat",
+                "description": "The climate card for point-to-point races now shows start and finish weather as tabs on a single card instead of two separate ones, and only splits them when the race genuinely spans two distinct locations. Its background is now tinted to match the day's weather category, a sunshine-hours stat was added, and an overstated rain-chance percentage was fixed. Layout fixes also stop the sunshine and precipitation tiles from overflowing on narrow screens."
+            },
             "v1_17_0": {
                 "title": "Historical climate data for races, brand-matched favicons, and a fixed week filter for race series",
                 "description": "Event pages now show historical climate normals — average temperature, precipitation and wind for the race date — with a separate reading for the start and finish of long point-to-point races. The browser tab icon now matches each site's brand (Hlaupadagskra.is or 360Runs.com) instead of a shared one. The \"This week\"/\"Next week\" filter was fixed to check each race in a series individually again, after a regression let a far-future series flood the list. Race-day registration status can now be set to Invitational or Not required, and PWA icons no longer show a white background."
