@@ -309,9 +309,9 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
                         {/* #1446: sunshine tile positioned before the rain tiles below — a
                             positive counterbalance stat shouldn't be buried last, where a
                             visitor skimming the grid would see only rain numbers first. */}
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                             <WbSunnyIcon fontSize="small" sx={{ color: 'warning.main' }} />
-                            <Box>
+                            <Box sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
                                     {activeClimate.averageSunshineHours.toFixed(1)} h · {t(sunshineLabelKey)}
                                 </Typography>
@@ -331,9 +331,9 @@ export default function ClimateCard({ climate, loading, error, locationName, fin
                                 </Typography>
                             </Box>
                         </Stack>
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                             <WaterDropIcon fontSize="small" color="info" />
-                            <Box>
+                            <Box sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
                                     {precipitationChancePct}% · {t(precipitationLabelKey)}
                                 </Typography>

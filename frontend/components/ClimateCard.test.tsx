@@ -216,3 +216,57 @@ describe('ClimateCard activeTab reset happens at render time, not via useEffect 
         expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
     });
 });
+
+// #1451: sunshine and precipitation-chance tiles didn't carry the `minWidth: 0` flex pattern the
+// Location tile (#1413, above) already uses to let its Typography wrap instead of overflowing the
+// row — flagged non-blocking during #1450's review. Asserts the computed style directly (both
+// tiles' outer Stack and inner Box) rather than just checking the longest labels render without
+// throwing, since a missing `minWidth: 0` wouldn't throw either — MUI Typography wraps at spaces
+// on its own; the regression this guards against is a flex child refusing to shrink below its
+// content width, not a thrown error.
+describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
+    it('applies minWidth: 0 to the sunshine tile Stack and Box with the longest Icelandic label', () => {
+        render(
+            <ClimateCard
+                // averageSunshineHours=5 -> getSunshineLabelKey's "moderate" band (>=4, <8),
+                // rendered here as the untranslated key since this test's i18next has no
+                // resources — `climate.sunshineModerate` is Icelandic's longest sunshine label
+                // ("Skiptist á sól og skýjum") in the real app, per the work order.
+                climate={makeClimate({ averageSunshineHours: 5 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        const sunshineText = screen.getByText('5.0 h · climate.sunshineModerate');
+        const sunshineBox = sunshineText.closest('div')!;
+        const sunshineStack = sunshineBox.parentElement!;
+
+        // jsdom's getComputedStyle normalizes MUI's `minWidth: 0` sx value (a bare number,
+        // serialized to the unitless CSS string "0") rather than adding a "px" suffix.
+        expect(getComputedStyle(sunshineBox).minWidth).toBe('0');
+        expect(getComputedStyle(sunshineStack).minWidth).toBe('0');
+    });
+
+    it('applies minWidth: 0 to the precipitation-chance tile Stack and Box with the longest Icelandic label', () => {
+        render(
+            <ClimateCard
+                // precipitationChance=0.6 -> getPrecipitationLabelKey's "heavy" band (>=0.5),
+                // rendered as the untranslated key — `climate.rainHeavy` is Icelandic's "Tíð
+                // rigning" in the real app, per the work order.
+                climate={makeClimate({ precipitationChance: 0.6 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        const precipitationText = screen.getByText('60% · climate.rainHeavy');
+        const precipitationBox = precipitationText.closest('div')!;
+        const precipitationStack = precipitationBox.parentElement!;
+
+        expect(getComputedStyle(precipitationBox).minWidth).toBe('0');
+        expect(getComputedStyle(precipitationStack).minWidth).toBe('0');
+    });
+});
