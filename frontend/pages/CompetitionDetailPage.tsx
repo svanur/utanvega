@@ -532,7 +532,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             ?? undefined;
     }, [event, primaryEdition, visibleRaces]);
 
-    const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
+    const { weather, loading: weatherLoading } = useTrailWeather(weatherTrailSlug);
 
     // #1335: climate is event data, not trail data — the backend resolves the coordinate from the
     // event's own GpxPointLat/Lng, falling back to its Location, so this needs only the event's
