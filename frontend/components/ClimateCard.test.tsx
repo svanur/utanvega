@@ -12,7 +12,7 @@
 // the app's actual i18n.ts, and sufficient since this test only asserts on the coordinate fallback
 // string and structural presence/absence of the tile, never on translated copy.
 import { describe, it, expect, afterEach, beforeAll } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ClimateCard from './ClimateCard';
@@ -79,5 +79,50 @@ describe('ClimateCard Location tile (#1413)', () => {
         );
 
         expect(screen.queryByText('climate.location')).toBeNull();
+    });
+});
+
+// #1430: start/finish is now one card with a Start/Finish tab instead of two ClimateCard
+// instances — covers the header staying fixed, the tab appearing only when finish is passed,
+// and switching it swapping which EventClimate's stats render.
+describe('ClimateCard Start/Finish tab (#1430)', () => {
+    it('renders no tab control and the plain title for a single-point event (finish omitted)', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate()}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('climate.title')).toBeTruthy();
+        expect(screen.queryByText('climate.atStart')).toBeNull();
+        expect(screen.queryByText('climate.atFinish')).toBeNull();
+    });
+
+    it('shows a Start/Finish tab for a split event and swaps stats/location on switch', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 })}
+                finish={makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        // Header stays the plain "Climate Normals" title, never swapped for atStart/atFinish.
+        expect(screen.getByText('climate.title')).toBeTruthy();
+        // Start tab active by default: start's own locationName, prefixed with "At the start".
+        expect(screen.getByText('climate.atStart — Reykjavík')).toBeTruthy();
+
+        fireEvent.click(screen.getByText('climate.atFinish'));
+
+        // Switching to the finish tab swaps the location row to the finish's own coordinate
+        // (never the start's locationName — #1416 review fix, preserved under the single card)
+        // and the "At the finish" wording now labels it.
+        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
+        expect(screen.queryByText('climate.atStart — Reykjavík')).toBeNull();
     });
 });
