@@ -11,8 +11,9 @@
 // directly (without react-i18next's HttpBackend/I18nextProvider ceremony) — cheaper than wiring up
 // the app's actual i18n.ts, and sufficient since this test only asserts on the coordinate fallback
 // string and structural presence/absence of the tile, never on translated copy.
-import { describe, it, expect, afterEach, beforeAll } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { Profiler } from 'react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ClimateCard from './ClimateCard';
@@ -38,6 +39,7 @@ function makeClimate(overrides: Partial<EventClimate> = {}): EventClimate {
         averagePrecipitation: 2,
         precipitationChance: 0.2,
         averageMaxWind: 5,
+        averageSunshineHours: 6,
         yearsOfData: 15,
         targetMonth: 7,
         targetDay: 15,
@@ -79,5 +81,192 @@ describe('ClimateCard Location tile (#1413)', () => {
         );
 
         expect(screen.queryByText('climate.location')).toBeNull();
+    });
+});
+
+// #1430: start/finish is now one card with a Start/Finish tab instead of two ClimateCard
+// instances — covers the header staying fixed, the tab appearing only when finish is passed,
+// and switching it swapping which EventClimate's stats render.
+describe('ClimateCard Start/Finish tab (#1430)', () => {
+    it('renders no tab control and the plain title for a single-point event (finish omitted)', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate()}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('climate.title')).toBeTruthy();
+        expect(screen.queryByText('climate.atStart')).toBeNull();
+        expect(screen.queryByText('climate.atFinish')).toBeNull();
+    });
+
+    it('shows a Start/Finish tab for a split event and swaps stats/location on switch', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 })}
+                finish={makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        // Header stays the plain "Climate Normals" title, never swapped for atStart/atFinish.
+        expect(screen.getByText('climate.title')).toBeTruthy();
+        // Start tab active by default: start's own locationName, prefixed with "At the start".
+        expect(screen.getByText('climate.atStart — Reykjavík')).toBeTruthy();
+
+        fireEvent.click(screen.getByText('climate.atFinish'));
+
+        // Switching to the finish tab swaps the location row to the finish's own coordinate
+        // (never the start's locationName — #1416 review fix, preserved under the single card)
+        // and the "At the finish" wording now labels it.
+        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
+        expect(screen.queryByText('climate.atStart — Reykjavík')).toBeNull();
+    });
+});
+
+// #1435: today's single call site (CompetitionDetailPage) remounts ClimateCard between events,
+// so this was unreachable in practice — hardens the assumption for a future client-side
+// transition that could reuse the mounted instance instead of remounting it.
+describe('ClimateCard activeTab reset on prop identity change (#1435)', () => {
+    it('resets activeTab back to "start" when climate/finish props are replaced without unmounting', () => {
+        const { rerender } = render(
+            <ClimateCard
+                climate={makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 })}
+                finish={makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        fireEvent.click(screen.getByText('climate.atFinish'));
+        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
+
+        // Same component instance (no unmount) — new EventClimate objects (different identity,
+        // standing in for a different event's data) via rerender, not a fresh render() call.
+        rerender(
+            <ClimateCard
+                climate={makeClimate({ averageHigh: 20, lat: 63.4, lon: -19.0 })}
+                finish={makeClimate({ averageHigh: 1, lat: 66.0, lon: -17.0 })}
+                loading={false}
+                error={null}
+                locationName="Vík"
+            />
+        );
+
+        // activeTab reset to 'start' rather than persisting the old event's "finish" selection.
+        expect(screen.getByText('climate.atStart — Vík')).toBeTruthy();
+        expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
+    });
+});
+
+// #1440: hardens the above reset to happen at render time (an "adjust state during render" bail
+// before commit), not inside a useEffect that fires after an initial commit. React's Profiler
+// onRender fires once per *committed* render of its subtree — a setState call during render
+// (this fix) discards the in-progress render and restarts before ever committing, so the
+// corrected frame is the *only* commit; a useEffect-based reset instead commits once with the
+// stale tab + new data, then a second time after the effect's setState fires. Asserting exactly
+// one onRender call after the prop-identity change is therefore direct evidence that no
+// intermediate render ever pairs the old activeTab with the new climate/finish data.
+describe('ClimateCard activeTab reset happens at render time, not via useEffect (#1440)', () => {
+    it('commits exactly once when climate/finish identity changes on a mounted instance', () => {
+        const onRender = vi.fn();
+        const renderWithProfiler = (climate: EventClimate, finish: EventClimate, locationName: string) => (
+            <Profiler id="climate-card" onRender={onRender}>
+                <ClimateCard
+                    climate={climate}
+                    finish={finish}
+                    loading={false}
+                    error={null}
+                    locationName={locationName}
+                />
+            </Profiler>
+        );
+
+        const { rerender } = render(
+            renderWithProfiler(
+                makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 }),
+                makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 }),
+                'Reykjavík'
+            )
+        );
+
+        fireEvent.click(screen.getByText('climate.atFinish'));
+        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
+        onRender.mockClear();
+
+        // Same instance (no unmount) — new EventClimate objects standing in for a different event.
+        rerender(
+            renderWithProfiler(
+                makeClimate({ averageHigh: 20, lat: 63.4, lon: -19.0 }),
+                makeClimate({ averageHigh: 1, lat: 66.0, lon: -17.0 }),
+                'Vík'
+            )
+        );
+
+        // Exactly one commit — no separate, earlier commit existed where the stale "finish" tab
+        // was paired with Vík's new data before being corrected back to "start".
+        expect(onRender).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('climate.atStart — Vík')).toBeTruthy();
+        expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
+    });
+});
+
+// #1451: sunshine and precipitation-chance tiles didn't carry the `minWidth: 0` flex pattern the
+// Location tile (#1413, above) already uses to let its Typography wrap instead of overflowing the
+// row — flagged non-blocking during #1450's review. Asserts the computed style directly (both
+// tiles' outer Stack and inner Box) rather than just checking the longest labels render without
+// throwing, since a missing `minWidth: 0` wouldn't throw either — MUI Typography wraps at spaces
+// on its own; the regression this guards against is a flex child refusing to shrink below its
+// content width, not a thrown error.
+describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
+    it('applies minWidth: 0 to the sunshine tile Stack and Box with the longest Icelandic label', () => {
+        render(
+            <ClimateCard
+                // averageSunshineHours=5 -> getSunshineLabelKey's "moderate" band (>=4, <8),
+                // rendered here as the untranslated key since this test's i18next has no
+                // resources — `climate.sunshineModerate` is Icelandic's longest sunshine label
+                // ("Skiptist á sól og skýjum") in the real app, per the work order.
+                climate={makeClimate({ averageSunshineHours: 5 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        const sunshineText = screen.getByText('5.0 h · climate.sunshineModerate');
+        const sunshineBox = sunshineText.closest('div')!;
+        const sunshineStack = sunshineBox.parentElement!;
+
+        // jsdom's getComputedStyle normalizes MUI's `minWidth: 0` sx value (a bare number,
+        // serialized to the unitless CSS string "0") rather than adding a "px" suffix.
+        expect(getComputedStyle(sunshineBox).minWidth).toBe('0');
+        expect(getComputedStyle(sunshineStack).minWidth).toBe('0');
+    });
+
+    it('applies minWidth: 0 to the precipitation-chance tile Stack and Box with the longest Icelandic label', () => {
+        render(
+            <ClimateCard
+                // precipitationChance=0.6 -> getPrecipitationLabelKey's "heavy" band (>=0.5),
+                // rendered as the untranslated key — `climate.rainHeavy` is Icelandic's "Tíð
+                // rigning" in the real app, per the work order.
+                climate={makeClimate({ precipitationChance: 0.6 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        const precipitationText = screen.getByText('60% · climate.rainHeavy');
+        const precipitationBox = precipitationText.closest('div')!;
+        const precipitationStack = precipitationBox.parentElement!;
+
+        expect(getComputedStyle(precipitationBox).minWidth).toBe('0');
+        expect(getComputedStyle(precipitationStack).minWidth).toBe('0');
     });
 });

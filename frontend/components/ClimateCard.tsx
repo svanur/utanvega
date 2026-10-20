@@ -9,10 +9,14 @@ import {
     Divider,
     IconButton,
     Collapse,
+    ToggleButton,
+    ToggleButtonGroup,
+    useTheme,
 } from '@mui/material';
 import HistoryIcon from '@mui/icons-material/History';
 import AirIcon from '@mui/icons-material/Air';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
+import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -24,12 +28,13 @@ interface ClimateCardProps {
     loading: boolean;
     error: string | null;
     locationName?: string | null;
-    // #1416: set only when this card is one of a start/finish pair (a qualifying PointToPoint
-    // event — see GetEventClimateQueryHandler's ResolvePointToPointEndpointsAsync) — replaces the
-    // generic "Climate normals" header with "At the start"/"At the finish" so the two sections
-    // read as clearly distinct rather than two identical-looking cards. Left undefined for the
-    // ordinary single-card case, which keeps today's unchanged header and behavior.
-    sectionLabel?: 'start' | 'finish';
+    // #1416: only populated for a qualifying PointToPoint event (see
+    // GetEventClimateQueryHandler's ResolvePointToPointEndpointsAsync). #1430: rather than
+    // instantiating a second ClimateCard for it, this now drives a Start/Finish tab within the
+    // single card — climate stays the "Start" data, finish is the "Finish" data shown when the
+    // tab is switched. Left undefined/null for the ordinary single-point case, which keeps
+    // today's unchanged header, layout, and no-tab-control behavior.
+    finish?: EventClimate | null;
 }
 
 // Unlike WeatherCard, there's no WMO weatherCode to key off — climate normals are an aggregate
@@ -45,6 +50,64 @@ function getClimateIcon(climate: EventClimate): string {
     return '⛅';
 }
 
+// #1448: subtle background wash per getClimateIcon's own bucket — reuses that classification
+// rather than re-deriving it, so the two never drift apart. Each pair fades from a low-alpha
+// tint (left) to fully transparent (right), so the Paper's own theme.palette.background.paper
+// still shows through — a wash, not a banner — and text/stat contrast is unaffected since
+// nothing opaque sits behind it. Dark variants use a lower alpha than light ones, since the
+// same alpha reads more strongly against a dark background.
+function getClimateBackground(climate: EventClimate): { light: string; dark: string } {
+    if (climate.averageLow <= 0 && climate.precipitationChance >= 0.3) {
+        // snow — pale blue
+        return {
+            light: 'linear-gradient(135deg, rgba(187, 222, 251, 0.45) 0%, rgba(187, 222, 251, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(100, 181, 246, 0.16) 0%, rgba(100, 181, 246, 0) 100%)',
+        };
+    }
+    if (climate.precipitationChance >= 0.5) {
+        // heavy rain — slate blue
+        return {
+            light: 'linear-gradient(135deg, rgba(144, 164, 174, 0.4) 0%, rgba(144, 164, 174, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(120, 144, 156, 0.18) 0%, rgba(120, 144, 156, 0) 100%)',
+        };
+    }
+    if (climate.precipitationChance >= 0.2) {
+        // showers — light blue
+        return {
+            light: 'linear-gradient(135deg, rgba(179, 229, 252, 0.4) 0%, rgba(179, 229, 252, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(79, 195, 247, 0.14) 0%, rgba(79, 195, 247, 0) 100%)',
+        };
+    }
+    if (climate.averageHigh >= 15) {
+        // sunny — warm yellow
+        return {
+            light: 'linear-gradient(135deg, rgba(255, 224, 130, 0.4) 0%, rgba(255, 224, 130, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(255, 183, 77, 0.14) 0%, rgba(255, 183, 77, 0) 100%)',
+        };
+    }
+    // cloudy — neutral grey
+    return {
+        light: 'linear-gradient(135deg, rgba(207, 216, 220, 0.4) 0%, rgba(207, 216, 220, 0) 100%)',
+        dark: 'linear-gradient(135deg, rgba(144, 164, 174, 0.14) 0%, rgba(144, 164, 174, 0) 100%)',
+    };
+}
+
+// #1446: short qualitative reads for the precipitation-chance and sunshine stats, so a visitor
+// isn't left to interpret "42%" or "6.3 h" on their own — bands mirror getClimateIcon's own
+// precipitationChance thresholds (0.5/0.2) above, for the same "rainy" cutoffs throughout the
+// card. Sunshine bands (8h/4h) are independent, since there's no existing icon threshold for it.
+function getPrecipitationLabelKey(precipitationChance: number): string {
+    if (precipitationChance >= 0.5) return 'climate.rainHeavy';
+    if (precipitationChance >= 0.2) return 'climate.rainModerate';
+    return 'climate.rainLight';
+}
+
+function getSunshineLabelKey(averageSunshineHours: number): string {
+    if (averageSunshineHours >= 8) return 'climate.sunshineHigh';
+    if (averageSunshineHours >= 4) return 'climate.sunshineModerate';
+    return 'climate.sunshineLow';
+}
+
 // Fallback for events with a GPS point but no linked Location to name (#1411) — e.g. "64.15°N,
 // 21.94°W". Rounded to 2 decimals, which is ~1km of precision, plenty for a "where roughly is
 // this" read; no i18n key needed since the format (degree symbol + N/S/E/W) isn't language text.
@@ -57,9 +120,34 @@ function formatCoordinate(lat: number, lon: number): string {
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
 // icon, "usually" framing, no condition chip) so a visitor can't mistake a 15-year average for
 // today's forecast when both cards render on the same event-detail page (#1335).
-export default function ClimateCard({ climate, loading, error, locationName, sectionLabel }: ClimateCardProps) {
+export default function ClimateCard({ climate, loading, error, locationName, finish }: ClimateCardProps) {
     const { t } = useTranslation();
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const [expanded, setExpanded] = useState(false);
+    // #1430: which point's stats are showing — only switchable when finish is non-null (the
+    // start/finish split case). Defaults to 'start', matching the pre-#1430 single-card data.
+    const [activeTab, setActiveTab] = useState<'start' | 'finish'>('start');
+
+    // #1435: today's only call site remounts ClimateCard between events, so activeTab never
+    // needs resetting in practice — but nothing guarantees that stays true (e.g. a future
+    // client-side transition that reuses the mounted component across events). Reset on prop
+    // *identity* change (not deep-equality) so a visitor who switched to "Finish" for event A
+    // doesn't see that selection silently carried over onto event B's climate data.
+    // #1440: this reset is done during render ("adjusting state during render", not useEffect —
+    // https://react.dev/reference/react/useState#storing-information-from-previous-renders) so
+    // there is no committed render where the *old* activeTab pairs with the *new* climate/finish.
+    // A useEffect-based reset would still paint that stale-tab frame for one tick before the
+    // effect fires and triggers a second render. Deliberately `useState`, not `useRef`, to store
+    // the previous identity — reading/writing a ref's `.current` during render is unsupported
+    // (react-hooks/refs) and can silently fail to trigger the re-render this depends on.
+    const [prevIdentity, setPrevIdentity] = useState(() => ({ climate, finish }));
+    if (prevIdentity.climate !== climate || prevIdentity.finish !== finish) {
+        setPrevIdentity({ climate, finish });
+        if (activeTab !== 'start') {
+            setActiveTab('start');
+        }
+    }
 
     if (loading) {
         return (
@@ -90,29 +178,49 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
         );
     }
 
-    const precipitationChancePct = Math.round(climate.precipitationChance * 100);
-    const icon = getClimateIcon(climate);
+    // #1430: finish only ever selectable when it actually exists; otherwise always 'start' (the
+    // single-point case has no tab control to switch away from it in the first place).
+    const activeClimate = activeTab === 'finish' && finish ? finish : climate;
+    const hasFinish = !!finish;
+
+    const precipitationChancePct = Math.round(activeClimate.precipitationChance * 100);
+    const icon = getClimateIcon(activeClimate);
+    // #1448: re-derived from activeClimate (not climate), so switching the Start/Finish tab
+    // (#1430) re-evaluates the wash for whichever point's data is now showing.
+    const background = getClimateBackground(activeClimate);
+    const precipitationLabelKey = getPrecipitationLabelKey(activeClimate.precipitationChance);
+    const sunshineLabelKey = getSunshineLabelKey(activeClimate.averageSunshineHours);
     // Climate normals have no year of their own (averaged across ~15 past years), so this is
     // deliberately "15. júlí", not a dated "15. júlí 2027" — reusing the same months array other
     // pages already pull from the races namespace rather than duplicating it under climate.
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
-    const targetDateLabel = `${climate.targetDay}. ${months[climate.targetMonth - 1]}`;
+    const targetDateLabel = `${activeClimate.targetDay}. ${months[activeClimate.targetMonth - 1]}`;
 
-    // Tied to *this* card's own coordinate — locationName is only trustworthy for the climate it
-    // was resolved for, never copied across a start/finish pair (#1416 review fix): the caller
-    // passes a name only when it actually names this card's coordinate, so the fallback below is
-    // what gives the finish card (which has no reverse-geocoded name of its own) a location string
-    // distinct from the start's, instead of silently inheriting the start's name.
-    const resolvedLocationLabel = locationName || formatCoordinate(climate.lat, climate.lon);
+    // locationName only ever names the start coordinate (CompetitionDetailPage never resolves a
+    // name for the finish point) — tied to *this* card's own active coordinate, never copied
+    // across the start/finish pair (#1416 review fix, kept under #1430's single-card tabs): the
+    // fallback below is what gives the finish tab (which has no reverse-geocoded name of its own)
+    // a location string distinct from the start's, instead of silently inheriting the start's name.
+    const activeLocationName = activeTab === 'start' ? locationName : null;
+    const resolvedLocationLabel = activeLocationName || formatCoordinate(activeClimate.lat, activeClimate.lon);
 
-    // #1416: "At the start — <location>" / "At the finish — <location>" when part of a start/finish
-    // pair; the plain "Climate normals" title otherwise — see the sectionLabel prop doc above.
-    const title = sectionLabel
-        ? `${t(sectionLabel === 'start' ? 'climate.atStart' : 'climate.atFinish')} — ${resolvedLocationLabel}`
-        : t('climate.title');
+    // #1430: header is always the plain "Climate Normals" title now — the "At the start"/"At the
+    // finish" wording moved out of the title and down into the location row below, where it
+    // labels whichever tab is currently active instead of permanently splitting the header.
+    const title = t('climate.title');
 
     return (
-        <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 2 }}>
+        <Paper
+            elevation={1}
+            sx={{
+                p: { xs: 2, sm: 3 },
+                mb: 3,
+                borderRadius: 2,
+                // #1448: only this "real data" Paper gets the tint — the loading/unavailable
+                // Papers above keep their plain background unchanged.
+                backgroundImage: isDark ? background.dark : background.light,
+            }}
+        >
             {/* Clickable header — always visible */}
             <Stack
                 direction="row"
@@ -131,12 +239,12 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
                             <Typography sx={{ fontSize: '1.2rem', lineHeight: 1 }}>{icon}</Typography>
                             <Typography variant="body2" fontWeight="bold">
-                                {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
+                                {Math.round(activeClimate.averageHigh)}° / {Math.round(activeClimate.averageLow)}°C
                             </Typography>
                             <Stack direction="row" alignItems="center" spacing={0.3}>
                                 <AirIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                                 <Typography variant="caption" color="text.secondary">
-                                    {climate.averageMaxWind.toFixed(0)} m/s
+                                    {activeClimate.averageMaxWind.toFixed(0)} m/s
                                 </Typography>
                             </Stack>
                         </Stack>
@@ -150,6 +258,30 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                 </IconButton>
             </Stack>
 
+            {/* #1430: Start/Finish segmented control — only rendered for the start/finish split
+                case (finish non-null), always visible (not nested in the Collapse below) so a
+                visitor can switch points without first expanding the card. Each ToggleButton is
+                forced to 44px min height to meet the mobile touch-target minimum regardless of
+                MUI's default small-size padding; flex: 1 on both keeps the pair from wrapping at
+                the 375px mobile viewport since they always share the row width evenly. */}
+            {hasFinish && (
+                <ToggleButtonGroup
+                    value={activeTab}
+                    exclusive
+                    fullWidth
+                    size="small"
+                    onChange={(_event, value: 'start' | 'finish' | null) => value && setActiveTab(value)}
+                    sx={{ mt: 1.5 }}
+                >
+                    <ToggleButton value="start" sx={{ flex: 1, minHeight: 44 }}>
+                        {t('climate.atStart')}
+                    </ToggleButton>
+                    <ToggleButton value="finish" sx={{ flex: 1, minHeight: 44 }}>
+                        {t('climate.atFinish')}
+                    </ToggleButton>
+                </ToggleButtonGroup>
+            )}
+
             {/* Collapsible content */}
             <Collapse in={expanded}>
                 <Box sx={{ mt: 2 }}>
@@ -157,7 +289,7 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                         <Typography sx={{ fontSize: '2.5rem', lineHeight: 1 }}>{icon}</Typography>
                         <Box>
                             <Typography variant="h5" fontWeight="bold" sx={{ lineHeight: 1.1 }}>
-                                {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
+                                {Math.round(activeClimate.averageHigh)}° / {Math.round(activeClimate.averageLow)}°C
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 {t('climate.avgHighLow')}
@@ -174,22 +306,36 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                             rowGap: 1.5,
                         }}
                     >
+                        {/* #1446: sunshine tile positioned before the rain tiles below — a
+                            positive counterbalance stat shouldn't be buried last, where a
+                            visitor skimming the grid would see only rain numbers first. */}
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+                            <WbSunnyIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                            <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="body2" fontWeight="bold">
+                                    {activeClimate.averageSunshineHours.toFixed(1)} h · {t(sunshineLabelKey)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {t('climate.avgSunshine')}
+                                </Typography>
+                            </Box>
+                        </Stack>
                         <Stack direction="row" alignItems="center" spacing={0.5}>
                             <WaterDropIcon fontSize="small" color="action" />
                             <Box>
                                 <Typography variant="body2" fontWeight="bold">
-                                    {climate.averagePrecipitation.toFixed(1)} mm
+                                    {activeClimate.averagePrecipitation.toFixed(1)} mm
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.avgPrecipitation')}
                                 </Typography>
                             </Box>
                         </Stack>
-                        <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                             <WaterDropIcon fontSize="small" color="info" />
-                            <Box>
+                            <Box sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
-                                    {precipitationChancePct}%
+                                    {precipitationChancePct}% · {t(precipitationLabelKey)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.chanceOfRain')}
@@ -200,7 +346,7 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                             <AirIcon fontSize="small" color="action" />
                             <Box>
                                 <Typography variant="body2" fontWeight="bold">
-                                    {climate.averageMaxWind.toFixed(1)} m/s
+                                    {activeClimate.averageMaxWind.toFixed(1)} m/s
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.avgWind')}
@@ -211,18 +357,24 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                             coordinate rather than disappearing when the event has a GPS point
                             but no linked Location to name it (#1411). Uses the same
                             resolvedLocationLabel as the header above (#1416) — always tied to
-                            this card's own coordinate, never a copy of the other section's name. */}
+                            this card's own active coordinate, never a copy of the other tab's
+                            name. #1430: when finish exists, the bold line is prefixed with
+                            "At the start"/"At the finish" (climate.atStart/atFinish) — wording
+                            moved down from the old split-card title, now labeling whichever tab
+                            is active instead. */}
                         {/* #1413: typeof check, not a bare `&&` truthy test — `0 && 0` is falsy
                             under the old check, hiding this tile for a resolved (0, 0)
                             coordinate exactly like the bug #1411 fixed. Not reachable with real
                             Iceland data (lat/lon never cross either axis here), but kept
                             explicit so this class of bug can't resurface. */}
-                        {(locationName || (typeof climate.lat === 'number' && typeof climate.lon === 'number')) && (
+                        {(activeLocationName || (typeof activeClimate.lat === 'number' && typeof activeClimate.lon === 'number')) && (
                             <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                                 <LocationOnIcon fontSize="small" color="action" />
                                 <Box sx={{ minWidth: 0 }}>
                                     <Typography variant="body2" fontWeight="bold" noWrap>
-                                        {resolvedLocationLabel}
+                                        {hasFinish
+                                            ? `${t(activeTab === 'start' ? 'climate.atStart' : 'climate.atFinish')} — ${resolvedLocationLabel}`
+                                            : resolvedLocationLabel}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
                                         {t('climate.location')}
@@ -234,11 +386,11 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                                         signal it's only the start, not the whole route. The DTO's
                                         resolution logic makes these mutually exclusive, so render
                                         them as alternatives, not both at once. */}
-                                    {climate.isApproximate ? (
+                                    {activeClimate.isApproximate ? (
                                         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontStyle: 'italic' }}>
                                             {t('climate.approximateLocation')}
                                         </Typography>
-                                    ) : climate.isStartPoint ? (
+                                    ) : activeClimate.isStartPoint ? (
                                         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontStyle: 'italic' }}>
                                             {t('climate.startPointLocation')}
                                         </Typography>
@@ -262,7 +414,7 @@ export default function ClimateCard({ climate, loading, error, locationName, sec
                     <Divider sx={{ my: 2 }} />
 
                     <Typography variant="caption" color="text.secondary">
-                        {t('climate.basedOnYears', { years: climate.yearsOfData })}
+                        {t('climate.basedOnYears', { years: activeClimate.yearsOfData })}
                     </Typography>
                 </Box>
             </Collapse>

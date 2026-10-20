@@ -532,7 +532,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             ?? undefined;
     }, [event, primaryEdition, visibleRaces]);
 
-    const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
+    const { weather, loading: weatherLoading } = useTrailWeather(weatherTrailSlug);
 
     // #1335: climate is event data, not trail data — the backend resolves the coordinate from the
     // event's own GpxPointLat/Lng, falling back to its Location, so this needs only the event's
@@ -1174,32 +1174,25 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     data nor an error (#1355) — that's the "no usable climate data" case,
                     which ClimateCard renders as an explicit unavailable message rather than
                     nothing. A real fetch error still suppresses the card, same as before.
-                    #1416: climate.finish is only populated for a qualifying long PointToPoint
-                    event — render it as a second, clearly labeled section rather than averaging
-                    the two into one card. Every other event still gets exactly one card, same as
-                    before (climate.finish null, sectionLabel left undefined on that single card). */}
+                    #1416/#1430: climate.finish is only populated for a qualifying long
+                    PointToPoint event — a single ClimateCard now takes both points and renders
+                    a Start/Finish tab itself rather than this page mounting two Paper instances.
+                    Every other event still gets exactly today's single-point card (climate.finish
+                    null, finish prop omitted below, no tab control rendered).
+                    #1432: when a split exists, the start point comes from the trail's own GPX
+                    start (GetEventClimateQuery's line.StartPoint), not event.GpxPointLat/Lng —
+                    so event.locationName no longer describes it and is omitted, letting
+                    ClimateCard fall back to the formatted start coordinate. Unsplit events keep
+                    locationName unchanged. */}
                 {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate || !climateError) && (
                     <Box sx={{ mt: 3 }}>
                         <ClimateCard
                             climate={climate?.start ?? null}
+                            finish={climate?.finish ?? null}
                             loading={climateLoading}
                             error={climateError}
-                            locationName={event?.locationName}
-                            sectionLabel={climate?.finish ? 'start' : undefined}
+                            locationName={climate?.finish ? null : event?.locationName}
                         />
-                        {/* #1416 review fix: no locationName here — event.locationName names the
-                            event's own point (the start, by #1415's convention), not the trail's
-                            finish coordinate. Omitting it lets ClimateCard fall back to a
-                            coordinate string derived from climate.finish's own lat/lon, so the two
-                            sections never show the same place name for two different points. */}
-                        {climate?.finish && (
-                            <ClimateCard
-                                climate={climate.finish}
-                                loading={climateLoading}
-                                error={climateError}
-                                sectionLabel="finish"
-                            />
-                        )}
                     </Box>
                 )}
 
