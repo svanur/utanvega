@@ -29,3 +29,18 @@ describe('CompetitionDetailPage map section (#1299)', () => {
         expect(source).not.toContain('getCurrentPosition');
     });
 });
+
+// #1438: #1432/#1437 made ClimateCard's locationName prop a ternary
+// (climate?.finish ? null : event?.locationName) so the start-tab card omits
+// event.locationName whenever a start/finish split exists, letting it fall back to the
+// formatted start coordinate instead. ClimateCard.test.tsx covers the fallback-to-coordinate
+// rendering once locationName is null, but nothing exercised the ternary itself, since
+// CompetitionDetailPage has no render-level harness (see #1299 above). Same source-text
+// approach as #1299: assert the shipped ternary text is actually there.
+describe('CompetitionDetailPage climate section (#1438)', () => {
+    it('passes locationName={climate?.finish ? null : event?.locationName} to ClimateCard', () => {
+        const match = source.match(/<ClimateCard\b[\s\S]*?\/>/);
+        expect(match).not.toBeNull();
+        expect(match![0]).toContain('locationName={climate?.finish ? null : event?.locationName}');
+    });
+});
