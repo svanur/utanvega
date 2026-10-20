@@ -554,6 +554,10 @@ export interface EventClimate {
     averagePrecipitation: number;
     precipitationChance: number;
     averageMaxWind: number;
+    // #1446: average daily sunshine_duration (Open-Meteo, converted to hours on the backend) over
+    // the same windowed samples the other averages use — a positive counterbalance to
+    // precipitationChance, which otherwise reads as rainier than it feels.
+    averageSunshineHours: number;
     yearsOfData: number;
     targetMonth: number;
     targetDay: number;

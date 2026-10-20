@@ -32,6 +32,11 @@ public record ClimateDto(
     double AveragePrecipitation,
     double PrecipitationChance,
     double AverageMaxWind,
+    // #1446: average daily sunshine_duration (Open-Meteo reports seconds; converted to hours
+    // here) across the same windowed samples the other averages use — a positive counterbalance
+    // to PrecipitationChance, since a "60% rain chance" reads as rainier than it feels without
+    // some indication of how much sun a visitor can also expect on the same days.
+    double AverageSunshineHours,
     int YearsOfData,
     int TargetMonth,
     int TargetDay,
@@ -65,8 +70,12 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
     private const int YearsOfHistory = 15;
     private const int WindowDays = 5;
 
-    // Open-Meteo reports precipitation in mm; below this a "rainy" day is really just dew/mist noise.
-    private const double MeasurablePrecipitationMm = 0.1;
+    // #1446: a "rain day" is one with at least a full hour of measurable precipitation —
+    // precipitation_hours is Open-Meteo's own count of hours within the day that crossed its
+    // measurable-precipitation floor. Replaces the old precipitation_sum >= 0.1mm test, which
+    // counted a single overnight drizzle the same as an all-day downpour and inflated
+    // PrecipitationChance relative to what "rainy" means to a visitor planning a race.
+    private const double MeasurableRainHours = 1;
 
     // #1416: minimum "effort distance" (DifficultyCalculator's distance_km + elevationGain_m/100)
     // a PointToPoint trail must reach before its start and finish are worth showing as two separate
@@ -322,7 +331,7 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
 
         var url = $"https://archive-api.open-meteo.com/v1/archive?latitude={latStr}&longitude={lonStr}" +
                   $"&start_date={startStr}&end_date={endStr}" +
-                  "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max" +
+                  "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_hours,sunshine_duration,wind_speed_10m_max" +
                   "&timezone=Atlantic/Reykjavik&wind_speed_unit=ms";
 
         try
@@ -362,6 +371,8 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         var lows = new List<double>();
         var precipValues = new List<double>();
         var windValues = new List<double>();
+        var sunshineHoursValues = new List<double>();
+        var precipHoursSamples = 0;
         var wetDays = 0;
         var yearsWithData = new HashSet<int>();
 
@@ -381,15 +392,22 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
             var hi = daily.Temperature2mMax.ElementAtOrDefault(i);
             var lo = daily.Temperature2mMin.ElementAtOrDefault(i);
             var precip = daily.PrecipitationSum.ElementAtOrDefault(i);
+            var precipHours = daily.PrecipitationHours.ElementAtOrDefault(i);
+            var sunshineSeconds = daily.SunshineDuration.ElementAtOrDefault(i);
             var wind = daily.WindSpeed10mMax.ElementAtOrDefault(i);
 
             if (hi.HasValue) highs.Add(hi.Value);
             if (lo.HasValue) lows.Add(lo.Value);
             if (wind.HasValue) windValues.Add(wind.Value);
-            if (precip.HasValue)
+            if (precip.HasValue) precipValues.Add(precip.Value);
+            // #1446: sunshine_duration arrives in seconds — hours is the unit ClimateDto and the
+            // frontend both work in, matching AverageMaxWind/AveragePrecipitation already being
+            // pre-converted to their display units here rather than in the frontend.
+            if (sunshineSeconds.HasValue) sunshineHoursValues.Add(sunshineSeconds.Value / 3600.0);
+            if (precipHours.HasValue)
             {
-                precipValues.Add(precip.Value);
-                if (precip.Value >= MeasurablePrecipitationMm) wetDays++;
+                precipHoursSamples++;
+                if (precipHours.Value >= MeasurableRainHours) wetDays++;
             }
         }
 
@@ -400,8 +418,9 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
             Math.Round(highs.Average(), 1),
             Math.Round(lows.Average(), 1),
             Math.Round(precipValues.Count > 0 ? precipValues.Average() : 0, 1),
-            Math.Round(precipValues.Count > 0 ? (double)wetDays / precipValues.Count : 0, 2),
+            Math.Round(precipHoursSamples > 0 ? (double)wetDays / precipHoursSamples : 0, 2),
             Math.Round(windValues.Count > 0 ? windValues.Average() : 0, 1),
+            Math.Round(sunshineHoursValues.Count > 0 ? sunshineHoursValues.Average() : 0, 1),
             yearsWithData.Count,
             targetMonth,
             targetDay,
@@ -435,6 +454,18 @@ public class OpenMeteoArchiveDaily
 
     [JsonPropertyName("precipitation_sum")]
     public List<double?> PrecipitationSum { get; set; } = [];
+
+    // #1446: hours within the day that crossed Open-Meteo's own measurable-precipitation floor —
+    // the "rain day" test in Aggregate keys off this, not PrecipitationSum, so a single
+    // overnight-drizzle millimeter no longer counts the same as an all-day downpour.
+    [JsonPropertyName("precipitation_hours")]
+    public List<double?> PrecipitationHours { get; set; } = [];
+
+    // #1446: seconds of actual sunshine (not daylight length) — averaged and converted to hours
+    // in Aggregate for ClimateDto.AverageSunshineHours, the positive counterbalance to
+    // PrecipitationChance.
+    [JsonPropertyName("sunshine_duration")]
+    public List<double?> SunshineDuration { get; set; } = [];
 
     [JsonPropertyName("wind_speed_10m_max")]
     public List<double?> WindSpeed10mMax { get; set; } = [];
