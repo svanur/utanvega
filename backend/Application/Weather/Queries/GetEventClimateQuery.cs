@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Application.Events;
 using Utanvega.Backend.Core.Entities;
+using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Weather.Queries;
@@ -76,6 +77,16 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
     // microclimates (coastal start, highland finish, etc.). Adjustable later without a schema
     // change — this is a constant, not a stored threshold.
     private const double MinPointToPointEffortKm = 25;
+
+    // #1431: minimum straight-line (haversine) distance between a PointToPoint trail's start and
+    // finish before the two ends are worth showing as separate climate cards — independent of, and
+    // required in addition to, MinPointToPointEffortKm above. A long/steep effort (e.g. a
+    // switchbacking climb) can still start and finish only a few hundred metres apart, in the same
+    // microclimate, so the effort gate alone isn't enough. Set to 10 km: Iceland's microclimates
+    // (coastal vs. inland, lowland vs. highland) typically shift over single-digit kilometres, so
+    // 10 km is a conservative floor below which two cards would likely show near-identical numbers
+    // anyway. Adjustable later without a schema change — this is a constant, not a stored threshold.
+    private const double MinPointToPointEndpointDistanceKm = 10;
 
     private static readonly TimeSpan CacheDuration = TimeSpan.FromDays(7);
 
@@ -198,9 +209,10 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
     // ongoingEdition/recentlyCompleted/next-upcoming fallback chain) and, within it, the primary
     // trail — the longest non-hidden race's trail (mirroring GetEventQuery.cs:216-222) — then
     // returns its GpxData LineString's start/end coordinates if, and only if, that trail is
-    // PointToPoint and meets MinPointToPointEffortKm. Returns null for every other case (no
-    // relevant edition, no linked trail, wrong TrailType, below threshold, or no/degenerate GPX
-    // geometry) so the caller falls back to the single-coordinate behavior unchanged.
+    // PointToPoint and meets *both* MinPointToPointEffortKm and (#1431) MinPointToPointEndpointDistanceKm.
+    // Returns null for every other case (no relevant edition, no linked trail, wrong TrailType,
+    // below either threshold, or no/degenerate GPX geometry) so the caller falls back to the
+    // single-coordinate behavior unchanged.
     private async Task<(double StartLat, double StartLon, double EndLat, double EndLon)?> ResolvePointToPointEndpointsAsync(Event ev, CancellationToken cancellationToken)
     {
         // Climate has no admin/IncludeHidden variant — always the public view of editions.
@@ -281,7 +293,20 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         if (trail.GpxData is not LineString line || line.NumPoints < 2)
             return null;
 
-        return (line.StartPoint.Y, line.StartPoint.X, line.EndPoint.Y, line.EndPoint.X);
+        var startLat = line.StartPoint.Y;
+        var startLon = line.StartPoint.X;
+        var endLat = line.EndPoint.Y;
+        var endLon = line.EndPoint.X;
+
+        // #1431: effort alone doesn't guarantee the two ends are geographically far apart — also
+        // require a minimum straight-line distance between them, so a hard-but-tight climb (steep
+        // switchbacks, start and finish a few hundred metres apart) doesn't split into two cards
+        // that would show near-identical numbers anyway.
+        var endpointDistanceKm = LocationDetector.HaversineMeters(startLat, startLon, endLat, endLon) / 1000.0;
+        if (endpointDistanceKm < MinPointToPointEndpointDistanceKm)
+            return null;
+
+        return (startLat, startLon, endLat, endLon);
     }
 
     // #1356: a single wide-range call (startDate..endDate spans every year's ±WindowDays window)
