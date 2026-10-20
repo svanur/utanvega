@@ -417,6 +417,82 @@ public class GetEventClimateQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Handle_PointToPointMeetsEffortButEndpointsTooClose_FallsBackToSingleCoordinate()
+    {
+        // 3 km + 2200 m gain = 25 effort-km, right at MinPointToPointEffortKm — but start/finish
+        // are ~0.7 km apart (haversine), well under MinPointToPointEndpointDistanceKm (10): a
+        // steep switchbacking climb, same microclimate at both ends (#1431).
+        var startCoord = new Coordinate(-21.90, 64.13);
+        var endCoord = new Coordinate(-21.91, 64.135);
+        var gpx = GeoFactory.CreateLineString([startCoord, endCoord]);
+
+        var trail = CreateTestTrail(TrailType.PointToPoint, lengthMeters: 3000, elevationGainMeters: 2200, gpxData: gpx);
+        var @event = CreateTestEvent("Steep Short Climb Event", gpxLat: startCoord.Y, gpxLng: startCoord.X);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = CreateTestEdition(@event.Id, today);
+        var race = CreateTestRace(edition.Id, trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.Finish);
+        Assert.True(result.Start.IsStartPoint);
+        // Single archive call — the distance gate fails, so the two-coordinate attempt never happens.
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(1), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_QualifyingPointToPointPrimaryTrail_EndpointsFarEnoughApart_PassesDistanceGate()
+    {
+        // Same fixture as Handle_QualifyingPointToPointPrimaryTrail_ReturnsDistinctStartAndFinishClimate,
+        // asserted here specifically against MinPointToPointEndpointDistanceKm (10 km) via
+        // LocationDetector.HaversineMeters — the reusable implementation this gate is built on.
+        var startCoord = new Coordinate(-21.90, 64.13);
+        var endCoord = new Coordinate(-16.00, 65.50);
+        var endpointDistanceKm = Utanvega.Backend.Core.Services.LocationDetector.HaversineMeters(
+            startCoord.Y, startCoord.X, endCoord.Y, endCoord.X) / 1000.0;
+        Assert.True(endpointDistanceKm >= 10);
+
+        var gpx = GeoFactory.CreateLineString([startCoord, endCoord]);
+        var trail = CreateTestTrail(TrailType.PointToPoint, lengthMeters: 30000, elevationGainMeters: 1000, gpxData: gpx);
+        var @event = CreateTestEvent("Distance Gate Pass Event", gpxLat: startCoord.Y, gpxLng: startCoord.X);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = CreateTestEdition(@event.Id, today);
+        var race = CreateTestRace(edition.Id, trail.Id);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(@event);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var ctx2 = _factory.CreateContext();
+        var handlerMock = MockHandlerReturning(FakeArchiveJson);
+        var handler = new GetEventClimateQueryHandler(ctx2, FactoryFor(handlerMock.Object).Object, _cache, NullLogger<GetEventClimateQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetEventClimateQuery(@event.Slug, 7, 15), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result!.Finish);
+    }
+
+    [Fact]
     public async Task Handle_LoopPrimaryTrailAboveThreshold_FallsBackToSingleCoordinate()
     {
         var gpx = GeoFactory.CreateLineString([new Coordinate(-21.90, 64.13), new Coordinate(-16.00, 65.50)]);
