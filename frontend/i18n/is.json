@@ -575,6 +575,7 @@
         "avgPrecipitation": "Meðalúrkoma",
         "chanceOfRain": "Líkur á úrkomu",
         "avgSunshine": "Meðalsólskin",
+        "sunshineUnit": "klst",
         "avgWind": "Meðal hámarksvindur",
         "rainLight": "Að mestu þurrt",
         "rainModerate": "Stöku skúrir",

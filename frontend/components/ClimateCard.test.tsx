@@ -139,7 +139,9 @@ describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
             />
         );
 
-        const sunshineText = screen.getByText('5.0 h · climate.sunshineModerate');
+        // #1461: the "h" unit now comes from t('climate.sunshineUnit') instead of a literal —
+        // this test's i18next has no resources, so it renders as the untranslated key.
+        const sunshineText = screen.getByText('5.0 climate.sunshineUnit · climate.sunshineModerate');
         const sunshineBox = sunshineText.closest('div')!;
         const sunshineStack = sunshineBox.parentElement!;
 
