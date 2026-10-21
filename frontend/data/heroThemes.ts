@@ -386,6 +386,18 @@ export const HERO_THEMES: HeroTheme[] = [
         priority: 5,
     },
     {
+        id: 'bleiki-dagurinn',
+        name: 'Bleiki dagurinn',
+        description: 'Við hvetjum ykkur til að hlaupa í bleika bolnum í dag svo allar konur sem greinst hafa með krabbamein finni stuðning okkar og samstöðu.',
+        gradient: 'linear-gradient(90deg, #c2185b 0%, #e91e63 50%, #f48fb1 100%)',
+        gradientDark: 'linear-gradient(90deg, #6a0035 0%, #880e4f 50%, #b0507d 100%)',
+        headerLine: 'Bleiki dagurinn 💟',
+        tagline: 'Við hvetjum ykkur til að fara í bleika bolinn í dag svo allar konur sem greinst hafa með krabbamein finni stuðning okkar og samstöðu.',
+        showCountdown: false,
+        holidayKey: 'Bleiki dagurinn',
+        priority: 5,
+    },
+    {
         id: 'fyrsti-vetrardagur',
         name: 'Fyrsti vetrardagur',
         description: 'First Day of Winter — shifts every year (first Saturday after Oct 21).',
