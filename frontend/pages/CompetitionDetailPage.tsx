@@ -1174,24 +1174,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     data nor an error (#1355) — that's the "no usable climate data" case,
                     which ClimateCard renders as an explicit unavailable message rather than
                     nothing. A real fetch error still suppresses the card, same as before.
-                    #1416/#1430: climate.finish is only populated for a qualifying long
-                    PointToPoint event — a single ClimateCard now takes both points and renders
-                    a Start/Finish tab itself rather than this page mounting two Paper instances.
-                    Every other event still gets exactly today's single-point card (climate.finish
-                    null, finish prop omitted below, no tab control rendered).
-                    #1432: when a split exists, the start point comes from the trail's own GPX
-                    start (GetEventClimateQuery's line.StartPoint), not event.GpxPointLat/Lng —
-                    so event.locationName no longer describes it and is omitted, letting
-                    ClimateCard fall back to the formatted start coordinate. Unsplit events keep
-                    locationName unchanged. */}
-                {isEnabled('climate_normals') && climateEventSlug && climateTarget && (climateLoading || climate || !climateError) && (
+                    #1460: the backend only ever resolves climate from event.Location.Center now
+                    (no GPS-pin fallback, no point-to-point split), so an event with no linked
+                    Location can never produce usable climate data — event?.locationName gates the
+                    card out entirely for that case rather than mounting it to show "unavailable". */}
+                {isEnabled('climate_normals') && climateEventSlug && climateTarget && event?.locationName && (climateLoading || climate || !climateError) && (
                     <Box sx={{ mt: 3 }}>
                         <ClimateCard
-                            climate={climate?.start ?? null}
-                            finish={climate?.finish ?? null}
+                            climate={climate}
                             loading={climateLoading}
                             error={climateError}
-                            locationName={climate?.finish ? null : event?.locationName}
+                            locationName={event?.locationName}
                         />
                     </Box>
                 )}

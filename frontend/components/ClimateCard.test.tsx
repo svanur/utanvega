@@ -11,9 +11,8 @@
 // directly (without react-i18next's HttpBackend/I18nextProvider ceremony) — cheaper than wiring up
 // the app's actual i18n.ts, and sufficient since this test only asserts on the coordinate fallback
 // string and structural presence/absence of the tile, never on translated copy.
-import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import { Profiler } from 'react';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ClimateCard from './ClimateCard';
@@ -46,7 +45,6 @@ function makeClimate(overrides: Partial<EventClimate> = {}): EventClimate {
         lat: 64.15,
         lon: -21.94,
         isApproximate: false,
-        isStartPoint: false,
         ...overrides,
     };
 }
@@ -84,11 +82,11 @@ describe('ClimateCard Location tile (#1413)', () => {
     });
 });
 
-// #1430: start/finish is now one card with a Start/Finish tab instead of two ClimateCard
-// instances — covers the header staying fixed, the tab appearing only when finish is passed,
-// and switching it swapping which EventClimate's stats render.
-describe('ClimateCard Start/Finish tab (#1430)', () => {
-    it('renders no tab control and the plain title for a single-point event (finish omitted)', () => {
+// #1460: the Start/Finish tab control was removed along with the point-to-point split — a single
+// ClimateCard now always renders the one resolved climate directly, with no tab/toggle of any
+// kind. This covers that the tab control and its wording are gone for good.
+describe('ClimateCard renders without a Start/Finish tab control (#1460)', () => {
+    it('renders the plain title and no "at start"/"at finish" wording', () => {
         render(
             <ClimateCard
                 climate={makeClimate()}
@@ -101,119 +99,21 @@ describe('ClimateCard Start/Finish tab (#1430)', () => {
         expect(screen.getByText('climate.title')).toBeTruthy();
         expect(screen.queryByText('climate.atStart')).toBeNull();
         expect(screen.queryByText('climate.atFinish')).toBeNull();
+        expect(screen.queryByRole('button', { name: /start/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /finish/i })).toBeNull();
     });
 
-    it('shows a Start/Finish tab for a split event and swaps stats/location on switch', () => {
+    it('renders the locationName directly, with no start/finish prefix', () => {
         render(
             <ClimateCard
-                climate={makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 })}
-                finish={makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 })}
+                climate={makeClimate()}
                 loading={false}
                 error={null}
                 locationName="Reykjavík"
             />
         );
 
-        // Header stays the plain "Climate Normals" title, never swapped for atStart/atFinish.
-        expect(screen.getByText('climate.title')).toBeTruthy();
-        // Start tab active by default: start's own locationName, prefixed with "At the start".
-        expect(screen.getByText('climate.atStart — Reykjavík')).toBeTruthy();
-
-        fireEvent.click(screen.getByText('climate.atFinish'));
-
-        // Switching to the finish tab swaps the location row to the finish's own coordinate
-        // (never the start's locationName — #1416 review fix, preserved under the single card)
-        // and the "At the finish" wording now labels it.
-        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
-        expect(screen.queryByText('climate.atStart — Reykjavík')).toBeNull();
-    });
-});
-
-// #1435: today's single call site (CompetitionDetailPage) remounts ClimateCard between events,
-// so this was unreachable in practice — hardens the assumption for a future client-side
-// transition that could reuse the mounted instance instead of remounting it.
-describe('ClimateCard activeTab reset on prop identity change (#1435)', () => {
-    it('resets activeTab back to "start" when climate/finish props are replaced without unmounting', () => {
-        const { rerender } = render(
-            <ClimateCard
-                climate={makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 })}
-                finish={makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 })}
-                loading={false}
-                error={null}
-                locationName="Reykjavík"
-            />
-        );
-
-        fireEvent.click(screen.getByText('climate.atFinish'));
-        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
-
-        // Same component instance (no unmount) — new EventClimate objects (different identity,
-        // standing in for a different event's data) via rerender, not a fresh render() call.
-        rerender(
-            <ClimateCard
-                climate={makeClimate({ averageHigh: 20, lat: 63.4, lon: -19.0 })}
-                finish={makeClimate({ averageHigh: 1, lat: 66.0, lon: -17.0 })}
-                loading={false}
-                error={null}
-                locationName="Vík"
-            />
-        );
-
-        // activeTab reset to 'start' rather than persisting the old event's "finish" selection.
-        expect(screen.getByText('climate.atStart — Vík')).toBeTruthy();
-        expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
-    });
-});
-
-// #1440: hardens the above reset to happen at render time (an "adjust state during render" bail
-// before commit), not inside a useEffect that fires after an initial commit. React's Profiler
-// onRender fires once per *committed* render of its subtree — a setState call during render
-// (this fix) discards the in-progress render and restarts before ever committing, so the
-// corrected frame is the *only* commit; a useEffect-based reset instead commits once with the
-// stale tab + new data, then a second time after the effect's setState fires. Asserting exactly
-// one onRender call after the prop-identity change is therefore direct evidence that no
-// intermediate render ever pairs the old activeTab with the new climate/finish data.
-describe('ClimateCard activeTab reset happens at render time, not via useEffect (#1440)', () => {
-    it('commits exactly once when climate/finish identity changes on a mounted instance', () => {
-        const onRender = vi.fn();
-        const renderWithProfiler = (climate: EventClimate, finish: EventClimate, locationName: string) => (
-            <Profiler id="climate-card" onRender={onRender}>
-                <ClimateCard
-                    climate={climate}
-                    finish={finish}
-                    loading={false}
-                    error={null}
-                    locationName={locationName}
-                />
-            </Profiler>
-        );
-
-        const { rerender } = render(
-            renderWithProfiler(
-                makeClimate({ averageHigh: 15, lat: 64.15, lon: -21.94 }),
-                makeClimate({ averageHigh: 2, lat: 65.68, lon: -18.1 }),
-                'Reykjavík'
-            )
-        );
-
-        fireEvent.click(screen.getByText('climate.atFinish'));
-        expect(screen.getByText('climate.atFinish — 65.68°N, 18.10°W')).toBeTruthy();
-        onRender.mockClear();
-
-        // Same instance (no unmount) — new EventClimate objects standing in for a different event.
-        rerender(
-            renderWithProfiler(
-                makeClimate({ averageHigh: 20, lat: 63.4, lon: -19.0 }),
-                makeClimate({ averageHigh: 1, lat: 66.0, lon: -17.0 }),
-                'Vík'
-            )
-        );
-
-        // Exactly one commit — no separate, earlier commit existed where the stale "finish" tab
-        // was paired with Vík's new data before being corrected back to "start".
-        expect(onRender).toHaveBeenCalledTimes(1);
-        expect(screen.getByText('climate.atStart — Vík')).toBeTruthy();
-        expect(screen.queryByText('climate.atFinish — 66.00°N, 17.00°W')).toBeNull();
+        expect(screen.getByText('Reykjavík')).toBeTruthy();
     });
 });
 
