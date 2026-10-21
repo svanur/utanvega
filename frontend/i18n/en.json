@@ -575,6 +575,7 @@
         "avgPrecipitation": "Avg. precipitation",
         "chanceOfRain": "Chance of rain",
         "avgSunshine": "Avg. sunshine",
+        "sunshineUnit": "h",
         "avgWind": "Avg. max wind",
         "rainLight": "Mostly dry",
         "rainModerate": "Occasional showers",

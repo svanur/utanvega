@@ -109,11 +109,22 @@ function formatCoordinate(lat: number, lon: number): string {
     return `${Math.abs(lat).toFixed(2)}°${latHemisphere}, ${Math.abs(lon).toFixed(2)}°${lonHemisphere}`;
 }
 
+// #1461: .toFixed() always renders a period, regardless of UI language — wrong for Icelandic,
+// which uses a comma decimal separator. Intl.NumberFormat keyed off i18n.language fixes the
+// separator for every decimal stat on this card (sunshine, precipitation, both wind readings)
+// without touching formatCoordinate above, which is degree-symbol formatting, not language text.
+function formatDecimal(value: number, language: string, fractionDigits = 1): string {
+    return new Intl.NumberFormat(language, {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+    }).format(value);
+}
+
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
 // icon, "usually" framing, no condition chip) so a visitor can't mistake a 15-year average for
 // today's forecast when both cards render on the same event-detail page (#1335).
 export default function ClimateCard({ climate, loading, error, locationName }: ClimateCardProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [expanded, setExpanded] = useState(false);
@@ -197,7 +208,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                             <Stack direction="row" alignItems="center" spacing={0.3}>
                                 <AirIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                                 <Typography variant="caption" color="text.secondary">
-                                    {climate.averageMaxWind.toFixed(0)} m/s
+                                    {formatDecimal(climate.averageMaxWind, i18n.language, 0)} m/s
                                 </Typography>
                             </Stack>
                         </Stack>
@@ -242,7 +253,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                             <WbSunnyIcon fontSize="small" sx={{ color: 'warning.main' }} />
                             <Box sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
-                                    {climate.averageSunshineHours.toFixed(1)} h · {t(sunshineLabelKey)}
+                                    {formatDecimal(climate.averageSunshineHours, i18n.language)} {t('climate.sunshineUnit')} · {t(sunshineLabelKey)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.avgSunshine')}
@@ -253,7 +264,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                             <WaterDropIcon fontSize="small" color="action" />
                             <Box>
                                 <Typography variant="body2" fontWeight="bold">
-                                    {climate.averagePrecipitation.toFixed(1)} mm
+                                    {formatDecimal(climate.averagePrecipitation, i18n.language)} mm
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.avgPrecipitation')}
@@ -275,7 +286,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                             <AirIcon fontSize="small" color="action" />
                             <Box>
                                 <Typography variant="body2" fontWeight="bold">
-                                    {climate.averageMaxWind.toFixed(1)} m/s
+                                    {formatDecimal(climate.averageMaxWind, i18n.language)} m/s
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('climate.avgWind')}
