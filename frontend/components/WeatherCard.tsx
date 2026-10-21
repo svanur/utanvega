@@ -20,6 +20,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { TrailWeather, HourlyForecastDto, DailyForecastDto, WeatherPointDto } from '../hooks/useTrails';
+import { formatDecimal } from '../utils/formatDecimal';
 
 interface WeatherCardProps {
     weather: TrailWeather | null;
@@ -79,7 +80,7 @@ function formatDay(dateStr: string, t: (key: string) => string, locale: string):
     }
 }
 
-function CurrentWeather({ point, label, t }: { point: WeatherPointDto; label: string; t: (key: string, opts?: Record<string, unknown>) => string }) {
+function CurrentWeather({ point, label, t, language }: { point: WeatherPointDto; label: string; t: (key: string, opts?: Record<string, unknown>) => string; language: string }) {
     const weatherCode = point.weatherCode;
     const icon = getWeatherIcon(weatherCode);
     const codeKey = `weather.codes.${weatherCode}`;
@@ -106,16 +107,16 @@ function CurrentWeather({ point, label, t }: { point: WeatherPointDto; label: st
                 <Stack direction="row" alignItems="center" spacing={0.5}>
                     <AirIcon fontSize="small" color="action" />
                     <Typography variant="body2">
-                        {point.windSpeed.toFixed(1)} m/s
+                        {formatDecimal(point.windSpeed, language)} m/s
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                        ({t('weather.gusts')} {point.windGusts.toFixed(1)})
+                        ({t('weather.gusts')} {formatDecimal(point.windGusts, language)})
                     </Typography>
                 </Stack>
                 <Stack direction="row" alignItems="center" spacing={0.5}>
                     <WaterDropIcon fontSize="small" color="action" />
                     <Typography variant="body2">
-                        {point.precipitation.toFixed(1)} mm
+                        {formatDecimal(point.precipitation, language)} mm
                     </Typography>
                 </Stack>
             </Stack>
@@ -216,7 +217,7 @@ function HourlyStrip({ hourly, t }: { hourly: HourlyForecastDto[]; t: (key: stri
     );
 }
 
-function DailyForecast({ daily, t, locale, raceDate }: { daily: DailyForecastDto[]; t: (key: string) => string; locale: string; raceDate?: string | null }) {
+function DailyForecast({ daily, t, locale, language, raceDate }: { daily: DailyForecastDto[]; t: (key: string) => string; locale: string; language: string; raceDate?: string | null }) {
     return (
         <Box>
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
@@ -265,7 +266,7 @@ function DailyForecast({ daily, t, locale, raceDate }: { daily: DailyForecastDto
                             <Stack direction="row" alignItems="center" spacing={0.3}>
                                 <WaterDropIcon sx={{ fontSize: 14, color: 'info.main' }} />
                                 <Typography variant="caption" color="text.secondary">
-                                    {d.precipitationSum.toFixed(1)}mm
+                                    {formatDecimal(d.precipitationSum, language)}mm
                                 </Typography>
                             </Stack>
                         )}
@@ -355,7 +356,7 @@ export default function WeatherCard({ weather, loading, error, raceDate }: Weath
             <Collapse in={expanded}>
                 <Box sx={{ mt: 2 }}>
                     {/* Current conditions at start */}
-                    <CurrentWeather point={weather.current} label={t('weather.atStart')} t={t} />
+                    <CurrentWeather point={weather.current} label={t('weather.atStart')} t={t} language={i18n.language} />
 
                     {/* Summit conditions if available */}
                     {weather.summit && (
@@ -367,7 +368,7 @@ export default function WeatherCard({ weather, loading, error, raceDate }: Weath
                                     {t('weather.atSummit')}
                                 </Typography>
                             </Stack>
-                            <CurrentWeather point={weather.summit} label={t('weather.atSummit')} t={t} />
+                            <CurrentWeather point={weather.summit} label={t('weather.atSummit')} t={t} language={i18n.language} />
                         </>
                     )}
 
@@ -379,7 +380,7 @@ export default function WeatherCard({ weather, loading, error, raceDate }: Weath
                     <Divider sx={{ my: 2 }} />
 
                     {/* Daily forecast */}
-                    <DailyForecast daily={weather.daily} t={t} locale={locale} raceDate={raceDate} />
+                    <DailyForecast daily={weather.daily} t={t} locale={locale} language={i18n.language} raceDate={raceDate} />
                 </Box>
             </Collapse>
         </Paper>

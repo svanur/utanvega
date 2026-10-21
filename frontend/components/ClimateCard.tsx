@@ -20,6 +20,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import type { EventClimate } from '../hooks/useTrails';
+import { formatDecimal } from '../utils/formatDecimal';
 
 interface ClimateCardProps {
     climate: EventClimate | null;
@@ -107,17 +108,6 @@ function formatCoordinate(lat: number, lon: number): string {
     const latHemisphere = lat >= 0 ? 'N' : 'S';
     const lonHemisphere = lon >= 0 ? 'E' : 'W';
     return `${Math.abs(lat).toFixed(2)}°${latHemisphere}, ${Math.abs(lon).toFixed(2)}°${lonHemisphere}`;
-}
-
-// #1461: .toFixed() always renders a period, regardless of UI language — wrong for Icelandic,
-// which uses a comma decimal separator. Intl.NumberFormat keyed off i18n.language fixes the
-// separator for every decimal stat on this card (sunshine, precipitation, both wind readings)
-// without touching formatCoordinate above, which is degree-symbol formatting, not language text.
-function formatDecimal(value: number, language: string, fractionDigits = 1): string {
-    return new Intl.NumberFormat(language, {
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
-    }).format(value);
 }
 
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
