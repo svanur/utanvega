@@ -820,6 +820,10 @@
             }
         },
         "changelog": {
+            "v1_17_1": {
+                "title": "Einfaldað veðurfarskort, og réttir tugabrotspunktar fyrir veðurfar og veður",
+                "description": "Veðurfarskort viðburðasíðna sækir nú veðurfarsgögn eingöngu út frá staðsetningu viðburðar — GPS-punkts/start-endamarks skiptingin felld niður enda flækti hún kortið meira en hún bætti. Tölur með tugabroti og klukkustunda-einingin fyrir sólskinsstundir á veðurfars- og veðurkortum birtast nú með kommu á íslensku útgáfunni í stað punkts, með sameiginlegu sniðverkfæri."
+            },
             "v1_17_0": {
                 "title": "Veðurfarsgögn fyrir viðburði, lagfæring á mánaðarsíu o.fl",
                 "description": "Viðburðasíður sýna nú veðurfarsgögn — meðalhita, úrkomu og vind fyrir keppnisdaginn — með sérstökum gildum fyrir start og endamark í löngum hlaupum milli tveggja staða. Icon í flipum vafra birtist skv. hlaupadagskra.is eða 360Runs.com. Villa í 'mánaðar-síum' löguð, seríu-hlaup voru ekki að birtast rétt skv. mánuði. Nýtt gildi fyrir RegistrationStatus: 'Invitational' fyrir viðburði þar sem útvaldir taka þátt, s.s. í bakgarðs-heimsmeistaramótinu. Margar aðrar lagfæringar og test-viðbætur."

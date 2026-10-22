@@ -820,6 +820,10 @@
             }
         },
         "changelog": {
+            "v1_17_1": {
+                "title": "Simplified climate card, and locale-correct decimals for climate and weather",
+                "description": "The climate card on event pages now resolves weather normals from the event's location only, dropping the GPS-pin/point-to-point start-finish split that made the card more confusing than useful. Decimal numbers and the sunshine-hour unit on the climate and weather cards now render with a comma on the Icelandic site instead of always showing a period, via a shared formatting utility."
+            },
             "v1_17_0": {
                 "title": "Historical climate data for races, brand-matched favicons, and a fixed week filter for race series",
                 "description": "Event pages now show historical climate normals — average temperature, precipitation and wind for the race date — with a separate reading for the start and finish of long point-to-point races. The browser tab icon now matches each site's brand (Hlaupadagskra.is or 360Runs.com) instead of a shared one. The \"This week\"/\"Next week\" filter was fixed to check each race in a series individually again, after a regression let a far-future series flood the list. Race-day registration status can now be set to Invitational or Not required, and PWA icons no longer show a white background."
