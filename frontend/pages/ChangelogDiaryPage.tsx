@@ -52,7 +52,7 @@ const VERSIONS = [
  * Add entries here as they are established.
  */
 const RELEASE_DATES: Record<string, string> = {
-    v1_17_1: '2026-10-20',
+    v1_17_1: '2026-10-22',
     v1_17_0: '2026-10-19',
     v1_16_3: '2026-10-16',
     v1_16_2: '2026-10-12',
@@ -98,7 +98,7 @@ const GITHUB_RELEASES = new Set(['v1_17_1', 'v1_17_0', 'v1_16_3', 'v1_16_2', 'v1
  * none, and that's fine: the tag row is simply omitted for them.
  */
 const TAGS: Partial<Record<string, string[]>> = {
-    v1_17_1: ['frontend', 'events', 'races'],
+    v1_17_1: ['frontend', 'events'],
     v1_17_0: ['admin', 'frontend', 'events', 'races'],
     v1_16_3: ['admin', 'frontend', 'races'],
     v1_16_2: ['frontend', 'events', 'races', 'trails'],

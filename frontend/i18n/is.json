@@ -575,6 +575,7 @@
         "avgPrecipitation": "Meðalúrkoma",
         "chanceOfRain": "Líkur á úrkomu",
         "avgSunshine": "Meðalsólskin",
+        "sunshineUnit": "klst",
         "avgWind": "Meðal hámarksvindur",
         "rainLight": "Að mestu þurrt",
         "rainModerate": "Stöku skúrir",
@@ -584,9 +585,6 @@
         "sunshineHigh": "Að mestu sólríkt",
         "location": "Staðsetning",
         "approximateLocation": "Áætlað gildi fyrir stórt svæði",
-        "startPointLocation": "Við upphafsstað",
-        "atStart": "Við upphafsstað",
-        "atFinish": "Við endamark",
         "date": "Dagsetning",
         "basedOnYears": "Veðurfar viðburðar á þessum stað og tíma síðustu {{years}} ár — ekki veðurspá.",
         "unavailable": "Veðurfarsgögn ekki tiltæk"
@@ -823,8 +821,8 @@
         },
         "changelog": {
             "v1_17_1": {
-                "title": "Uppfærsla á 'Veðurfari viðburðar': flipar fyrir start/endamark, litað eftir veðri og nýtt sólskinsgildi",
-                "description": "Veðurkortið fyrir hlaup milli tveggja staða sýnir nú veður á byrjunarreit og endamarki í flipum á einu korti. Bakgrunnur kortsins er litaður eftir veðurflokki dagsins, nýtt sólskinsstundagildi bætt við og of háar úrkomulíkur lagaðar. Lagfæringar á útliti koma einnig í veg fyrir að sólskins- og úrkomureitir flæði yfir á litlum skjám."
+                "title": "Einfaldað veðurfarskort, og réttir tugabrotspunktar fyrir veðurfar og veður",
+                "description": "Veðurfarskort viðburðasíðna sækir nú veðurfarsgögn eingöngu út frá staðsetningu viðburðar — GPS-punkts/start-endamarks skiptingin felld niður enda flækti hún kortið meira en hún bætti. Tölur með tugabroti og klukkustunda-einingin fyrir sólskinsstundir á veðurfars- og veðurkortum birtast nú með kommu á íslensku útgáfunni í stað punkts, með sameiginlegu sniðverkfæri."
             },
             "v1_17_0": {
                 "title": "Veðurfarsgögn fyrir viðburði, lagfæring á mánaðarsíu o.fl",

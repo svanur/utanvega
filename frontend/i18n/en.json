@@ -575,6 +575,7 @@
         "avgPrecipitation": "Avg. precipitation",
         "chanceOfRain": "Chance of rain",
         "avgSunshine": "Avg. sunshine",
+        "sunshineUnit": "h",
         "avgWind": "Avg. max wind",
         "rainLight": "Mostly dry",
         "rainModerate": "Occasional showers",
@@ -584,9 +585,6 @@
         "sunshineHigh": "Mostly sunny",
         "location": "Location",
         "approximateLocation": "Estimated for a broad area",
-        "startPointLocation": "At the start",
-        "atStart": "At the start",
-        "atFinish": "At the finish",
         "date": "Date",
         "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
         "unavailable": "Historical climate data unavailable"
@@ -823,8 +821,8 @@
         },
         "changelog": {
             "v1_17_1": {
-                "title": "Climate card redesign: start/finish tabs, weather-tinted background, and a sunshine stat",
-                "description": "The climate card for point-to-point races now shows start and finish weather as tabs on a single card instead of two separate ones, and only splits them when the race genuinely spans two distinct locations. Its background is now tinted to match the day's weather category, a sunshine-hours stat was added, and an overstated rain-chance percentage was fixed. Layout fixes also stop the sunshine and precipitation tiles from overflowing on narrow screens."
+                "title": "Simplified climate card, and locale-correct decimals for climate and weather",
+                "description": "The climate card on event pages now resolves weather normals from the event's location only, dropping the GPS-pin/point-to-point start-finish split that made the card more confusing than useful. Decimal numbers and the sunshine-hour unit on the climate and weather cards now render with a comma on the Icelandic site instead of always showing a period, via a shared formatting utility."
             },
             "v1_17_0": {
                 "title": "Historical climate data for races, brand-matched favicons, and a fixed week filter for race series",

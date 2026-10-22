@@ -52,7 +52,7 @@ vi.mock('../hooks/useEvents', () => ({
 }));
 
 const { mockClimateResult } = vi.hoisted(() => ({
-    mockClimateResult: { current: { climate: null as { start: EventClimate; finish: EventClimate | null } | null, loading: false, error: null as string | null } },
+    mockClimateResult: { current: { climate: null as EventClimate | null, loading: false, error: null as string | null } },
 }));
 vi.mock('../hooks/useTrails', () => ({
     useTrailWeather: () => ({ weather: null, loading: false, error: null }),
@@ -166,7 +166,6 @@ function makeClimate(overrides: Partial<EventClimate> = {}): EventClimate {
         lat: 64.25,
         lon: -21.13,
         isApproximate: false,
-        isStartPoint: false,
         ...overrides,
     };
 }
@@ -217,14 +216,14 @@ describe('CompetitionDetailPage map section (#1299)', () => {
     });
 });
 
-// #1438: #1432/#1437 made ClimateCard's locationName prop a ternary
-// (climate?.finish ? null : event?.locationName) so the start-tab card omits event.locationName
-// whenever a start/finish split exists, letting it fall back to the formatted start coordinate.
-// ClimateCard.test.tsx covers the fallback-to-coordinate rendering once locationName is null;
-// this covers the ternary itself, rendered from CompetitionDetailPage.
-describe('CompetitionDetailPage climate section (#1438)', () => {
-    it('passes locationName={event.locationName} to ClimateCard when climate.finish is absent', () => {
-        mockClimateResult.current = { climate: { start: makeClimate(), finish: null }, loading: false, error: null };
+// #1460: dropped the GPS-pin/point-to-point split — ClimateCard now only ever mounts for an event
+// with a linked Location (event.locationName), and when it does, locationName is passed straight
+// through unconditionally (no ternary driven by a start/finish split, since that split no longer
+// exists). ClimateCard.test.tsx covers the fallback-to-coordinate rendering when locationName is
+// null; this covers the render gate and prop-passing itself, from CompetitionDetailPage.
+describe('CompetitionDetailPage climate section (#1460)', () => {
+    it('mounts ClimateCard with locationName={event.locationName} when the event has a linked Location', () => {
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
 
         renderCompetitionDetailPage(makeEvent({ locationName: 'Thingvellir' }));
 
@@ -233,17 +232,11 @@ describe('CompetitionDetailPage climate section (#1438)', () => {
         expect(lastCallProps.locationName).toBe('Thingvellir');
     });
 
-    it('passes locationName={null} to ClimateCard when climate.finish is present', () => {
-        mockClimateResult.current = {
-            climate: { start: makeClimate(), finish: makeClimate({ isStartPoint: true }) },
-            loading: false,
-            error: null,
-        };
+    it('never mounts ClimateCard when the event has no linked Location, even with gpxPointLat/Lng set', () => {
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
 
-        renderCompetitionDetailPage(makeEvent({ locationName: 'Thingvellir' }));
+        renderCompetitionDetailPage(makeEvent({ locationName: null, gpxPointLat: 64.25, gpxPointLng: -21.13 }));
 
-        expect(climateCardMock).toHaveBeenCalled();
-        const lastCallProps = climateCardMock.mock.calls.at(-1)![0] as { locationName: unknown };
-        expect(lastCallProps.locationName).toBeNull();
+        expect(climateCardMock).not.toHaveBeenCalled();
     });
 });
