@@ -571,7 +571,7 @@
     },
     "climate": {
         "title": "Climate Normals",
-        "avgHighLow": "Average high / low",
+        "avgHighLow": "Average low to high",
         "avgPrecipitation": "Avg. precipitation",
         "chanceOfRain": "Chance of rain",
         "avgSunshine": "Avg. sunshine",
@@ -586,7 +586,7 @@
         "location": "Location",
         "approximateLocation": "Estimated for a broad area",
         "date": "Date",
-        "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
+        "basedOnYears": "An overview of weather conditions in the area over the past {{years}} years, during the time the event takes place. — This is not a probability calculation or a forecast for the weather at the next event. You can click 'View trail' above to see weather forecast.",
         "unavailable": "Historical climate data unavailable"
     },
     "privacy": {

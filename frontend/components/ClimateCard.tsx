@@ -193,7 +193,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
                             <Typography sx={{ fontSize: '1.2rem', lineHeight: 1 }}>{icon}</Typography>
                             <Typography variant="body2" fontWeight="bold">
-                                {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
+                                {Math.round(climate.averageLow)} - {Math.round(climate.averageHigh)} °C
                             </Typography>
                             <Stack direction="row" alignItems="center" spacing={0.3}>
                                 <AirIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
@@ -219,7 +219,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         <Typography sx={{ fontSize: '2.5rem', lineHeight: 1 }}>{icon}</Typography>
                         <Box>
                             <Typography variant="h5" fontWeight="bold" sx={{ lineHeight: 1.1 }}>
-                                {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
+                                {Math.round(climate.averageLow)} - {Math.round(climate.averageHigh)} °C
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 {t('climate.avgHighLow')}
