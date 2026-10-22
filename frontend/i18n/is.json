@@ -570,10 +570,10 @@
         }
     },
     "climate": {
-        "title": "Veðurfar viðburðar",
-        "avgHighLow": "Meðalhámark / meðallágmark",
+        "title": "Veðurfar síðustu ára",
+        "avgHighLow": "Meðallágmark - meðalhámark",
         "avgPrecipitation": "Meðalúrkoma",
-        "chanceOfRain": "Líkur á úrkomu",
+        "chanceOfRain": "Líkur á einhverri úrkomu á svæðinu",
         "avgSunshine": "Meðalsólskin",
         "sunshineUnit": "klst",
         "avgWind": "Meðal hámarksvindur",
@@ -581,13 +581,13 @@
         "rainModerate": "Stöku skúrir",
         "rainHeavy": "Tíð rigning",
         "sunshineLow": "Að mestu skýjað",
-        "sunshineModerate": "Skiptist á sól og skýjum",
+        "sunshineModerate": "Hálfskýjað",
         "sunshineHigh": "Að mestu sólríkt",
         "location": "Staðsetning",
         "approximateLocation": "Áætlað gildi fyrir stórt svæði",
         "date": "Dagsetning",
-        "basedOnYears": "Veðurfar viðburðar á þessum stað og tíma síðustu {{years}} ár — ekki veðurspá.",
-        "unavailable": "Veðurfarsgögn ekki tiltæk"
+        "basedOnYears": "Yfirlit yfir veðurfar á viðkomandi svæði síðustu {{years}} ár á þeim tíma sem viðburður er haldinn. — Ekki líkindareikningur eða spá um veðurfar næsta viðburðar. Þú getur smellt á 'Skoða leið' hér að ofan til að sjá veðurspá.",
+        "unavailable": "Gögn um veðurfar því miður ekki tiltæk fyrir þetta svæði."
     },
     "privacy": {
         "title": "Persónuverndarstefna",
