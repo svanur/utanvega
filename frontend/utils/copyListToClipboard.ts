@@ -54,26 +54,37 @@ export function formatEventListHeader(dates: string[], t: TFunc): string {
 // Builds the full clipboard text for the events list: a date header, then one "<day> <date>."
 // line per distinct date with each event/race name bulleted underneath — ports the shape of
 // admin's handleCopyAgenda, but bilingual (races.weekdaysShort/races.months come from i18n rather
-// than the admin util's Icelandic-only MONTHS_IS_FULL/inline DAY_NAMES). Rows with no date are
-// dropped — there's no date line to group them under. Returns '' when nothing is copyable.
+// than the admin util's Icelandic-only MONTHS_IS_FULL/inline DAY_NAMES). Rows with no date (an
+// unconfirmed/TBD edition) still render as a visible card on RacesPage, so they are NOT dropped —
+// that would silently paste fewer lines than are on screen (#1488 review) — but grouped last,
+// under races.noDate, since there's no date to sort them by. Returns '' when nothing is copyable.
 export function formatEventListForClipboard(rows: CopyableEventRow[], t: TFunc): string {
     const byDate = new Map<string, string[]>();
+    const undated: string[] = [];
     for (const row of rows) {
-        if (!row.dateStr) continue;
+        if (!row.dateStr) { undated.push(row.name); continue; }
         if (!byDate.has(row.dateStr)) byDate.set(row.dateStr, []);
         byDate.get(row.dateStr)!.push(row.name);
     }
-    if (byDate.size === 0) return '';
+    if (byDate.size === 0 && undated.length === 0) return '';
 
     const sortedDates = [...byDate.keys()].sort();
     const dayNames = t('races.weekdaysShort', { returnObjects: true }) as unknown as string[];
     const months = t('races.months', { returnObjects: true }) as unknown as string[];
 
-    const lines: string[] = [formatEventListHeader(sortedDates, t), ''];
-    for (const dateStr of sortedDates) {
-        const d = new Date(dateStr + 'T00:00:00');
-        lines.push(`${dayNames[d.getDay()]} ${d.getDate()}. ${months[d.getMonth()]}`);
-        for (const name of byDate.get(dateStr)!) lines.push(`  • ${name}`);
+    const lines: string[] = [];
+    if (sortedDates.length > 0) {
+        lines.push(formatEventListHeader(sortedDates, t), '');
+        for (const dateStr of sortedDates) {
+            const d = new Date(dateStr + 'T00:00:00');
+            lines.push(`${dayNames[d.getDay()]} ${d.getDate()}. ${months[d.getMonth()]}`);
+            for (const name of byDate.get(dateStr)!) lines.push(`  • ${name}`);
+            lines.push('');
+        }
+    }
+    if (undated.length > 0) {
+        lines.push(t('races.noDate'));
+        for (const name of undated) lines.push(`  • ${name}`);
         lines.push('');
     }
     return lines.join('\n').trimEnd();

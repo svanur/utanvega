@@ -14,9 +14,11 @@ const WEEKDAYS_SHORT_IS = ['Sun', 'Mán', 'Þri', 'Mið', 'Fim', 'Fös', 'Lau'];
 function makeT(lang: 'en' | 'is') {
     const months = lang === 'en' ? MONTHS_EN : MONTHS_IS;
     const weekdaysShort = lang === 'en' ? WEEKDAYS_SHORT_EN : WEEKDAYS_SHORT_IS;
+    const noDate = lang === 'en' ? 'Date TBD' : 'Dagsetning óákveðin';
     return (key: string) => {
         if (key === 'races.months') return months as unknown as string;
         if (key === 'races.weekdaysShort') return weekdaysShort as unknown as string;
+        if (key === 'races.noDate') return noDate;
         return key;
     };
 }
@@ -142,8 +144,35 @@ describe('toCopyableEventRows', () => {
 });
 
 describe('formatEventListForClipboard', () => {
-    it('returns an empty string when no row has a date', () => {
-        expect(formatEventListForClipboard([{ dateStr: null, name: 'Dateless Event' }], makeT('is'))).toBe('');
+    it('returns an empty string for an empty row list', () => {
+        expect(formatEventListForClipboard([], makeT('is'))).toBe('');
+    });
+
+    // #1488 review: an undated/unconfirmed row still renders as a visible card on RacesPage, so
+    // it must not be silently dropped from the copied text — it has nowhere to go under a date
+    // header, so it's grouped last under races.noDate instead.
+    it('keeps undated rows, grouped last under races.noDate, when every row is dateless', () => {
+        const text = formatEventListForClipboard([{ dateStr: null, name: 'Dateless Event' }], makeT('is'));
+        expect(text).toBe(['Dagsetning óákveðin', '  • Dateless Event'].join('\n'));
+    });
+
+    it('keeps undated rows after the dated groups in a mixed dated/undated list', () => {
+        const text = formatEventListForClipboard(
+            [
+                { dateStr: '2026-09-20', name: 'Hlaup A' },
+                { dateStr: null, name: 'Óstaðfest hlaup' },
+            ],
+            makeT('is'),
+        );
+        expect(text).toBe([
+            '20. september 2026',
+            '',
+            'Sun 20. september',
+            '  • Hlaup A',
+            '',
+            'Dagsetning óákveðin',
+            '  • Óstaðfest hlaup',
+        ].join('\n'));
     });
 
     it('groups same-date rows under one date header, bulleted with "  • "', () => {
