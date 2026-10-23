@@ -26,6 +26,8 @@ interface FieldDef {
   label: string;
   getIs: (item: EntityItem) => string | null | undefined;
   getEn: (item: EntityItem) => string | null | undefined;
+  /** Set false for proper-noun fields (e.g. Name) that must be copied verbatim, never run through DeepL. Defaults to true. */
+  translatable?: boolean;
 }
 
 type EntityKind = 'Event' | 'Edition' | 'Race' | 'Trail' | 'Location' | 'Organizer' | 'Tag';
@@ -44,7 +46,7 @@ interface EntityItem {
 // ─── field definitions ────────────────────────────────────────────────────────
 
 const EVENT_FIELDS: FieldDef[] = [
-  { label: 'Name',        getIs: r => (r.raw as EventDetailDto).name,         getEn: r => (r.raw as EventDetailDto).nameEn },
+  { label: 'Name',        getIs: r => (r.raw as EventDetailDto).name,         getEn: r => (r.raw as EventDetailDto).nameEn, translatable: false },
   { label: 'Description', getIs: r => (r.raw as EventDetailDto).description,  getEn: r => (r.raw as EventDetailDto).descriptionEn },
   { label: 'Organizer',   getIs: r => (r.raw as EventDetailDto).organizerName,getEn: r => (r.raw as EventDetailDto).organizerNameEn },
   { label: 'Alert',       getIs: r => (r.raw as EventDetailDto).alertMessage, getEn: r => (r.raw as EventDetailDto).alertMessageEn },
@@ -56,19 +58,19 @@ const EDITION_FIELDS: FieldDef[] = [
 ];
 
 const RACE_FIELDS: FieldDef[] = [
-  { label: 'Name',         getIs: r => (r.raw as RaceDto).name,                getEn: r => (r.raw as RaceDto).nameEn },
+  { label: 'Name',         getIs: r => (r.raw as RaceDto).name,                getEn: r => (r.raw as RaceDto).nameEn, translatable: false },
   { label: 'Description',  getIs: r => (r.raw as RaceDto).description,         getEn: r => (r.raw as RaceDto).descriptionEn },
   { label: 'CertifiedBy',  getIs: r => (r.raw as RaceDto).certifiedBy,         getEn: r => (r.raw as RaceDto).certifiedByEn },
   { label: 'Championship', getIs: r => (r.raw as RaceDto).championshipCategory,getEn: r => (r.raw as RaceDto).championshipCategoryEn },
 ];
 
 const TRAIL_FIELDS: FieldDef[] = [
-  { label: 'Name',        getIs: r => (r.raw as Trail).name,        getEn: r => (r.raw as Trail).nameEn },
+  { label: 'Name',        getIs: r => (r.raw as Trail).name,        getEn: r => (r.raw as Trail).nameEn, translatable: false },
   { label: 'Description', getIs: r => (r.raw as Trail).description, getEn: r => (r.raw as Trail).descriptionEn },
 ];
 
 const LOCATION_FIELDS: FieldDef[] = [
-  { label: 'Name',        getIs: r => (r.raw as LocationDto).name,        getEn: r => (r.raw as LocationDto).nameEn },
+  { label: 'Name',        getIs: r => (r.raw as LocationDto).name,        getEn: r => (r.raw as LocationDto).nameEn, translatable: false },
   { label: 'Description', getIs: r => (r.raw as LocationDto).description, getEn: r => (r.raw as LocationDto).descriptionEn },
 ];
 
@@ -392,11 +394,18 @@ export default function TranslationHealth({ onNotify }: Props) {
     if (targetFields.length === 0) return;
     setTranslatingId(item.id);
     try {
-      const translated = await translate(targetFields.map(f => f.getIs(item) ?? ''));
+      const toTranslate = targetFields.filter(f => f.translatable !== false);
+      const toCopy = targetFields.filter(f => f.translatable === false);
+      const translated = await translate(toTranslate.map(f => f.getIs(item) ?? ''));
       const patch: Record<string, string> = {};
-      targetFields.forEach((f, i) => {
+      toTranslate.forEach((f, i) => {
         const key = EN_FIELD_MAP[item.kind][f.label];
         if (key && translated[i]) patch[key] = translated[i];
+      });
+      toCopy.forEach(f => {
+        const key = EN_FIELD_MAP[item.kind][f.label];
+        const isText = f.getIs(item);
+        if (key && isText) patch[key] = isText;
       });
       if (Object.keys(patch).length > 0) {
         const hashes = buildHashes(item, targetFields);
@@ -423,11 +432,18 @@ export default function TranslationHealth({ onNotify }: Props) {
         const targetFields = item.fields.filter(f =>
           staleOnly ? isStale(f, item) : (isMissing(f, item) || isStale(f, item))
         );
-        const translated = await translate(targetFields.map(f => f.getIs(item) ?? ''));
+        const toTranslate = targetFields.filter(f => f.translatable !== false);
+        const toCopy = targetFields.filter(f => f.translatable === false);
+        const translated = await translate(toTranslate.map(f => f.getIs(item) ?? ''));
         const patch: Record<string, string> = {};
-        targetFields.forEach((f, i) => {
+        toTranslate.forEach((f, i) => {
           const key = EN_FIELD_MAP[item.kind][f.label];
           if (key && translated[i]) patch[key] = translated[i];
+        });
+        toCopy.forEach(f => {
+          const key = EN_FIELD_MAP[item.kind][f.label];
+          const isText = f.getIs(item);
+          if (key && isText) patch[key] = isText;
         });
         if (Object.keys(patch).length > 0) {
           const hashes = buildHashes(item, targetFields);
