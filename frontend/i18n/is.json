@@ -15,6 +15,8 @@
         "collapse": "Loka",
         "copyLink": "Afrita síu",
         "copied": "Afritað!",
+        "copyList": "Afrita lista",
+        "listCopied": "Listi afritaður!",
         "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
@@ -1488,6 +1490,15 @@
             "fimmtudagur",
             "föstudagur",
             "laugardagur"
+        ],
+        "weekdaysShort": [
+            "Sun",
+            "Mán",
+            "Þri",
+            "Mið",
+            "Fim",
+            "Fös",
+            "Lau"
         ],
         "ordinals": [
             "",
