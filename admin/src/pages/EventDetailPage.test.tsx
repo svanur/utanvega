@@ -237,6 +237,40 @@ describe('EditionDialogInner — Start/End date disabled and derived for a Serie
   });
 });
 
+// #1365: the issue owner's decision — events are scheduled start-first, so End date with no
+// Start date isn't a real scheduling pattern. Blocks Save client-side rather than letting a
+// 400 from CreateEditionCommandValidator/UpdateEditionCommandValidator surface after submit.
+function getSaveButton() {
+  return screen.getByRole('button', { name: /add edition|save edition/i }) as HTMLButtonElement;
+}
+
+describe('EditionDialogInner — Start date required once End date is set (#1365)', () => {
+  afterEach(cleanup);
+
+  it('disables Save and shows an inline error once End date is set with no Start date', () => {
+    renderEditionDialog();
+
+    expect(getSaveButton().disabled).toBe(false);
+
+    fireEvent.change(getEndDateInput(), { target: { value: '08/01/2026' } });
+
+    expect(getSaveButton().disabled).toBe(true);
+    expect(screen.getByText('Start date is required when an End date is set.')).not.toBe(null);
+  });
+
+  it('re-enables Save once Start date is filled in', () => {
+    renderEditionDialog();
+
+    fireEvent.change(getEndDateInput(), { target: { value: '08/01/2026' } });
+    expect(getSaveButton().disabled).toBe(true);
+
+    fireEvent.change(getStartDateInput(), { target: { value: '07/01/2026' } });
+
+    expect(getSaveButton().disabled).toBe(false);
+    expect(screen.queryByText('Start date is required when an End date is set.')).toBe(null);
+  });
+});
+
 // #1024: handleCycleEditionStatus (the chip labeled with the edition's own EditionStatus, e.g.
 // "Active" — not the Status *Select* covered above) fires a bare, non-awaited apiFetch PUT and,
 // unlike its sibling handleToggleEditionNeedsReview, never called invalidateEventsList() on
