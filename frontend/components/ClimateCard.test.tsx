@@ -173,6 +173,161 @@ describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
     });
 });
 
+// #1452: getPrecipitationLabelKey and getSunshineLabelKey (ClimateCard.tsx, added by #1450/#1446)
+// had no band-boundary coverage of their own — the #1451 minWidth tests above exercise one value
+// from each ("moderate" and "heavy"/"high"), but none of the boundary values themselves. Neither
+// function is exported, so these assert on the rendered, untranslated i18n key text, same as
+// every other private-helper test in this file.
+describe('ClimateCard getPrecipitationLabelKey band boundaries (#1452)', () => {
+    it('below 0.2 renders climate.rainLight', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ precipitationChance: 0.1 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('10% · climate.rainLight')).toBeTruthy();
+    });
+
+    it('at exactly 0.2 renders climate.rainModerate', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ precipitationChance: 0.2 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('20% · climate.rainModerate')).toBeTruthy();
+    });
+
+    it('between 0.2 and 0.5 renders climate.rainModerate', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ precipitationChance: 0.35 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('35% · climate.rainModerate')).toBeTruthy();
+    });
+
+    it('at exactly 0.5 renders climate.rainHeavy', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ precipitationChance: 0.5 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('50% · climate.rainHeavy')).toBeTruthy();
+    });
+
+    it('above 0.5 renders climate.rainHeavy', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ precipitationChance: 0.75 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('75% · climate.rainHeavy')).toBeTruthy();
+    });
+});
+
+describe('ClimateCard getSunshineLabelKey band boundaries (#1452)', () => {
+    it('below 4 renders climate.sunshineLow', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageSunshineHours: 3.9 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('3.9 climate.sunshineUnit · climate.sunshineLow')).toBeTruthy();
+    });
+
+    it('at exactly 4 renders climate.sunshineModerate', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageSunshineHours: 4 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('4.0 climate.sunshineUnit · climate.sunshineModerate')).toBeTruthy();
+    });
+
+    it('between 4 and 8 renders climate.sunshineModerate', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageSunshineHours: 6 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('6.0 climate.sunshineUnit · climate.sunshineModerate')).toBeTruthy();
+    });
+
+    it('at exactly 8 renders climate.sunshineHigh', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageSunshineHours: 8 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('8.0 climate.sunshineUnit · climate.sunshineHigh')).toBeTruthy();
+    });
+
+    it('above 8 renders climate.sunshineHigh', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageSunshineHours: 9.2 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('9.2 climate.sunshineUnit · climate.sunshineHigh')).toBeTruthy();
+    });
+
+    // Render-level check that the "Avg. sunshine" tile itself (the caption below the value line
+    // above, not the band label) renders for a given averageSunshineHours fixture — distinct from
+    // the band-key assertions above, which only cover the value line's text.
+    it('renders the Avg. sunshine caption for a given averageSunshineHours fixture', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ averageSunshineHours: 6 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('climate.avgSunshine')).toBeTruthy();
+    });
+});
+
 // #1418: the approximateLocation caption ("Áætlað gildi fyrir stórt svæði" in Icelandic — 30
 // chars) had `noWrap`, so at a 375px viewport the Location tile (half the card's width there,
 // per the grid's `xs: repeat(2, 1fr)`) clipped it with an ellipsis and no tooltip to recover the
