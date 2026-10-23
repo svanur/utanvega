@@ -1946,6 +1946,60 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetEvent_BySlug_WithLocation_PopulatesLocationType()
+    {
+        // #1419: EventDetailDto must carry LocationType the same way EventSummaryDto does
+        // (GetEventsQuery), so admin TS callers typed on the shared base don't get undefined
+        // at runtime where the type promises a value.
+        var location = new Location
+        {
+            Name = "Test Location",
+            Slug = $"test-location-{Guid.NewGuid():N}",
+            Type = LocationType.Region,
+            CreatedBy = "seed-user",
+        };
+        var ev = CreateTestEvent("Location Typed Event");
+        ev.Slug = "location-typed-event";
+        ev.LocationId = location.Id;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("location-typed-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(LocationType.Region.ToString(), result!.LocationType);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_WithoutLocation_LocationTypeIsNull()
+    {
+        var ev = CreateTestEvent("No Location Event");
+        ev.Slug = "no-location-event";
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("no-location-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.LocationType);
+    }
+
+    [Fact]
     public async Task GetEvent_NonExistentSlug_ReturnsNull()
     {
         using var ctx = _factory.CreateContext();
