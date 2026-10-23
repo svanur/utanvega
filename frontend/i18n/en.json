@@ -264,6 +264,13 @@
         "halfMarathon": "Half–Marathon",
         "marathonTo100": "Marathon–100 km",
         "elevationGain": "Elevation Gain",
+        "climbRatio": "Climb ratio",
+        "climbRatioBuckets": {
+            "under20": "< 20 m/km",
+            "20to35": "20–35 m/km",
+            "35to50": "35–50 m/km",
+            "over50": "50+ m/km"
+        },
         "elevationLoss": "Elevation Loss",
         "duration": "Est. Duration",
         "distanceFromYou": "Distance from You",

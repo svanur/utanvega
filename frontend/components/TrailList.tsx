@@ -135,6 +135,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     const activeFilterCount = React.useMemo(() =>
         filters.lengthBuckets.length +
         filters.elevationGainBuckets.length +
+        filters.climbRatioBuckets.length +
         filters.distanceBuckets.length +
         filters.difficulties.length +
         (filters.locationSlugs.length > 0 ? 1 : 0) +
@@ -313,6 +314,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
         const length = searchParams.get('length');
         const elevation = searchParams.get('elevation');
+        const climbratio = searchParams.get('climbratio');
         const nearme = searchParams.get('nearme');
         const locations = searchParams.get('locations');
         const tags = searchParams.get('tags');
@@ -320,6 +322,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
         if (length) updates.lengthBuckets = length.split(',');
         if (elevation) updates.elevationGainBuckets = elevation.split(',');
+        if (climbratio) updates.climbRatioBuckets = climbratio.split(',');
         if (nearme) updates.distanceBuckets = nearme.split(',');
         if (locations) updates.locationSlugs = locations.split(',');
         if (tags) updates.selectedTags = tags.split(',');
@@ -350,6 +353,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         if (filters.difficulties.length > 0) params.set('difficulty', filters.difficulties.join(','));
         if (filters.lengthBuckets.length > 0) params.set('length', filters.lengthBuckets.join(','));
         if (filters.elevationGainBuckets.length > 0) params.set('elevation', filters.elevationGainBuckets.join(','));
+        if (filters.climbRatioBuckets.length > 0) params.set('climbratio', filters.climbRatioBuckets.join(','));
         if (filters.distanceBuckets.length > 0) params.set('nearme', filters.distanceBuckets.join(','));
         // Write only user-selected (top-level) slugs, not the expanded descendant set
         if (selectedLocationItems.length > 0) params.set('locations', selectedLocationItems.map(i => i.slug).join(','));
@@ -362,7 +366,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery, filters.selectedActivityTypes, filters.difficulties, filters.lengthBuckets,
-        filters.elevationGainBuckets, filters.distanceBuckets, selectedLocationItems,
+        filters.elevationGainBuckets, filters.climbRatioBuckets, filters.distanceBuckets, selectedLocationItems,
         filters.selectedTags, filters.favoritesOnly, filters.offlineOnly, filters.sortBy, viewMode]);
 
     // Runs after the sync effect on first flush — marks init done so sync starts writing
@@ -812,6 +816,39 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     ? filters.elevationGainBuckets.filter(b => b !== key)
                                                     : [...filters.elevationGainBuckets, key];
                                                 setFilters(f => ({ ...f, elevationGainBuckets: next }));
+                                            }}
+                                            sx={{ cursor: 'pointer' }}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+
+                        {/* 4b. Climb ratio (m/km = elevationGain / (length/1000)) */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.climbRatio')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                {([
+                                    { key: '<20', label: t('filters.climbRatioBuckets.under20', '< 20 m/km') },
+                                    { key: '20-35', label: t('filters.climbRatioBuckets.20to35', '20–35 m/km') },
+                                    { key: '35-50', label: t('filters.climbRatioBuckets.35to50', '35–50 m/km') },
+                                    { key: '50+', label: t('filters.climbRatioBuckets.over50', '50+ m/km') },
+                                ] as const).map(({ key, label }) => {
+                                    const selected = filters.climbRatioBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.climbRatioBuckets.filter(b => b !== key)
+                                                    : [...filters.climbRatioBuckets, key];
+                                                setFilters(f => ({ ...f, climbRatioBuckets: next }));
                                             }}
                                             sx={{ cursor: 'pointer' }}
                                         />
