@@ -303,9 +303,13 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                                     </Typography>
                                     {/* #1414: the resolved coordinate came from a broad Location
                                         (Country/Area/Region) — signal that the numbers above are
-                                        an estimate, not tied to this event's exact spot. */}
+                                        an estimate, not tied to this event's exact spot.
+                                        #1418: no noWrap here — this caption is long enough in
+                                        Icelandic to clip at a 375px tile width with no tooltip to
+                                        recover the text, so it's left to wrap to a second line
+                                        instead of truncating. */}
                                     {climate.isApproximate && (
-                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontStyle: 'italic' }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontStyle: 'italic' }}>
                                             {t('climate.approximateLocation')}
                                         </Typography>
                                     )}
