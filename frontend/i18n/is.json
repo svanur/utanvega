@@ -264,6 +264,13 @@
         "halfMarathon": "Hálft-Maraþon",
         "marathonTo100": "Maraþon–100 km",
         "elevationGain": "Hækkun",
+        "climbRatio": "Hækkunarhlutfall",
+        "climbRatioBuckets": {
+            "under20": "< 20 m/km",
+            "20to35": "20–35 m/km",
+            "35to50": "35–50 m/km",
+            "over50": "50+ m/km"
+        },
         "elevationLoss": "Lækkun",
         "duration": "Áætlaður tími",
         "distanceFromYou": "Fjarlægð frá þér",
