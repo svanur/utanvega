@@ -375,11 +375,11 @@ public class EventValidatorTests : IDisposable
     }
 
     [Fact]
-    public void CreateEdition_EndDateWithNullDate_Passes()
+    public void CreateEdition_EndDateWithNullDate_Fails()
     {
         var cmd = ValidCreateEditionCommand with { Date = null, EndDate = new DateOnly(2025, 8, 1) };
         var result = _createEditionValidator.TestValidate(cmd);
-        result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
+        result.ShouldHaveValidationErrorFor(x => x.Date);
     }
 
     [Fact]
@@ -598,6 +598,14 @@ public class EventValidatorTests : IDisposable
         var cmd = ValidUpdateEditionCommand with { Date = new DateOnly(2025, 8, 1), EndDate = new DateOnly(2025, 8, 3) };
         var result = _updateEditionValidator.TestValidate(cmd);
         result.ShouldNotHaveValidationErrorFor(x => x.EndDate);
+    }
+
+    [Fact]
+    public void UpdateEdition_EndDateWithNullDate_Fails()
+    {
+        var cmd = ValidUpdateEditionCommand with { Date = null, EndDate = new DateOnly(2025, 8, 1) };
+        var result = _updateEditionValidator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.Date);
     }
 
     [Fact]
