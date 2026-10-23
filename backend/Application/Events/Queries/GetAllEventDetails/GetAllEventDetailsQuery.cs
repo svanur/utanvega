@@ -78,6 +78,7 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
             ev.AlertSeverity,
             ev.LocationId,
             ev.Location?.Name,
+            ev.Location?.Type.ToString(),
             ev.ScheduleRule,
             ev.SocialLinks,
             null,
