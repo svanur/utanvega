@@ -47,6 +47,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import { QRCodeSVG } from 'qrcode.react';
 import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -75,6 +76,7 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
+import { toCopyableEventRows, formatEventListForClipboard } from '../utils/copyListToClipboard';
 import { applyFilters, eventFiltersEqual, eventMonths, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -173,6 +175,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [showFilters, setShowFilters] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
     const linkCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [listCopied, setListCopied] = useState(false);
+    const listCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [siteQROpen, setSiteQROpen] = useState(false);
     const [siteQRCopied, setSiteQRCopied] = useState(false);
@@ -608,6 +612,28 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             {linkCopied
                                                 ? <CheckIcon fontSize="small" color="success" />
                                                 : <ContentCopyIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                {/* #1483: unlike the Copy-URL button above, this is NOT gated on
+                                    activeFilterCount > 0 — copying the full unfiltered list is a
+                                    valid use case too, so it only needs a non-empty result set. */}
+                                {flattenedUpcoming.length > 0 && (
+                                    <Tooltip title={listCopied ? t('common.listCopied') : t('common.copyList')}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ mr: 0.5 }}
+                                            onClick={() => {
+                                                const rows = toCopyableEventRows(flattenedUpcoming, loc);
+                                                navigator.clipboard.writeText(formatEventListForClipboard(rows, t));
+                                                setListCopied(true);
+                                                if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+                                                listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                            }}
+                                        >
+                                            {listCopied
+                                                ? <CheckIcon fontSize="small" color="success" />
+                                                : <FormatListBulletedIcon fontSize="small" />}
                                         </IconButton>
                                     </Tooltip>
                                 )}

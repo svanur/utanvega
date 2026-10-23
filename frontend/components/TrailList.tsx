@@ -34,6 +34,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import FilterIcon from '@mui/icons-material/FilterList';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import ListIcon from '@mui/icons-material/List';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
@@ -77,6 +78,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
 import { isOngoingPastDayTwo } from '../utils/eventUtils';
+import { formatTrailListForClipboard } from '../utils/copyListToClipboard';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
@@ -131,6 +133,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [linkCopied, setLinkCopied] = React.useState(false);
     const linkCopiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [listCopied, setListCopied] = React.useState(false);
+    const listCopiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const activeFilterCount = React.useMemo(() =>
         filters.lengthBuckets.length +
@@ -442,6 +446,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, [trails, filters.favoritesOnly, filters.offlineOnly, favoritesSet, isOffline, hiddenSlugs, hidingSlugsSet]);
     React.useEffect(() => { filteredTrailsRef.current = filteredTrails; }, [filteredTrails]);
 
+    // #1483: name + primary location (same "lowest order wins" tiebreak TrailCard already uses
+    // for its own location chip) for the "Copy list" clipboard text — a flat list, no date
+    // grouping, unlike the events list's copy util.
+    const copyableTrails = React.useMemo(() => filteredTrails.map(trail => {
+        const primaryLocation = trail.locations.length > 0
+            ? [...trail.locations].sort((a, b) => a.order - b.order)[0]
+            : null;
+        return { name: trail.name, location: primaryLocation ? (loc(primaryLocation.name, primaryLocation.nameEn) ?? primaryLocation.name) : null };
+    }), [filteredTrails, loc]);
+
     // Gather trail names for the slot machine display
     const slotTrailNames = React.useMemo(() => {
         const names = filteredTrails.map(t => t.name);
@@ -652,6 +666,27 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             {linkCopied
                                                 ? <CheckIcon fontSize="small" color="success" />
                                                 : <ContentCopyIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                {/* #1483: unlike the Copy-URL button above, this is NOT gated on
+                                    activeFilterCount > 0 — copying the full unfiltered list is a
+                                    valid use case too, so it only needs a non-empty result set. */}
+                                {filteredTrails.length > 0 && (
+                                    <Tooltip title={listCopied ? t('common.listCopied') : t('common.copyList')}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ mr: 0.5 }}
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(formatTrailListForClipboard(copyableTrails));
+                                                setListCopied(true);
+                                                if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+                                                listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                            }}
+                                        >
+                                            {listCopied
+                                                ? <CheckIcon fontSize="small" color="success" />
+                                                : <FormatListBulletedIcon fontSize="small" />}
                                         </IconButton>
                                     </Tooltip>
                                 )}
