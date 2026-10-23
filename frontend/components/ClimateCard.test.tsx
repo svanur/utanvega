@@ -172,3 +172,27 @@ describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
         expect(getComputedStyle(precipitationStack).minWidth).toBe('0');
     });
 });
+
+// #1418: the approximateLocation caption ("Áætlað gildi fyrir stórt svæði" in Icelandic — 30
+// chars) had `noWrap`, so at a 375px viewport the Location tile (half the card's width there,
+// per the grid's `xs: repeat(2, 1fr)`) clipped it with an ellipsis and no tooltip to recover the
+// full text. Dropping `noWrap` lets it wrap to a second line instead of truncating.
+describe('ClimateCard approximateLocation caption does not truncate (#1418)', () => {
+    it('renders the Icelandic approximateLocation caption without noWrap when isApproximate is true', () => {
+        render(
+            <ClimateCard
+                climate={makeClimate({ isApproximate: true })}
+                loading={false}
+                error={null}
+                locationName="Vestfirðir"
+            />
+        );
+
+        // i18next has no resources loaded in this test, so the caption renders as its
+        // untranslated key — "climate.approximateLocation" is "Áætlað gildi fyrir stórt svæði"
+        // in the real app (frontend/i18n/is.json). The untranslated key is long enough on its
+        // own to exercise the same noWrap/wrap behavior being asserted here.
+        const caption = screen.getByText('climate.approximateLocation');
+        expect(caption.className).not.toContain('MuiTypography-noWrap');
+    });
+});
