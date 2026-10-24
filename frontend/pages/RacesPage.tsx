@@ -104,6 +104,12 @@ const EventMapView = lazy(() => import('../components/EventMapView'));
 
 type ViewMode = 'list' | 'map' | 'table';
 
+// #1487: selectable filter pills in the filter panel need a >=44x44px touch target (iOS/Android
+// a11y guideline) — MUI's size="small" Chip renders ~24px tall by default. Bumping both
+// dimensions here, local to this file, rather than a blanket MuiChip theme override, which would
+// also grow unrelated chips elsewhere (status/badge chips) that aren't filter pills.
+const FILTER_CHIP_SX = { cursor: 'pointer', minHeight: 44, minWidth: 44 };
+
 
 type RacesPageProps = {
     mode: PaletteMode;
@@ -704,7 +710,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {filterOptions.activityTypes.length > 0 && (
                             <Box sx={{ mb: 1.5 }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.activityType')}</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                     {filterOptions.activityTypes.map(type => {
                                         const selected = filters.activityTypes.includes(type);
                                         return (
@@ -719,7 +725,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ...f,
                                                     activityTypes: selected ? f.activityTypes.filter(x => x !== type) : [...f.activityTypes, type],
                                                 }))}
-                                                sx={{ cursor: 'pointer' }}
+                                                sx={FILTER_CHIP_SX}
                                             />
                                         );
                                     })}
@@ -730,7 +736,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* Race distance */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.raceDistance', 'Race distance')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 {([
                                     { key: '<10', label: '< 10 km' },
                                     { key: '10-21', label: '10–21 km' },
@@ -752,7 +758,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ? f.distanceBuckets.filter(b => b !== key)
                                                     : [...f.distanceBuckets, key],
                                             }))}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -762,14 +768,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* Month */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.month', 'Month')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 <Chip
                                     label={t('races.filters.allMonths', 'All')}
                                     size="small"
                                     variant={filters.months.length === 0 ? 'filled' : 'outlined'}
                                     color={filters.months.length === 0 ? 'primary' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, months: [] }))}
-                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                    sx={{ ...FILTER_CHIP_SX, fontWeight: 600 }}
                                 />
                                 {(t('races.months', { returnObjects: true }) as string[]).map((name, idx) => {
                                     const selected = filters.months.includes(idx);
@@ -781,7 +787,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             variant={selected ? 'filled' : 'outlined'}
                                             color={selected ? 'primary' : 'default'}
                                             onClick={() => toggleMonth(idx)}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -791,14 +797,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* Week */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.week', 'Week')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 <Chip
                                     label={t('races.filters.thisWeek', 'This week')}
                                     size="small"
                                     variant={filters.thisWeekOnly ? 'filled' : 'outlined'}
                                     color={filters.thisWeekOnly ? 'primary' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, thisWeekOnly: !f.thisWeekOnly, nextWeekOnly: false }))}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                                 <Chip
                                     label={t('races.filters.nextWeek', 'Next week')}
@@ -806,7 +812,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     variant={filters.nextWeekOnly ? 'filled' : 'outlined'}
                                     color={filters.nextWeekOnly ? 'primary' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, nextWeekOnly: !f.nextWeekOnly, thisWeekOnly: false }))}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             </Box>
                         </Box>
@@ -814,14 +820,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* ITRA points */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.itraPoints')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 <Chip
                                     label="ITRA"
                                     size="small"
                                     variant={filters.itraAny ? 'filled' : 'outlined'}
                                     color={filters.itraAny ? 'warning' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
-                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                    sx={{ ...FILTER_CHIP_SX, fontWeight: 600 }}
                                 />
                                 {[0, 1, 2, 3, 4, 5].map(pts => {
                                     const selected = !filters.itraAny && filters.itraPoints.includes(pts);
@@ -839,7 +845,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ? f.itraPoints.filter(x => x !== pts)
                                                     : [...f.itraPoints, pts],
                                             }))}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -852,7 +858,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 {filterOptions.championships.length > 0 && (
                                     <Box sx={{ flex: 1, minWidth: 140 }}>
                                         <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.championships')}</Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                             {filterOptions.championships.map(ch => {
                                                 const selected = filters.championships.includes(ch);
                                                 return (
@@ -866,7 +872,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             ...f,
                                                             championships: selected ? f.championships.filter(x => x !== ch) : [...f.championships, ch],
                                                         }))}
-                                                        sx={{ cursor: 'pointer' }}
+                                                        sx={FILTER_CHIP_SX}
                                                     />
                                                 );
                                             })}
@@ -876,7 +882,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 {filterOptions.certifications.length > 0 && (
                                     <Box sx={{ flex: 1, minWidth: 140 }}>
                                         <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.certifications')}</Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                             {filterOptions.certifications.map(cert => {
                                                 const selected = filters.certifications.includes(cert);
                                                 return (
@@ -890,7 +896,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             ...f,
                                                             certifications: selected ? f.certifications.filter(x => x !== cert) : [...f.certifications, cert],
                                                         }))}
-                                                        sx={{ cursor: 'pointer' }}
+                                                        sx={FILTER_CHIP_SX}
                                                     />
                                                 );
                                             })}
