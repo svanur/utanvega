@@ -213,3 +213,58 @@ describe('TrailList copy buttons do not show success on a rejected clipboard wri
         expect(screen.getByTestId('FormatListBulletedIcon')).not.toBeNull();
     });
 });
+
+// #1497 round 1 review: the reject-path tests above only prove the buttons don't show a false
+// positive — they don't prove the success state ever renders at all. These cover the resolve
+// path so a regression that broke the "copied" checkmark entirely (not just the reject-path
+// bug) would also be caught.
+describe('TrailList copy buttons show the copied checkmark when writeText resolves (#1497)', () => {
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+    });
+
+    function stubResolvingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockResolvedValue(undefined) },
+            configurable: true,
+        });
+    }
+
+    it('Copy link button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockTrailsState.trails = [makeTrail()];
+        mockTrailsState.filters = { ...DEFAULT_FILTERS, locationSlugs: ['reykjavik'] };
+        renderTrailList();
+
+        const copyButton = screen.getByTestId('ContentCopyIcon').closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            // Flush the resolved microtask through the .then() handler.
+            await Promise.resolve();
+        });
+
+        expect(screen.getByTestId('CheckIcon')).not.toBeNull();
+        expect(screen.queryByTestId('ContentCopyIcon')).toBeNull();
+    });
+
+    it('Copy list button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockTrailsState.trails = [makeTrail()];
+        mockTrailsState.filters = { ...DEFAULT_FILTERS };
+        renderTrailList();
+
+        const listButton = screen.getByTestId('FormatListBulletedIcon').closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve();
+        });
+
+        expect(screen.getByTestId('CheckIcon')).not.toBeNull();
+        expect(screen.queryByTestId('FormatListBulletedIcon')).toBeNull();
+    });
+});
