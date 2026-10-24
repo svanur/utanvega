@@ -360,6 +360,9 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
   const [saving, setSaving] = useState(false);
   const registrationStatusHelperId = useId();
   const editionStatusHelperId = useId();
+  // #1478: mirrors EventDetailPage.tsx's startDateRequiredHelperId — labels the "End date needs a
+  // Start date" FormHelperText via aria-describedby, not the Select-pairing ids below.
+  const startDateRequiredHelperId = useId();
   // #964: explicit id/labelId pairing so these two Selects have an accessible name reachable via
   // getByLabelText — the plain <InputLabel> + Select `label` prop pairing everywhere else in this
   // step only paints the outline notch text, it doesn't associate the label with the control.
@@ -373,6 +376,12 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
   // Drives which month/year the date pickers below open on when they have no value of their own
   // yet — same helper EditionDialogInner uses for its own four date pickers.
   const referenceDate = referenceDateForYear(form.year);
+
+  // #1478: same gap #1365 fixed in EventDetailPage.tsx's EditionDialogInner — events are
+  // scheduled start-first, so an End date with no Start date isn't a real pattern. The wizard has
+  // no Series/race-derived-date concept (unlike EditionDialogInner's isDateDerivedFromRaces), so
+  // that clause is omitted here.
+  const startDateMissingForEndDate = !!form.endDate && !form.date;
 
   const handleSave = async () => {
     setSaving(true);
@@ -477,13 +486,23 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
             value={form.date ? dayjs(form.date) : null}
             onChange={v => set('date', v ? v.format('YYYY-MM-DD') : '')}
             referenceDate={referenceDate}
-            slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiOutlinedInput-root': TOUCH_TARGET_SX } } }} />
+            slotProps={{ textField: {
+              size: 'small', fullWidth: true,
+              sx: { '& .MuiOutlinedInput-root': TOUCH_TARGET_SX },
+              error: startDateMissingForEndDate,
+              'aria-describedby': startDateMissingForEndDate ? startDateRequiredHelperId : undefined,
+            } }} />
           <DatePicker label="End date (multi-day)"
             value={form.endDate ? dayjs(form.endDate) : null}
             onChange={v => set('endDate', v ? v.format('YYYY-MM-DD') : '')}
             referenceDate={referenceDate}
             slotProps={{ textField: { size: 'small', fullWidth: true, sx: { '& .MuiOutlinedInput-root': TOUCH_TARGET_SX } } }} />
         </Box>
+        {startDateMissingForEndDate && (
+          <FormHelperText id={startDateRequiredHelperId} error sx={{ mt: -1.5 }}>
+            Start date is required when an End date is set.
+          </FormHelperText>
+        )}
 
         <BilingualTextField
           size="small" fullWidth label="Title"
@@ -570,7 +589,7 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
         <Button onClick={onBack} disabled={saving} sx={TOUCH_TARGET_SX}>Back</Button>
         <Stack direction="row" spacing={1}>
           <Button onClick={handleCancel} disabled={saving} sx={TOUCH_TARGET_SX}>Cancel</Button>
-          <Button variant="contained" disabled={saving} onClick={() => void handleSave()} sx={TOUCH_TARGET_SX}>
+          <Button variant="contained" disabled={saving || startDateMissingForEndDate} onClick={() => void handleSave()} sx={TOUCH_TARGET_SX}>
             {saving ? <CircularProgress size={18} /> : (isEdit ? 'Save Edition' : 'Create Edition')}
           </Button>
         </Stack>

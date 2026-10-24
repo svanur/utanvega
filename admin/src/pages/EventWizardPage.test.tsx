@@ -804,6 +804,41 @@ describe('EditionDetailsStep — Year field wiring', () => {
   });
 });
 
+// #1478: same gap #1365 fixed in EditionDialogInner (EventDetailPage.tsx) — events are scheduled
+// start-first, so an End date with no Start date isn't a real pattern. Blocks Save client-side
+// rather than letting a 400 from CreateEditionCommandValidator/UpdateEditionCommandValidator
+// surface after submit.
+function getEditionSaveButton() {
+  return screen.getByRole('button', { name: /save edition|create edition/i }) as HTMLButtonElement;
+}
+
+describe('EditionDetailsStep — Start date required once End date is set (#1478)', () => {
+  afterEach(cleanup);
+
+  it('disables Save and shows an inline error once End date is set with no Start date', () => {
+    renderEditionDetailsStep();
+
+    expect(getEditionSaveButton().disabled).toBe(false);
+
+    fireEvent.change(screen.getByLabelText('End date (multi-day)'), { target: { value: '08/01/2026' } });
+
+    expect(getEditionSaveButton().disabled).toBe(true);
+    expect(screen.getByText('Start date is required when an End date is set.')).not.toBe(null);
+  });
+
+  it('re-enables Save once Start date is filled in', () => {
+    renderEditionDetailsStep();
+
+    fireEvent.change(screen.getByLabelText('End date (multi-day)'), { target: { value: '08/01/2026' } });
+    expect(getEditionSaveButton().disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '07/01/2026' } });
+
+    expect(getEditionSaveButton().disabled).toBe(false);
+    expect(screen.queryByText('Start date is required when an End date is set.')).toBe(null);
+  });
+});
+
 // #977: PR #976 (closing #970) gave Step 1's Type/Activity/Status Selects the same explicit
 // labelId wiring #964 gave EditionDetailsStep's Status/Registration status further up this file —
 // but only the latter ever got a regression test. These mount EventDetailsStep (Step 1) directly
