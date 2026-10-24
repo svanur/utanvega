@@ -155,3 +155,49 @@ describe('TranslationHealth — Name field excluded from DeepL (#1481)', () => {
     expect(body.descriptionEn).toBe('Old English Description');
   });
 });
+
+// #1485: translateItem and translateAll used to each inline their own copy of the
+// toTranslate/toCopy split + patch-building logic. They now share one helper
+// (buildTranslationPatch), but the only way to catch a regression that reintroduces a second,
+// diverging copy is to exercise the bulk path on its own — translateItem's test above never
+// touches translateAll's loop. This drives the "Translate all missing" button and asserts the
+// same translatable/copy-verbatim split, independently, across both fixtures (Trail + Tag) in
+// one bulk run.
+describe('TranslationHealth — "Translate all missing" bulk path (#1485)', () => {
+  beforeEach(() => {
+    mockState.trail.nameEn = null;
+    mockState.trail.descriptionEn = null;
+    mockState.trail.translationHashes = undefined;
+    mockState.tag.nameEn = null;
+    mockState.putCalls = [];
+    mockState.translateCalls = [];
+  });
+
+  afterEach(cleanup);
+
+  it('copies verbatim Name fields and machine-translates the rest across all missing items in one bulk run', async () => {
+    renderTranslationHealth();
+
+    const button = await screen.findByRole('button', { name: /Translate all missing/ });
+    fireEvent.click(button);
+
+    // One PUT per item: the Trail (Name + Description) and the Tag (Name).
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(2));
+
+    const trailCall = mockState.putCalls.find(c => c.endpoint === '/api/v1/admin/trails/trail-1');
+    const tagCall = mockState.putCalls.find(c => c.endpoint === '/api/v1/admin/tags/tag-1');
+    if (!trailCall || !tagCall) throw new Error('Expected a PUT for both the Trail and the Tag');
+
+    // Trail Name (translatable: false) copied verbatim — never sent to /translate.
+    expect(trailCall.body.nameEn).toBe('Súlur Vertical');
+    // Trail Description machine-translated.
+    expect(trailCall.body.descriptionEn).toBe('EN:Lýsing á leiðinni');
+    // Tag Name is translatable, so — unlike the Trail's Name — it IS machine-translated.
+    expect(tagCall.body.nameEn).toBe('EN:Fjallahlaup');
+
+    const allTranslatedTexts = mockState.translateCalls.flat();
+    expect(allTranslatedTexts).not.toContain('Súlur Vertical');
+    expect(allTranslatedTexts).toContain('Lýsing á leiðinni');
+    expect(allTranslatedTexts).toContain('Fjallahlaup');
+  });
+});
