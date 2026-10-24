@@ -1,0 +1,215 @@
+// @vitest-environment jsdom
+//
+// #1497: backfills RTL coverage for TrailList.tsx's "Copy link" (:755-773) and "Copy list"
+// (:777-804) clipboard buttons, which had zero test coverage despite the equivalent RacesPage
+// buttons being covered since #1489 (RacesPage.test.tsx:236-292) — both already use the correct
+// writeText().then()/.catch() pattern (fixed alongside RacesPage in #1489/#1496), this file only
+// adds the missing regression guard. Follows RacesPage.test.tsx's jsdom-opt-in + RTL + vi.hoisted
+// pattern; the rest of the frontend suite runs under vitest.config.ts's global `environment: 'node'`.
+import React from 'react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material/styles';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import en from '../i18n/en.json';
+import { createAppTheme } from '../theme';
+import type { Trail } from '../hooks/useTrails';
+
+// vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
+// afterEach(cleanup) registration never fires — without this, a later test's screen queries can
+// match leftover DOM nodes still mounted from an earlier test in this file. Mirrors
+// RacesPage.test.tsx:24.
+afterEach(cleanup);
+
+// TrailList's t()/useLocalize() calls need a real, initialized i18next instance (react-i18next's
+// useTranslation() otherwise falls back to raw keys) — initialized once with the real EN
+// resources, same as RacesPage.test.tsx:31-36, so the assertions below exercise the same strings
+// production does.
+void i18n.use(initReactI18next).init({
+    resources: { en: { translation: en } },
+    lng: 'en',
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
+});
+
+// TrailCard pulls in a long chain of its own hooks/components (useTickedTrails -> useAuth ->
+// AuthContext, QRCodeShare's own ContentCopyIcon/CheckIcon, TrailQuickView, ElevationSparkline,
+// ...) that are orthogonal to the two search-bar copy buttons under test here and would otherwise
+// need their own provider/mock setup just to mount — stubbed to a bare passthrough that renders
+// the trail name, same "heavy but orthogonal" precedent as RacesPage.test.tsx mocking Layout.
+vi.mock('./TrailCard', () => ({
+    TrailCard: ({ trail }: { trail: Trail }) => <div>{trail.name}</div>,
+}));
+
+// vi.mock factories are hoisted above regular module-level declarations, so anything they
+// reference (DEFAULT_FILTERS, mockTrailsState) must live inside vi.hoisted too — a plain top-level
+// const here would throw "Cannot access before initialization" once the mock factory below runs.
+// mockTrailsState is mutable so individual tests can swap fixtures/filters without re-mocking;
+// it's read fresh on every useTrails() call. filters.locationSlugs starts non-empty so
+// activeFilterCount > 0 by default — that's what gates the "Copy link" button (TrailList.tsx:755).
+const { DEFAULT_FILTERS, mockTrailsState } = vi.hoisted(() => {
+    const defaultFilters = {
+        lengthBuckets: [],
+        elevationGainBuckets: [],
+        climbRatioBuckets: [],
+        distanceBuckets: [],
+        difficulties: [],
+        locationSlugs: [],
+        favoritesOnly: false,
+        offlineOnly: false,
+        selectedTags: [],
+        selectedActivityTypes: [],
+        sortBy: 'distance',
+    };
+    return {
+        DEFAULT_FILTERS: defaultFilters,
+        mockTrailsState: {
+            trails: [] as unknown[],
+            filters: { ...defaultFilters } as Record<string, unknown>,
+        },
+    };
+});
+
+function makeTrail(overrides: Partial<Trail> = {}): Trail {
+    return {
+        id: 'trail-1',
+        name: 'Esjan',
+        slug: 'esjan',
+        length: 8000,
+        elevationGain: 780,
+        elevationLoss: 780,
+        status: 'Published',
+        activityType: 'TrailRunning',
+        trailType: 'OutAndBack',
+        difficulty: 'Moderate',
+        startLatitude: 64.2,
+        startLongitude: -21.7,
+        locations: [],
+        ...overrides,
+    };
+}
+
+vi.mock('../hooks/useTrails', () => ({
+    ALL_ACTIVITY_TYPES: ['TrailRunning', 'Running', 'Hiking', 'Cycling', 'FunRun', 'ObstacleCourse', 'CrossCountryRun'],
+    DEFAULT_FILTERS,
+    useTrendingTrails: () => ({ trending: [] }),
+    useTrails: () => ({
+        trails: mockTrailsState.trails,
+        loading: false,
+        refreshing: false,
+        refresh: vi.fn(),
+        error: null,
+        userLocation: null,
+        locationDenied: false,
+        requestLocation: vi.fn(),
+        searchQuery: '',
+        setSearchQuery: vi.fn(),
+        filters: mockTrailsState.filters,
+        setFilters: vi.fn(),
+        resetFilters: vi.fn(),
+    }),
+}));
+
+vi.mock('../hooks/useFavorites', () => ({
+    useFavorites: () => ({ favorites: [], toggleFavorite: vi.fn() }),
+}));
+vi.mock('../hooks/useHiddenTrails', () => ({
+    useHiddenTrails: () => ({ hiddenSlugs: [] }),
+}));
+vi.mock('../hooks/useRecentlyViewed', () => ({
+    useRecentlyViewed: () => ({ recentSlugs: [] }),
+}));
+vi.mock('../hooks/useLocations', () => ({
+    useLocationTree: () => ({ tree: [] }),
+}));
+vi.mock('../hooks/useFeatureFlags', () => ({
+    useFeatureFlags: () => ({ flags: {}, loaded: true, isEnabled: () => false }),
+}));
+vi.mock('../hooks/useEvents', () => ({
+    useEvents: () => ({ events: [], loading: false, error: null, refresh: vi.fn() }),
+}));
+vi.mock('../hooks/useOfflineTrails', () => ({
+    useOfflineTrails: () => ({ offlineSlugs: new Set<string>(), isOffline: () => false }),
+}));
+
+import { TrailList } from './TrailList';
+
+function renderTrailList() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const theme = createAppTheme('light');
+    return render(
+        <MemoryRouter initialEntries={['/']}>
+            <QueryClientProvider client={queryClient}>
+                <ThemeProvider theme={theme}>
+                    <TrailList />
+                </ThemeProvider>
+            </QueryClientProvider>
+        </MemoryRouter>
+    );
+}
+
+// #1497: navigator.clipboard.writeText(...) is a Promise-returning API; both buttons already
+// pipe it through .then()/.catch() (fixed in #1489/#1496, confirmed at TrailList.tsx:761-765 and
+// :792-796), but had no regression test guarding against a future reintroduction of the earlier
+// bug where a rejected promise still flipped the UI to the "copied" checkmark. Same technique as
+// RacesPage.test.tsx:242-292: stub writeText to reject and assert CheckIcon never appears while
+// the pre-copy icon (ContentCopyIcon / FormatListBulletedIcon) stays put.
+describe('TrailList copy buttons do not show success on a rejected clipboard write (#1497)', () => {
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+    });
+
+    function stubRejectingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+            configurable: true,
+        });
+    }
+
+    it('Copy link button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockTrailsState.trails = [makeTrail()];
+        // Non-empty locationSlugs makes activeFilterCount > 0, which is what gates the Copy link
+        // button (TrailList.tsx:755).
+        mockTrailsState.filters = { ...DEFAULT_FILTERS, locationSlugs: ['reykjavik'] };
+        renderTrailList();
+
+        const copyIcon = screen.getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            // Flush the rejected microtask through the .catch() handler.
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(screen.queryByTestId('CheckIcon')).toBeNull();
+        expect(screen.getByTestId('ContentCopyIcon')).not.toBeNull();
+    });
+
+    it('Copy list button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockTrailsState.trails = [makeTrail()];
+        // #1483: the Copy list button only needs a non-empty result set, not activeFilterCount > 0
+        // (TrailList.tsx:777) — default (no active filters) is deliberate here.
+        mockTrailsState.filters = { ...DEFAULT_FILTERS };
+        renderTrailList();
+
+        const listIcon = screen.getByTestId('FormatListBulletedIcon');
+        const listButton = listIcon.closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(screen.queryByTestId('CheckIcon')).toBeNull();
+        expect(screen.getByTestId('FormatListBulletedIcon')).not.toBeNull();
+    });
+});
