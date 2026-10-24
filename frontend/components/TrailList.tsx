@@ -657,10 +657,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             size="small"
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
-                                                navigator.clipboard.writeText(window.location.href);
-                                                setLinkCopied(true);
-                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
-                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                navigator.clipboard.writeText(window.location.href).then(() => {
+                                                    setLinkCopied(true);
+                                                    if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                    linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
                                             }}
                                         >
                                             {linkCopied
@@ -678,10 +679,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             size="small"
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
-                                                navigator.clipboard.writeText(formatTrailListForClipboard(copyableTrails));
-                                                setListCopied(true);
-                                                if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
-                                                listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                                navigator.clipboard.writeText(formatTrailListForClipboard(copyableTrails)).then(() => {
+                                                    setListCopied(true);
+                                                    if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+                                                    listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
                                             }}
                                         >
                                             {listCopied

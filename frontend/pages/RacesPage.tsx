@@ -603,10 +603,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             size="small"
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
-                                                navigator.clipboard.writeText(window.location.href);
-                                                setLinkCopied(true);
-                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
-                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                navigator.clipboard.writeText(window.location.href).then(() => {
+                                                    setLinkCopied(true);
+                                                    if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                    linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
                                             }}
                                         >
                                             {linkCopied
@@ -625,10 +626,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
                                                 const rows = toCopyableEventRows(flattenedUpcoming, loc);
-                                                navigator.clipboard.writeText(formatEventListForClipboard(rows, t));
-                                                setListCopied(true);
-                                                if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
-                                                listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                                navigator.clipboard.writeText(formatEventListForClipboard(rows, t)).then(() => {
+                                                    setListCopied(true);
+                                                    if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+                                                    listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
                                             }}
                                         >
                                             {listCopied

@@ -7,7 +7,7 @@
 // runs under vitest.config.ts's global `environment: 'node'`.
 import React, { useEffect } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, act, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, act, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -230,5 +230,63 @@ describe('RacesPage URL<->state sync effects settle without ping-ponging (#1026,
         await act(async () => { await Promise.resolve(); });
 
         expect(setSearchParamsSpy).not.toHaveBeenCalled();
+    });
+});
+
+// #1489: navigator.clipboard.writeText(...) is a Promise-returning API; the Copy URL and Copy
+// list buttons used to flip to the "copied" checkmark unconditionally, right after firing the
+// call, so a rejected promise (permission denied, insecure context, etc.) still showed a success
+// checkmark for a copy that never happened. These stub writeText to reject and assert the
+// checkmark (CheckIcon, data-testid from @mui/icons-material's createSvgIcon) never appears, while
+// the pre-copy icon (ContentCopyIcon / FormatListBulletedIcon) stays put.
+describe('RacesPage copy buttons do not show success on a rejected clipboard write (#1489)', () => {
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+    });
+
+    function stubRejectingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+            configurable: true,
+        });
+    }
+
+    it('Copy URL button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        // activity=Running makes activeFilterCount > 0, which is what gates the Copy URL button.
+        renderRacesPage('/events?activity=Running');
+
+        const copyIcon = screen.getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            // Flush the rejected microtask through the .catch() handler.
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(screen.queryByTestId('CheckIcon')).toBeNull();
+        expect(screen.getByTestId('ContentCopyIcon')).not.toBeNull();
+    });
+
+    it('Copy list button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const listIcon = screen.getByTestId('FormatListBulletedIcon');
+        const listButton = listIcon.closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(screen.queryByTestId('CheckIcon')).toBeNull();
+        expect(screen.getByTestId('FormatListBulletedIcon')).not.toBeNull();
     });
 });
