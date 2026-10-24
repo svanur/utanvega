@@ -432,7 +432,7 @@ export function EditionDetailsStep({ onNotify, eventId, eventSlug, form, setForm
   const handleCancel = () => navigate(`/events/${eventSlug}`);
 
   usePageShortcuts([
-    { key: 'Enter', ctrl: true, allowInInput: true, handler: () => { if (!saving) void handleSave(); } },
+    { key: 'Enter', ctrl: true, allowInInput: true, handler: () => { if (!saving && !startDateMissingForEndDate) void handleSave(); } },
   ]);
 
   const registrationDatesSet = !!form.registrationOpens && !!form.registrationCloses;
