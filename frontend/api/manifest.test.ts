@@ -12,7 +12,28 @@ function makeRequest(host: string): Request {
   });
 }
 
-async function json(res: Response): Promise<any> {
+interface ManifestIcon {
+  src: string;
+  sizes: string;
+  type: string;
+  purpose?: string;
+}
+
+interface ManifestTestShape {
+  name: string;
+  short_name: string;
+  description: string;
+  lang: string;
+  theme_color: string;
+  background_color: string;
+  display: string;
+  start_url: string;
+  scope: string;
+  icons: ManifestIcon[];
+  shortcuts: unknown[];
+}
+
+async function json(res: Response): Promise<ManifestTestShape> {
   return res.json();
 }
 
