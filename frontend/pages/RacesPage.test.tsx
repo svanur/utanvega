@@ -233,6 +233,75 @@ describe('RacesPage URL<->state sync effects settle without ping-ponging (#1026,
     });
 });
 
+// #1514: the `months` URL param used to serialize filters.months' internal 0-indexed
+// (Date.getMonth()) values verbatim, so a shareable URL read e.g. `months=11` for December —
+// leaking a JS convention into a human-facing URL. The fix converts only at the URL boundary
+// (RacesPage.tsx's parse/serialize effects); pill selection and eventHasMonthInSet stay 0-indexed.
+describe('RacesPage months URL param is 1-indexed (#1514)', () => {
+    const decEvent = makeEvent({
+        id: 'event-dec', slug: 'december-run', name: 'December Run',
+        daysUntil: 40, displayDate: '2026-12-20', nextEditionDate: '2026-12-20',
+    });
+    const janEvent = makeEvent({
+        id: 'event-jan', slug: 'january-run', name: 'January Run',
+        daysUntil: 70, displayDate: '2026-01-10', nextEditionDate: '2026-01-10',
+    });
+
+    it('selects the December pill and filters to December events for ?months=12', async () => {
+        mockEvents.current = [decEvent, janEvent];
+        renderRacesPage('/events?months=12');
+
+        await waitFor(() => {
+            expect(screen.getByText('December Run')).not.toBeNull();
+            expect(screen.queryByText('January Run')).toBeNull();
+        });
+
+        // "Dec" renders in two places (the always-mounted filter-drawer month list and the
+        // quick-filter pills row) — both are driven by the same filters.months value, so every
+        // match must agree on the selected (filled) state.
+        const decChips = screen.getAllByText('Dec').map(el => el.closest('.MuiChip-root'));
+        expect(decChips.length).toBeGreaterThan(0);
+        for (const chip of decChips) {
+            expect(chip).not.toBeNull();
+            expect(chip!.className).toContain('MuiChip-filled');
+        }
+    });
+
+    it('selects the January pill (low end unaffected) for ?months=1', async () => {
+        mockEvents.current = [decEvent, janEvent];
+        renderRacesPage('/events?months=1');
+
+        await waitFor(() => {
+            expect(screen.getByText('January Run')).not.toBeNull();
+            expect(screen.queryByText('December Run')).toBeNull();
+        });
+
+        const janChips = screen.getAllByText('Jan').map(el => el.closest('.MuiChip-root'));
+        expect(janChips.length).toBeGreaterThan(0);
+        for (const chip of janChips) {
+            expect(chip).not.toBeNull();
+            expect(chip!.className).toContain('MuiChip-filled');
+        }
+    });
+
+    it('writes months=12 to the URL, not the internal 0-indexed 11, when December is selected', async () => {
+        mockEvents.current = [decEvent, janEvent];
+        setSearchParamsSpy.mockClear();
+        renderRacesPage('/events?months=12');
+
+        // The parse effect reads months=12 into internal index 11; the serialize effect must then
+        // write 12 back out, not the internal 11 — this is the canonical-URL round-trip the issue
+        // is about, and a regression here would be a sync effect that re-writes `months=11`.
+        await act(async () => { await Promise.resolve(); });
+        const monthsWrites = setSearchParamsSpy.mock.calls
+            .map(([params]) => (params as URLSearchParams).get('months'))
+            .filter((v): v is string => v !== null);
+        for (const v of monthsWrites) {
+            expect(v).toBe('12');
+        }
+    });
+});
+
 // #1489: navigator.clipboard.writeText(...) is a Promise-returning API; the Copy URL and Copy
 // list buttons used to flip to the "copied" checkmark unconditionally, right after firing the
 // call, so a rejected promise (permission denied, insecure context, etc.) still showed a success
