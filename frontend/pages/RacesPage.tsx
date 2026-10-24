@@ -1892,9 +1892,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     startIcon={siteQRCopied ? <CheckIcon /> : <ContentCopyIcon />}
                                     color={siteQRCopied ? 'success' : 'primary'}
                                     onClick={() => {
-                                        navigator.clipboard.writeText(siteUrl);
-                                        setSiteQRCopied(true);
-                                        setTimeout(() => setSiteQRCopied(false), 2000);
+                                        navigator.clipboard.writeText(siteUrl).then(() => {
+                                            setSiteQRCopied(true);
+                                            setTimeout(() => setSiteQRCopied(false), 2000);
+                                        }).catch(() => {});
                                     }}
                                     sx={{ textTransform: 'none' }}
                                 >

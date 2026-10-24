@@ -7,7 +7,7 @@
 // runs under vitest.config.ts's global `environment: 'node'`.
 import React, { useEffect } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, act, waitFor, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, act, waitFor, cleanup, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -288,5 +288,34 @@ describe('RacesPage copy buttons do not show success on a rejected clipboard wri
 
         expect(screen.queryByTestId('CheckIcon')).toBeNull();
         expect(screen.getByTestId('FormatListBulletedIcon')).not.toBeNull();
+    });
+
+    // #1498: same silent-failure pattern as the two call sites above, found in the Site QR
+    // dialog's "Copy site URL" button. That button is only reachable once the dialog is open, so
+    // this opens it via the unconditional Site QR Fab (aria-label t('races.shareQR')) first.
+    it('Site QR dialog copy button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const shareQRIcon = screen.getByTestId('QrCode2Icon');
+        const shareQRFab = shareQRIcon.closest('button');
+        expect(shareQRFab).not.toBeNull();
+        fireEvent.click(shareQRFab!);
+
+        // activity=Running also renders the page's own "Copy filter URL" button sharing the same
+        // ContentCopyIcon testid, so the copy button under test must be scoped to the dialog.
+        const dialog = screen.getByRole('dialog');
+        const copyIcon = within(dialog).getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(within(dialog).queryByTestId('CheckIcon')).toBeNull();
+        expect(within(dialog).getByTestId('ContentCopyIcon')).not.toBeNull();
     });
 });
