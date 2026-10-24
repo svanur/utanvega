@@ -297,7 +297,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
         const next: EventFilters = {
             activityTypes: activity ? activity.split(',') : [],
-            months: months ? months.split(',').map(Number) : [],
+            // URL is 1-indexed (human-facing month numbers, e.g. months=12 for December) while
+            // internal filter state stays 0-indexed (JS Date.getMonth() convention, used by pill
+            // selection and eventHasMonthInSet) — convert at this boundary only.
+            months: months ? months.split(',').map(n => Number(n) - 1) : [],
             locations: locations ? locations.split(',') : [],
             itraAny,
             // itraAny and itraPoints are mutually exclusive filters (see activeFilterCount below,
@@ -339,7 +342,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         set('q', search || null);
         set('all', search && includeAllEvents ? 'true' : null);
         set('activity', filters.activityTypes.length ? filters.activityTypes.join(',') : null);
-        set('months', filters.months.length ? filters.months.join(',') : null);
+        // Convert back to 1-indexed for the URL — mirrors the parse effect above.
+        set('months', filters.months.length ? filters.months.map(m => m + 1).join(',') : null);
         set('locations', filters.locations.length ? filters.locations.join(',') : null);
         set('itraAny', filters.itraAny ? 'true' : null);
         set('itraPoints', !filters.itraAny && filters.itraPoints.length ? filters.itraPoints.join(',') : null);
