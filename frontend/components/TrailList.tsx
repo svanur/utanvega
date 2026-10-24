@@ -78,7 +78,8 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
 import { isOngoingPastDayTwo } from '../utils/eventUtils';
-import { formatTrailListForClipboard } from '../utils/copyListToClipboard';
+import { formatTrailListForClipboard, formatListHeading, formatActiveFiltersSummary } from '../utils/copyListToClipboard';
+import type { ActiveFilterLine } from '../utils/copyListToClipboard';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
@@ -460,7 +461,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         const primaryLocation = trail.locations.length > 0
             ? [...trail.locations].sort((a, b) => a.order - b.order)[0]
             : null;
-        return { name: trail.name, location: primaryLocation ? (loc(primaryLocation.name, primaryLocation.nameEn) ?? primaryLocation.name) : null };
+        return {
+            name: trail.name,
+            location: primaryLocation ? (loc(primaryLocation.name, primaryLocation.nameEn) ?? primaryLocation.name) : null,
+            // #1495: trail.length is meters (matches the /1000 km conversion useTrails.ts's own
+            // sort/filter buckets already use), trail.elevationGain is meters already.
+            lengthKm: trail.length / 1000,
+            elevationGain: trail.elevationGain,
+        };
     }), [filteredTrails, loc]);
 
     // Gather trail names for the slot machine display
@@ -491,6 +499,92 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }));
         return Array.from(tagMap.values()).sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name));
     }, [trails, loc]);
+
+    // #1495: one Key: Value line per currently active filter for the "Copy list" clipboard text's
+    // "Filters:" section, same sections/order as activeFilterCount above. The bucket/option label
+    // text below is hand-duplicated from the Chip arrays further down this file (same t() keys/
+    // literal strings) rather than refactoring those arrays to share this lookup — kept small and
+    // commented so the two stay easy to eyeball in sync, same "duplicated, kept in sync by hand"
+    // precedent as _site.ts's BOT_USER_AGENT_PATTERN.
+    const activeFilterLines = React.useMemo((): ActiveFilterLine[] => {
+        const lines: ActiveFilterLine[] = [];
+
+        const lengthBucketLabels: Record<string, string> = {
+            '<10': '< 10 km',
+            '10-21': '10–21 km',
+            '21-42': t('filters.halfMarathon', 'Half–Marathon'),
+            '42-100': t('filters.marathonTo100', 'Marathon–100 km'),
+            '100+': '100 km+',
+        };
+        if (filters.lengthBuckets.length > 0) {
+            lines.push({ label: t('filters.trailLength'), value: filters.lengthBuckets.map(b => lengthBucketLabels[b] ?? b).join(', ') });
+        }
+
+        const elevationBucketLabels: Record<string, string> = {
+            '<200': '< 200 m',
+            '200-500': '200–500 m',
+            '500-1000': '500–1000 m',
+            '1000+': '1000 m+',
+        };
+        if (filters.elevationGainBuckets.length > 0) {
+            lines.push({ label: t('filters.elevationGain'), value: filters.elevationGainBuckets.map(b => elevationBucketLabels[b] ?? b).join(', ') });
+        }
+
+        const climbRatioLabels: Record<string, string> = {
+            '<20': t('filters.climbRatioBuckets.under20', '< 20 m/km'),
+            '20-35': t('filters.climbRatioBuckets.20to35', '20–35 m/km'),
+            '35-50': t('filters.climbRatioBuckets.35to50', '35–50 m/km'),
+            '50+': t('filters.climbRatioBuckets.over50', '50+ m/km'),
+        };
+        if (filters.climbRatioBuckets.length > 0) {
+            lines.push({ label: t('filters.climbRatio'), value: filters.climbRatioBuckets.map(b => climbRatioLabels[b] ?? b).join(', ') });
+        }
+
+        const nearMeLabels: Record<string, string> = {
+            '<10': '< 10 km',
+            '10-25': '10–25 km',
+            '25-50': '25–50 km',
+            '50-100': '50–100 km',
+            '100+': '100 km+',
+        };
+        if (filters.distanceBuckets.length > 0) {
+            lines.push({ label: t('races.nearMe.label', 'Near me'), value: filters.distanceBuckets.map(b => nearMeLabels[b] ?? b).join(', ') });
+        }
+
+        if (filters.difficulties.length > 0) {
+            lines.push({ label: t('filters.difficulty'), value: filters.difficulties.map(d => t(`difficulty.${d.toLowerCase()}`)).join(', ') });
+        }
+
+        if (filters.locationSlugs.length > 0) {
+            const names = selectedLocationItems.map(item => loc(item.name, item.nameEn) ?? item.name);
+            lines.push({ label: t('filters.location'), value: names.length > 0 ? names.join(', ') : t('filters.allLocations') });
+        }
+
+        if (filters.selectedActivityTypes.length > 0) {
+            const value = filters.selectedActivityTypes
+                .map(type => t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`))
+                .join(', ');
+            lines.push({ label: t('races.filters.activityType'), value });
+        }
+
+        if (filters.selectedTags.length > 0) {
+            const names = filters.selectedTags.map(slug => {
+                const tag = availableTags.find(candidate => candidate.slug === slug);
+                return tag ? (loc(tag.name, tag.nameEn) ?? tag.name) : slug;
+            });
+            lines.push({ label: t('filters.tags'), value: names.join(', ') });
+        }
+
+        if (filters.favoritesOnly) {
+            lines.push({ label: t('filters.showFavoritesOnly'), value: '✓' });
+        }
+
+        if (filters.offlineOnly) {
+            lines.push({ label: t('filters.showOfflineOnly'), value: '✓' });
+        }
+
+        return lines;
+    }, [filters, selectedLocationItems, availableTags, loc, t]);
 
     const locationRestored = React.useRef(false);
 
@@ -686,7 +780,16 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             size="small"
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
-                                                navigator.clipboard.writeText(formatTrailListForClipboard(copyableTrails)).then(() => {
+                                                const heading = formatListHeading('trails', t, window.location.hostname);
+                                                const filterLines = formatActiveFiltersSummary(activeFilterLines, t);
+                                                const list = formatTrailListForClipboard(copyableTrails);
+                                                const fullText = [
+                                                    heading, '',
+                                                    ...(filterLines.length > 0 ? [...filterLines, ''] : []),
+                                                    list, '',
+                                                    window.location.href,
+                                                ].join('\n');
+                                                navigator.clipboard.writeText(fullText).then(() => {
                                                     setListCopied(true);
                                                     if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
                                                     listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);

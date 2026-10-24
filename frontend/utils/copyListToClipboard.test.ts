@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { formatEventListForClipboard, formatEventListHeader, formatTrailListForClipboard, toCopyableEventRows } from './copyListToClipboard';
+import {
+    formatActiveFiltersSummary,
+    formatEventListForClipboard,
+    formatEventListHeader,
+    formatListHeading,
+    formatTrailListForClipboard,
+    toCopyableEventRows,
+} from './copyListToClipboard';
+import type { ActiveFilterLine } from './copyListToClipboard';
 import type { FlattenedEventRow } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
@@ -15,10 +23,14 @@ function makeT(lang: 'en' | 'is') {
     const months = lang === 'en' ? MONTHS_EN : MONTHS_IS;
     const weekdaysShort = lang === 'en' ? WEEKDAYS_SHORT_EN : WEEKDAYS_SHORT_IS;
     const noDate = lang === 'en' ? 'Date TBD' : 'Dagsetning óákveðin';
+    const strings: Record<string, string> = lang === 'en'
+        ? { 'nav.trails': 'Trails', 'nav.events': 'Events', 'common.filtersHeading': 'Filters:' }
+        : { 'nav.trails': 'Leiðir', 'nav.events': 'Hlaup', 'common.filtersHeading': 'Síur:' };
     return (key: string) => {
         if (key === 'races.months') return months as unknown as string;
         if (key === 'races.weekdaysShort') return weekdaysShort as unknown as string;
         if (key === 'races.noDate') return noDate;
+        if (key in strings) return strings[key];
         return key;
     };
 }
@@ -123,8 +135,8 @@ describe('formatEventListHeader', () => {
 describe('toCopyableEventRows', () => {
     it('maps a plain event row to its localized name and rowDate', () => {
         const rows: FlattenedEventRow[] = [{ kind: 'event', event: makeEvent({ name: 'Hlaupahátíð', nameEn: 'Running Festival' }), rowDate: '2026-06-15' }];
-        expect(toCopyableEventRows(rows, locIs)).toEqual([{ dateStr: '2026-06-15', name: 'Hlaupahátíð' }]);
-        expect(toCopyableEventRows(rows, locEn)).toEqual([{ dateStr: '2026-06-15', name: 'Running Festival' }]);
+        expect(toCopyableEventRows(rows, locIs)).toEqual([{ dateStr: '2026-06-15', name: 'Hlaupahátíð', distanceLabel: null, elevationGain: null }]);
+        expect(toCopyableEventRows(rows, locEn)).toEqual([{ dateStr: '2026-06-15', name: 'Running Festival', distanceLabel: null, elevationGain: null }]);
     });
 
     // A Series event's individual races must each keep their own line, not collapse into one
@@ -137,9 +149,47 @@ describe('toCopyableEventRows', () => {
             { kind: 'series-race', event, race: makeSeriesRace({ raceId: 'r2', raceName: 'Hlaup 2', dateOfRace: '2026-11-01' }), rowDate: '2026-11-01' },
         ];
         expect(toCopyableEventRows(rows, locIs)).toEqual([
-            { dateStr: '2026-10-01', name: 'Powerade Vetrarhlaupin · Hlaup 1' },
-            { dateStr: '2026-11-01', name: 'Powerade Vetrarhlaupin · Hlaup 2' },
+            { dateStr: '2026-10-01', name: 'Powerade Vetrarhlaupin · Hlaup 1', distanceLabel: null, elevationGain: null },
+            { dateStr: '2026-11-01', name: 'Powerade Vetrarhlaupin · Hlaup 2', distanceLabel: null, elevationGain: null },
         ]);
+    });
+
+    // #1495: a series-race row carries SeriesRaceDto.distanceLabel directly.
+    it('carries a series race\'s own distanceLabel through', () => {
+        const event = makeEvent({ name: 'Powerade Vetrarhlaupin', type: 'Series' });
+        const rows: FlattenedEventRow[] = [
+            { kind: 'series-race', event, race: makeSeriesRace({ raceId: 'r1', raceName: 'Hlaup 1', distanceLabel: '10 km' }), rowDate: '2026-10-01' },
+        ];
+        expect(toCopyableEventRows(rows, locIs)[0].distanceLabel).toBe('10 km');
+    });
+
+    // #1495: SeriesRaceDto has no declared trailElevationGain field today — read defensively
+    // rather than assuming it's always absent, so this starts working the moment the API sends it.
+    it('reads elevationGain defensively off a series race object that does carry one', () => {
+        const event = makeEvent({ name: 'Powerade Vetrarhlaupin', type: 'Series' });
+        const raceWithElevation = { ...makeSeriesRace({ raceId: 'r1' }), trailElevationGain: 450 };
+        const rows: FlattenedEventRow[] = [
+            { kind: 'series-race', event, race: raceWithElevation, rowDate: '2026-10-01' },
+        ];
+        expect(toCopyableEventRows(rows, locIs)[0].elevationGain).toBe(450);
+    });
+
+    // #1495: a plain event's `distances` is an aggregate list across all of its races — only
+    // unambiguous to show as "the" distance when there's exactly one entry.
+    it('carries a plain event\'s single distance label through, but omits it when the event has several', () => {
+        const single = makeEvent({ distances: [{ label: '21 km', ticketStatus: 'Available' }] });
+        const rowsSingle: FlattenedEventRow[] = [{ kind: 'event', event: single, rowDate: '2026-06-15' }];
+        expect(toCopyableEventRows(rowsSingle, locIs)[0].distanceLabel).toBe('21 km');
+
+        const multi = makeEvent({ distances: [{ label: '21 km', ticketStatus: 'Available' }, { label: '42 km', ticketStatus: 'Available' }] });
+        const rowsMulti: FlattenedEventRow[] = [{ kind: 'event', event: multi, rowDate: '2026-06-15' }];
+        expect(toCopyableEventRows(rowsMulti, locIs)[0].distanceLabel).toBeNull();
+    });
+
+    it('never carries an elevationGain for a plain event row — the aggregate distances shape has no such field', () => {
+        const event = makeEvent({ distances: [{ label: '21 km', ticketStatus: 'Available' }] });
+        const rows: FlattenedEventRow[] = [{ kind: 'event', event, rowDate: '2026-06-15' }];
+        expect(toCopyableEventRows(rows, locIs)[0].elevationGain).toBeNull();
     });
 });
 
@@ -220,6 +270,101 @@ describe('formatEventListForClipboard', () => {
             '  • Race A',
         ].join('\n'));
     });
+
+    // #1495
+    it('appends distance and elevation gain, " · "-separated, after the name when both are present', () => {
+        const text = formatEventListForClipboard([{ dateStr: '2026-09-20', name: 'Race A', distanceLabel: '21 km', elevationGain: 450 }], makeT('is'));
+        expect(text.split('\n').at(-1)).toBe('  • Race A · 21 km · 450 m');
+    });
+
+    it('omits distance or elevation individually when unavailable, without leaving a stray " · "', () => {
+        const distanceOnly = formatEventListForClipboard([{ dateStr: '2026-09-20', name: 'Race A', distanceLabel: '21 km', elevationGain: null }], makeT('is'));
+        expect(distanceOnly.split('\n').at(-1)).toBe('  • Race A · 21 km');
+
+        const elevationOnly = formatEventListForClipboard([{ dateStr: '2026-09-20', name: 'Race B', distanceLabel: null, elevationGain: 300 }], makeT('is'));
+        expect(elevationOnly.split('\n').at(-1)).toBe('  • Race B · 300 m');
+
+        const neither = formatEventListForClipboard([{ dateStr: '2026-09-20', name: 'Race C' }], makeT('is'));
+        expect(neither.split('\n').at(-1)).toBe('  • Race C');
+    });
+
+    // #1495: spliced in right after the date-range header, before the first day group.
+    it('inserts the "Filters:" block between the date-range header and the first day group', () => {
+        const text = formatEventListForClipboard(
+            [{ dateStr: '2026-09-20', name: 'Race A' }],
+            makeT('is'),
+            ['Síur:', '  Virkni: Hlaup'],
+        );
+        expect(text).toBe([
+            '20. september 2026',
+            '',
+            'Síur:',
+            '  Virkni: Hlaup',
+            '',
+            'Sun 20. september',
+            '  • Race A',
+        ].join('\n'));
+    });
+
+    // #1495: when every row is dateless there's no date-range header to splice after — the
+    // "Filters:" block still has to appear before the races.noDate group.
+    it('inserts the "Filters:" block before the races.noDate group when every row is dateless', () => {
+        const text = formatEventListForClipboard(
+            [{ dateStr: null, name: 'Dateless Event' }],
+            makeT('is'),
+            ['Síur:', '  Virkni: Hlaup'],
+        );
+        expect(text).toBe([
+            'Síur:',
+            '  Virkni: Hlaup',
+            '',
+            'Dagsetning óákveðin',
+            '  • Dateless Event',
+        ].join('\n'));
+    });
+
+    it('omits the "Filters:" block entirely when no filter lines are passed, matching pre-#1495 output', () => {
+        const text = formatEventListForClipboard([{ dateStr: '2026-09-20', name: 'Race A' }], makeT('is'), []);
+        expect(text).toBe([
+            '20. september 2026',
+            '',
+            'Sun 20. september',
+            '  • Race A',
+        ].join('\n'));
+    });
+});
+
+describe('formatListHeading', () => {
+    it('renders "{{brandName}} – Trails" for the Icelandic host', () => {
+        expect(formatListHeading('trails', makeT('is'), 'hlaupadagskra.is')).toBe('Hlaupadagskra.is – Leiðir');
+    });
+
+    it('renders "{{brandName}} – Events" for the English host', () => {
+        expect(formatListHeading('events', makeT('en'), '360runs.com')).toBe('360Runs – Events');
+    });
+
+    it('resolves the brand from the hostname independently of the t function\'s own language', () => {
+        // English t() but an Icelandic host — brand must follow the host, not the UI language.
+        expect(formatListHeading('trails', makeT('en'), 'hlaupadagskra.is')).toBe('Hlaupadagskra.is – Trails');
+    });
+});
+
+describe('formatActiveFiltersSummary', () => {
+    it('returns an empty array when no filter is active', () => {
+        expect(formatActiveFiltersSummary([], makeT('is'))).toEqual([]);
+    });
+
+    it('renders one "  Key: Value" line per entry, under a translated "Filters:" heading', () => {
+        const entries: ActiveFilterLine[] = [
+            { label: 'Lengd leiðar', value: 'Hálft-Maraþon' },
+            { label: 'Erfiðleiki', value: 'Auðvelt, Miðlungs' },
+        ];
+        expect(formatActiveFiltersSummary(entries, makeT('is'))).toEqual([
+            'Síur:',
+            '  Lengd leiðar: Hálft-Maraþon',
+            '  Erfiðleiki: Auðvelt, Miðlungs',
+        ]);
+    });
 });
 
 describe('formatTrailListForClipboard', () => {
@@ -235,5 +380,27 @@ describe('formatTrailListForClipboard', () => {
     it('appends the location in parentheses when present', () => {
         const text = formatTrailListForClipboard([{ name: 'Esjan', location: 'Mosfellsbær' }, { name: 'Úlfarsfell', location: null }]);
         expect(text).toBe(['• Esjan (Mosfellsbær)', '• Úlfarsfell'].join('\n'));
+    });
+
+    // #1495
+    it('appends length and elevation gain, " · "-separated, after the name/location when both are present', () => {
+        const text = formatTrailListForClipboard([{ name: 'Esjan', location: 'Mosfellsbær', lengthKm: 12.3, elevationGain: 450 }]);
+        expect(text).toBe('• Esjan (Mosfellsbær) · 12.3 km · 450 m');
+    });
+
+    it('rounds elevation gain to the nearest metre and formats length to one decimal', () => {
+        const text = formatTrailListForClipboard([{ name: 'Úlfarsfell', lengthKm: 6.449, elevationGain: 299.6 }]);
+        expect(text).toBe('• Úlfarsfell · 6.4 km · 300 m');
+    });
+
+    it('omits length or elevation individually when unavailable, without leaving a stray " · "', () => {
+        const lengthOnly = formatTrailListForClipboard([{ name: 'Esjan', lengthKm: 12.3, elevationGain: null }]);
+        expect(lengthOnly).toBe('• Esjan · 12.3 km');
+
+        const elevationOnly = formatTrailListForClipboard([{ name: 'Esjan', lengthKm: null, elevationGain: 450 }]);
+        expect(elevationOnly).toBe('• Esjan · 450 m');
+
+        const neither = formatTrailListForClipboard([{ name: 'Esjan', lengthKm: null, elevationGain: null }]);
+        expect(neither).toBe('• Esjan');
     });
 });

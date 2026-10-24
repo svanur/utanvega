@@ -17,6 +17,7 @@
         "copied": "Afritað!",
         "copyList": "Afrita lista",
         "listCopied": "Listi afritaður!",
+        "filtersHeading": "Síur:",
         "dataLoadUnavailable": "Ekki tókst að sækja gögn núna. Athugaðu nettenginguna og reyndu aftur."
     },
     "auth": {
