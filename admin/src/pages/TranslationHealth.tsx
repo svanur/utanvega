@@ -389,24 +389,35 @@ export default function TranslationHealth({ onNotify }: Props) {
     return updated;
   }
 
+  // Split targetFields into machine-translated vs copied-verbatim (translatable: false),
+  // call translate() for the former, and merge both into a single EN-field patch dict.
+  // Shared by translateItem and translateAll so the split/patch logic lives in one place.
+  const buildTranslationPatch = useCallback(async (
+    item: EntityItem,
+    targetFields: FieldDef[],
+  ): Promise<Record<string, string>> => {
+    const toTranslate = targetFields.filter(f => f.translatable !== false);
+    const toCopy = targetFields.filter(f => f.translatable === false);
+    const translated = await translate(toTranslate.map(f => f.getIs(item) ?? ''));
+    const patch: Record<string, string> = {};
+    toTranslate.forEach((f, i) => {
+      const key = EN_FIELD_MAP[item.kind][f.label];
+      if (key && translated[i]) patch[key] = translated[i];
+    });
+    toCopy.forEach(f => {
+      const key = EN_FIELD_MAP[item.kind][f.label];
+      const isText = f.getIs(item);
+      if (key && isText) patch[key] = isText;
+    });
+    return patch;
+  }, [translate]);
+
   const translateItem = useCallback(async (item: EntityItem) => {
     const targetFields = item.fields.filter(f => isMissing(f, item) || isStale(f, item));
     if (targetFields.length === 0) return;
     setTranslatingId(item.id);
     try {
-      const toTranslate = targetFields.filter(f => f.translatable !== false);
-      const toCopy = targetFields.filter(f => f.translatable === false);
-      const translated = await translate(toTranslate.map(f => f.getIs(item) ?? ''));
-      const patch: Record<string, string> = {};
-      toTranslate.forEach((f, i) => {
-        const key = EN_FIELD_MAP[item.kind][f.label];
-        if (key && translated[i]) patch[key] = translated[i];
-      });
-      toCopy.forEach(f => {
-        const key = EN_FIELD_MAP[item.kind][f.label];
-        const isText = f.getIs(item);
-        if (key && isText) patch[key] = isText;
-      });
+      const patch = await buildTranslationPatch(item, targetFields);
       if (Object.keys(patch).length > 0) {
         const hashes = buildHashes(item, targetFields);
         await savePatch(item, patch, hashes);
@@ -418,7 +429,7 @@ export default function TranslationHealth({ onNotify }: Props) {
     } finally {
       setTranslatingId(null);
     }
-  }, [translate, load, onNotify]);
+  }, [buildTranslationPatch, load, onNotify]);
 
   const translateAll = useCallback(async (staleOnly = false) => {
     const targets = items.filter(item =>
@@ -432,19 +443,7 @@ export default function TranslationHealth({ onNotify }: Props) {
         const targetFields = item.fields.filter(f =>
           staleOnly ? isStale(f, item) : (isMissing(f, item) || isStale(f, item))
         );
-        const toTranslate = targetFields.filter(f => f.translatable !== false);
-        const toCopy = targetFields.filter(f => f.translatable === false);
-        const translated = await translate(toTranslate.map(f => f.getIs(item) ?? ''));
-        const patch: Record<string, string> = {};
-        toTranslate.forEach((f, i) => {
-          const key = EN_FIELD_MAP[item.kind][f.label];
-          if (key && translated[i]) patch[key] = translated[i];
-        });
-        toCopy.forEach(f => {
-          const key = EN_FIELD_MAP[item.kind][f.label];
-          const isText = f.getIs(item);
-          if (key && isText) patch[key] = isText;
-        });
+        const patch = await buildTranslationPatch(item, targetFields);
         if (Object.keys(patch).length > 0) {
           const hashes = buildHashes(item, targetFields);
           await savePatch(item, patch, hashes);
@@ -460,7 +459,7 @@ export default function TranslationHealth({ onNotify }: Props) {
       failed > 0 ? `Translated ${done}, failed ${failed}` : `Translated ${done} items`,
       failed > 0 ? 'error' : 'success'
     );
-  }, [items, translate, load, onNotify]);
+  }, [items, buildTranslationPatch, load, onNotify]);
 
   const kinds: EntityKind[] = ['Event', 'Edition', 'Race', 'Trail', 'Location', 'Organizer', 'Tag'];
 
