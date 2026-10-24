@@ -11,7 +11,7 @@
 // directly (without react-i18next's HttpBackend/I18nextProvider ceremony) — cheaper than wiring up
 // the app's actual i18n.ts, and sufficient since this test only asserts on the coordinate fallback
 // string and structural presence/absence of the tile, never on translated copy.
-import { describe, it, expect, afterEach, beforeAll } from 'vitest';
+import { describe, it, expect, afterEach, afterAll, beforeAll } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -442,5 +442,38 @@ describe('ClimateCard getClimateBackground buckets (#1454)', () => {
             light: 'linear-gradient(135deg, rgba(207, 216, 220, 0.4) 0%, rgba(207, 216, 220, 0) 100%)',
             dark: 'linear-gradient(135deg, rgba(144, 164, 174, 0.14) 0%, rgba(144, 164, 174, 0) 100%)',
         });
+    });
+});
+
+// #1470: every other describe block above renders under the file-level `lng: 'en'` instance
+// (beforeAll at the top of this file), so formatDecimal's Icelandic (comma) branch — exercised
+// via i18n.language at ClimateCard.tsx:160/205/216/238 — had no automated coverage, only the
+// manual spot-check noted in #1461/#1469's review. Switches the shared i18next instance to 'is'
+// for this block only, then restores 'en' in afterAll so every other describe block in this file
+// keeps running under its original English default.
+describe('ClimateCard renders Icelandic comma decimals (#1470)', () => {
+    beforeAll(async () => {
+        await i18next.changeLanguage('is');
+    });
+
+    afterAll(async () => {
+        await i18next.changeLanguage('en');
+    });
+
+    it('formats the sunshine-hours value with a comma decimal separator under i18n.language "is"', () => {
+        render(
+            <ClimateCard
+                // averageSunshineHours=6 -> formatDecimal(6, 'is') -> "6,0" (Intl.NumberFormat's
+                // Icelandic comma separator) and getSunshineLabelKey's "moderate" band (>=4, <8).
+                // i18next has no 'is' resources loaded, so the band label still renders as its
+                // untranslated key, same convention as every other case in this file.
+                climate={makeClimate({ averageSunshineHours: 6 })}
+                loading={false}
+                error={null}
+                locationName="Reykjavík"
+            />
+        );
+
+        expect(screen.getByText('6,0 climate.sunshineUnit · climate.sunshineModerate')).toBeTruthy();
     });
 });
