@@ -16,6 +16,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ClimateCard from './ClimateCard';
+import { getClimateBackground } from '../utils/getClimateBackground';
 import type { EventClimate } from '../hooks/useTrails';
 
 afterEach(cleanup);
@@ -349,5 +350,97 @@ describe('ClimateCard approximateLocation caption does not truncate (#1418)', ()
         // own to exercise the same noWrap/wrap behavior being asserted here.
         const caption = screen.getByText('climate.approximateLocation');
         expect(caption.className).not.toContain('MuiTypography-noWrap');
+    });
+});
+
+// #1454: getClimateBackground (added by #1453/#1448, originally a private helper inside
+// ClimateCard.tsx) had no direct test. Split into utils/getClimateBackground.ts (same pattern as
+// getActivityIcon.tsx/contactEmail.ts — a component file that also exports a plain function trips
+// react-refresh/only-export-components) so these can call it directly and assert the exact
+// { light, dark } gradient pair per bucket, rather than inferring the bucket indirectly through a
+// rendered Paper's backgroundImage style. Mirrors getClimateIcon's own bucket order and thresholds
+// exactly, so each case below pins both the bucket choice and the literal gradient strings against
+// drift.
+describe('ClimateCard getClimateBackground buckets (#1454)', () => {
+    it('returns the snow (pale blue) pair when averageLow <= 0 and precipitationChance >= 0.3', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: -2, precipitationChance: 0.4 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(187, 222, 251, 0.45) 0%, rgba(187, 222, 251, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(100, 181, 246, 0.16) 0%, rgba(100, 181, 246, 0) 100%)',
+        });
+    });
+
+    it('returns the snow pair at the averageLow === 0 boundary (still <= 0)', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: 0, precipitationChance: 0.3 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(187, 222, 251, 0.45) 0%, rgba(187, 222, 251, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(100, 181, 246, 0.16) 0%, rgba(100, 181, 246, 0) 100%)',
+        });
+    });
+
+    it('returns the heavy rain (slate blue) pair when precipitationChance >= 0.5', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: 5, precipitationChance: 0.75 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(144, 164, 174, 0.4) 0%, rgba(144, 164, 174, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(120, 144, 156, 0.18) 0%, rgba(120, 144, 156, 0) 100%)',
+        });
+    });
+
+    it('returns the heavy rain pair at the precipitationChance === 0.5 boundary', () => {
+        // averageLow is above 0, so the snow bucket's earlier check can't shadow this boundary.
+        const result = getClimateBackground(makeClimate({ averageLow: 5, precipitationChance: 0.5 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(144, 164, 174, 0.4) 0%, rgba(144, 164, 174, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(120, 144, 156, 0.18) 0%, rgba(120, 144, 156, 0) 100%)',
+        });
+    });
+
+    it('returns the showers (light blue) pair when precipitationChance >= 0.2', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: 5, precipitationChance: 0.35 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(179, 229, 252, 0.4) 0%, rgba(179, 229, 252, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(79, 195, 247, 0.14) 0%, rgba(79, 195, 247, 0) 100%)',
+        });
+    });
+
+    it('returns the showers pair at the precipitationChance === 0.2 boundary', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: 5, precipitationChance: 0.2 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(179, 229, 252, 0.4) 0%, rgba(179, 229, 252, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(79, 195, 247, 0.14) 0%, rgba(79, 195, 247, 0) 100%)',
+        });
+    });
+
+    it('returns the sunny (warm yellow) pair when precipitationChance < 0.2 and averageHigh >= 15', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: 5, precipitationChance: 0.1, averageHigh: 20 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(255, 224, 130, 0.4) 0%, rgba(255, 224, 130, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(255, 183, 77, 0.14) 0%, rgba(255, 183, 77, 0) 100%)',
+        });
+    });
+
+    it('returns the sunny pair at the averageHigh === 15 boundary', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: 5, precipitationChance: 0.1, averageHigh: 15 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(255, 224, 130, 0.4) 0%, rgba(255, 224, 130, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(255, 183, 77, 0.14) 0%, rgba(255, 183, 77, 0) 100%)',
+        });
+    });
+
+    it('returns the cloudy (neutral grey) pair when none of the above thresholds are met', () => {
+        const result = getClimateBackground(makeClimate({ averageLow: 5, precipitationChance: 0.1, averageHigh: 14 }));
+
+        expect(result).toEqual({
+            light: 'linear-gradient(135deg, rgba(207, 216, 220, 0.4) 0%, rgba(207, 216, 220, 0) 100%)',
+            dark: 'linear-gradient(135deg, rgba(144, 164, 174, 0.14) 0%, rgba(144, 164, 174, 0) 100%)',
+        });
     });
 });
