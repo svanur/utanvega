@@ -85,11 +85,11 @@ import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
 type ViewMode = 'list' | 'map' | 'table';
 
-// #1487: selectable filter pills in the Advanced Filters panel need a >=44x44px touch target
-// (iOS/Android a11y guideline) — MUI's size="small" Chip renders ~24px tall by default. Bumping
-// both dimensions here, local to this file, rather than a blanket MuiChip theme override, which
-// would also grow unrelated chips elsewhere (discovery-tab chips, status badges) that aren't
-// Advanced Filters pills.
+// #1487/#1506: selectable filter/toggle pills (Advanced Filters panel, Activity Type pills,
+// discovery tab chips) need a >=44x44px touch target (iOS/Android a11y guideline) — MUI's
+// size="small" Chip renders ~24px tall by default. Bumping both dimensions here, local to this
+// file, rather than a blanket MuiChip theme override, which would also grow unrelated chips
+// elsewhere (status/count badges, race card tags) that are passive, not interactive.
 const FILTER_CHIP_SX = { cursor: 'pointer', minHeight: 44, minWidth: 44 };
 
 interface TrailListProps {
@@ -1152,9 +1152,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             </Collapse>
 
             {/* Activity Type pills — Trail Run + Road Run always visible; other types behind feature flag */}
+            {/* #1506: these are real toggle controls (same defect class as #1487's Advanced Filters
+                chips), so they get the same >=44x44px touch target via FILTER_CHIP_SX. */}
             <Box
                 display="flex"
-                gap={0.5}
+                gap={1}
                 mb={2}
                 flexWrap="nowrap"
                 overflow="auto"
@@ -1170,7 +1172,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         const selected = filters.selectedActivityTypes.includes('TrailRunning');
                         setFilters(f => ({ ...f, selectedActivityTypes: selected ? f.selectedActivityTypes.filter(x => x !== 'TrailRunning') : [...f.selectedActivityTypes, 'TrailRunning'] }));
                     }}
-                    sx={{ cursor: 'pointer' }}
+                    sx={FILTER_CHIP_SX}
                 />
                 <Chip
                     icon={<DirectionsRunIcon fontSize="small" />}
@@ -1182,7 +1184,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         const selected = filters.selectedActivityTypes.includes('Running');
                         setFilters(f => ({ ...f, selectedActivityTypes: selected ? f.selectedActivityTypes.filter(x => x !== 'Running') : [...f.selectedActivityTypes, 'Running'] }));
                     }}
-                    sx={{ cursor: 'pointer' }}
+                    sx={FILTER_CHIP_SX}
                 />
                 {isEnabled('activity_pills') && ALL_ACTIVITY_TYPES
                     .filter(type => type !== 'TrailRunning' && type !== 'Running' && trails.some(t => t.activityType === type))
@@ -1216,11 +1218,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                         fontWeight: selected ? 'bold' : 'normal',
                                         opacity: selected ? 1 : 0.6,
                                         fontSize: '0.75rem',
-                                        height: 26,
+                                        // #1506: 44px-tall equivalent of the old height: 26 — label hides on
+                                        // xs (icon-only), so minWidth also goes to 44 there to keep the
+                                        // collapsed pill square-ish and tappable.
+                                        minHeight: 44,
                                         '& .MuiChip-label': { display: { xs: 'none', sm: 'block' }, px: 0.75 },
                                         '& .MuiChip-icon': { mx: { xs: 0, sm: undefined }, fontSize: '1rem' },
                                         px: { xs: 0.5, sm: undefined },
-                                        minWidth: { xs: 32, sm: undefined },
+                                        minWidth: { xs: 44, sm: undefined },
                                         justifyContent: 'center',
                                     }}
                                 />
@@ -1249,7 +1254,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             {isEnabled('discovery_carousel') && (trendingTrails.length > 0 || recentTrails.length > 0 || upcomingCompetitions.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
                 <Box mb={3}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                        <Box display="flex" gap={0.5} flexWrap="wrap">
+                        {/* #1506: discovery tab chips are toggle controls like the Advanced Filters
+                            pills, so they get the same >=44x44px touch target via FILTER_CHIP_SX. */}
+                        <Box display="flex" gap={1} flexWrap="wrap">
                             {trendingTrails.length > 0 && (
                                 <Chip
                                     icon={<WhatshotIcon />}
@@ -1258,7 +1265,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     variant={discoveryTab === 'trending' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'trending' ? 'warning' : 'default'}
                                     onClick={() => handleDiscoveryTabChange('trending')}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             )}
                             {recentTrails.length > 0 && (
@@ -1269,7 +1276,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     variant={discoveryTab === 'recent' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'recent' ? 'primary' : 'default'}
                                     onClick={() => handleDiscoveryTabChange('recent')}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             )}
                             {isEnabled('races_page') && upcomingCompetitions.length > 0 && (
@@ -1280,7 +1287,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     variant={discoveryTab === 'races' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'races' ? 'success' : 'default'}
                                     onClick={() => handleDiscoveryTabChange('races')}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             )}
                         </Box>
