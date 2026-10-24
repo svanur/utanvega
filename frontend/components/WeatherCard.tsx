@@ -63,7 +63,7 @@ function formatHour(timeStr: string): string {
     }
 }
 
-function formatDay(dateStr: string, t: (key: string) => string, locale: string): string {
+function formatDay(dateStr: string, t: (key: string) => string, language: string): string {
     try {
         const date = new Date(dateStr + 'T00:00:00');
         const today = new Date();
@@ -74,6 +74,7 @@ function formatDay(dateStr: string, t: (key: string) => string, locale: string):
         if (date.getTime() === today.getTime()) return t('weather.today');
         if (date.getTime() === tomorrow.getTime()) return t('weather.tomorrow');
 
+        const locale = language === 'is' ? 'is-IS' : 'en-US';
         return date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' });
     } catch {
         return dateStr;
@@ -217,7 +218,7 @@ function HourlyStrip({ hourly, t }: { hourly: HourlyForecastDto[]; t: (key: stri
     );
 }
 
-function DailyForecast({ daily, t, locale, language, raceDate }: { daily: DailyForecastDto[]; t: (key: string) => string; locale: string; language: string; raceDate?: string | null }) {
+function DailyForecast({ daily, t, language, raceDate }: { daily: DailyForecastDto[]; t: (key: string) => string; language: string; raceDate?: string | null }) {
     return (
         <Box>
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
@@ -243,7 +244,7 @@ function DailyForecast({ daily, t, locale, language, raceDate }: { daily: DailyF
                         }}
                     >
                         <Typography variant="body2" sx={{ minWidth: { xs: 60, sm: 70 } }}>
-                            {formatDay(d.date, t, locale)}
+                            {formatDay(d.date, t, language)}
                         </Typography>
                         <Typography sx={{ fontSize: '1.1rem', minWidth: 28, textAlign: 'center' }}>
                             {getWeatherIcon(d.weatherCode)}
@@ -284,7 +285,6 @@ function DailyForecast({ daily, t, locale, language, raceDate }: { daily: DailyF
 export default function WeatherCard({ weather, loading, error, raceDate }: WeatherCardProps) {
     const { t, i18n } = useTranslation();
     const [expanded, setExpanded] = useState(false);
-    const locale = i18n.language === 'is' ? 'is-IS' : 'en-US';
 
     if (loading) {
         return (
@@ -380,7 +380,7 @@ export default function WeatherCard({ weather, loading, error, raceDate }: Weath
                     <Divider sx={{ my: 2 }} />
 
                     {/* Daily forecast */}
-                    <DailyForecast daily={weather.daily} t={t} locale={locale} language={i18n.language} raceDate={raceDate} />
+                    <DailyForecast daily={weather.daily} t={t} language={i18n.language} raceDate={raceDate} />
                 </Box>
             </Collapse>
         </Paper>
