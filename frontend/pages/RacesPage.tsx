@@ -710,7 +710,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {filterOptions.activityTypes.length > 0 && (
                             <Box sx={{ mb: 1.5 }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.activityType')}</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                     {filterOptions.activityTypes.map(type => {
                                         const selected = filters.activityTypes.includes(type);
                                         return (
@@ -725,7 +725,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ...f,
                                                     activityTypes: selected ? f.activityTypes.filter(x => x !== type) : [...f.activityTypes, type],
                                                 }))}
-                                                sx={{ cursor: 'pointer' }}
+                                                sx={FILTER_CHIP_SX}
                                             />
                                         );
                                     })}
@@ -736,7 +736,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* Race distance */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.raceDistance', 'Race distance')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 {([
                                     { key: '<10', label: '< 10 km' },
                                     { key: '10-21', label: '10–21 km' },
@@ -758,7 +758,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ? f.distanceBuckets.filter(b => b !== key)
                                                     : [...f.distanceBuckets, key],
                                             }))}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
