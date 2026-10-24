@@ -84,6 +84,13 @@ import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 
 type ViewMode = 'list' | 'map' | 'table';
 
+// #1487: selectable filter pills in the Advanced Filters panel need a >=44x44px touch target
+// (iOS/Android a11y guideline) — MUI's size="small" Chip renders ~24px tall by default. Bumping
+// both dimensions here, local to this file, rather than a blanket MuiChip theme override, which
+// would also grow unrelated chips elsewhere (discovery-tab chips, status badges) that aren't
+// Advanced Filters pills.
+const FILTER_CHIP_SX = { cursor: 'pointer', minHeight: 44, minWidth: 44 };
+
 interface TrailListProps {
     tagSlug?: string;
     onViewModeChange?: (mode: ViewMode) => void;
@@ -761,7 +768,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('races.filters.activityType')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {ALL_ACTIVITY_TYPES.filter(type => trails.some(t => t.activityType === type)).map(type => {
                                     const selected = filters.selectedActivityTypes.includes(type);
                                     const icon = {
@@ -786,7 +793,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                 const updated = selected ? current.filter(t => t !== type) : [...current, type];
                                                 setFilters(f => ({ ...f, selectedActivityTypes: updated }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -799,7 +806,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('filters.trailLength')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {([
                                     { key: '<10', label: '< 10 km' },
                                     { key: '10-21', label: '10–21 km' },
@@ -821,7 +828,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     : [...filters.lengthBuckets, key];
                                                 setFilters(f => ({ ...f, lengthBuckets: next }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -833,7 +840,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('filters.elevationGain')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {([
                                     { key: '<200', label: '< 200 m' },
                                     { key: '200-500', label: '200–500 m' },
@@ -854,7 +861,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     : [...filters.elevationGainBuckets, key];
                                                 setFilters(f => ({ ...f, elevationGainBuckets: next }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -866,7 +873,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('filters.climbRatio')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {([
                                     { key: '<20', label: t('filters.climbRatioBuckets.under20', '< 20 m/km') },
                                     { key: '20-35', label: t('filters.climbRatioBuckets.20to35', '20–35 m/km') },
@@ -887,7 +894,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     : [...filters.climbRatioBuckets, key];
                                                 setFilters(f => ({ ...f, climbRatioBuckets: next }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -899,7 +906,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('filters.difficulty')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {(['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'] as const).map(d => {
                                     const selected = filters.difficulties.includes(d);
                                     return (
@@ -915,7 +922,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     : [...filters.difficulties, d];
                                                 setFilters(f => ({ ...f, difficulties: next }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -926,7 +933,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         {tagsEnabled && availableTags.length > 0 && (
                             <Grid item xs={12}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>{t('filters.tags')}</Typography>
-                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                     {availableTags.map(tag => {
                                         const selected = filters.selectedTags.includes(tag.slug);
                                         return (
@@ -941,10 +948,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     handleFilterChange('selectedTags', next);
                                                 }}
                                                 sx={{
+                                                    ...FILTER_CHIP_SX,
                                                     backgroundColor: selected ? (tag.color || 'primary.main') : undefined,
                                                     color: selected ? '#fff' : undefined,
                                                     borderColor: tag.color || undefined,
-                                                    cursor: 'pointer',
                                                 }}
                                                 variant={selected ? 'filled' : 'outlined'}
                                             />
@@ -960,7 +967,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                     {t('races.nearMe.label', 'Near me')}
                                 </Typography>
-                                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                     {([
                                         { key: '<10', label: '< 10 km' },
                                         { key: '10-25', label: '10–25 km' },
@@ -982,7 +989,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                         : [...filters.distanceBuckets, key];
                                                     setFilters(f => ({ ...f, distanceBuckets: next }));
                                                 }}
-                                                sx={{ cursor: 'pointer' }}
+                                                sx={FILTER_CHIP_SX}
                                             />
                                         );
                                     })}
