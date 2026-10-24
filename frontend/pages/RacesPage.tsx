@@ -76,7 +76,8 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
-import { toCopyableEventRows, formatEventListForClipboard } from '../utils/copyListToClipboard';
+import { toCopyableEventRows, formatEventListForClipboard, formatListHeading, formatActiveFiltersSummary } from '../utils/copyListToClipboard';
+import type { ActiveFilterLine } from '../utils/copyListToClipboard';
 import { applyFilters, eventFiltersEqual, eventMonths, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -379,6 +380,83 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         filters.distanceBuckets.length,
     [filters]);
 
+    // #1495: one Key: Value line per currently active filter for the "Copy list" clipboard text's
+    // "Filters:" section, same sections/order as activeFilterCount above. The bucket/option label
+    // text below is hand-duplicated from the Chip arrays further down this file (same t() keys/
+    // literal strings, including the race-distance buckets TrailList.tsx's own lengthBuckets Chips
+    // use) rather than refactoring those arrays to share this lookup — kept small and commented so
+    // the two stay easy to eyeball in sync, same "duplicated, kept in sync by hand" precedent as
+    // _site.ts's BOT_USER_AGENT_PATTERN.
+    const activeFilterLines = useMemo((): ActiveFilterLine[] => {
+        const lines: ActiveFilterLine[] = [];
+
+        if (filters.activityTypes.length > 0) {
+            lines.push({
+                label: t('races.filters.activityType'),
+                value: filters.activityTypes.map(type => t(`races.activityTypes.${type}`, type)).join(', '),
+            });
+        }
+
+        if (filters.months.length > 0) {
+            const months = t('races.months', { returnObjects: true }) as string[];
+            lines.push({ label: t('races.filters.month', 'Month'), value: filters.months.map(idx => months[idx]).join(', ') });
+        }
+
+        if (filters.locations.length > 0) {
+            lines.push({ label: t('trail.location'), value: filters.locations.join(', ') });
+        }
+
+        if (filters.itraAny) {
+            lines.push({ label: 'ITRA', value: '✓' });
+        } else if (filters.itraPoints.length > 0) {
+            lines.push({ label: t('races.filters.itraPoints'), value: filters.itraPoints.map(pts => `ITRA ${pts}`).join(', ') });
+        }
+
+        if (filters.certifications.length > 0) {
+            lines.push({ label: t('races.filters.certifications'), value: filters.certifications.join(', ') });
+        }
+
+        if (filters.championships.length > 0) {
+            lines.push({ label: t('races.filters.championships'), value: filters.championships.join(', ') });
+        }
+
+        if (filters.weekendOnly) {
+            lines.push({ label: t('races.filters.weekendOnly'), value: '✓' });
+        }
+
+        if (filters.thisWeekOnly) {
+            lines.push({ label: t('races.filters.thisWeek'), value: '✓' });
+        }
+
+        if (filters.nextWeekOnly) {
+            lines.push({ label: t('races.filters.nextWeek'), value: '✓' });
+        }
+
+        if (filters.mountainRaceOnly) {
+            lines.push({ label: t('races.mountainRace', 'Mountain race'), value: '✓' });
+        }
+
+        if (filters.favoritesOnly) {
+            lines.push({ label: t('races.filters.favoritesOnly'), value: '✓' });
+        }
+
+        if (filters.distanceBuckets.length > 0) {
+            const distanceBucketLabels: Record<string, string> = {
+                '<10': '< 10 km',
+                '10-21': '10–21 km',
+                '21-42': t('filters.halfMarathon', 'Half–Marathon'),
+                '42-100': t('filters.marathonTo100', 'Marathon–100 km'),
+                '100+': '100 km+',
+            };
+            lines.push({
+                label: t('races.filters.raceDistance', 'Race distance'),
+                value: filters.distanceBuckets.map(b => distanceBucketLabels[b] ?? b).join(', '),
+            });
+        }
+
+        return lines;
+    }, [filters, t]);
+
     const filterOptions = useMemo(() => {
         const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
         const activityTypes = [...new Set(visible.map(e => e.activityType))].sort();
@@ -631,8 +709,12 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             size="small"
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
+                                                const heading = formatListHeading('events', t, window.location.hostname);
+                                                const filterLines = formatActiveFiltersSummary(activeFilterLines, t);
                                                 const rows = toCopyableEventRows(flattenedUpcoming, loc);
-                                                navigator.clipboard.writeText(formatEventListForClipboard(rows, t)).then(() => {
+                                                const list = formatEventListForClipboard(rows, t, filterLines);
+                                                const fullText = [heading, '', list, '', window.location.href].join('\n');
+                                                navigator.clipboard.writeText(fullText).then(() => {
                                                     setListCopied(true);
                                                     if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
                                                     listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);

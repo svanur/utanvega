@@ -17,6 +17,7 @@
         "copied": "Copied!",
         "copyList": "Copy list",
         "listCopied": "List copied!",
+        "filtersHeading": "Filters:",
         "dataLoadUnavailable": "We couldn't load data right now. Check your internet connection and try again."
     },
     "auth": {
