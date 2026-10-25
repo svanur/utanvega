@@ -50,7 +50,7 @@ vi.mock('./TrailCard', () => ({
 // mockTrailsState is mutable so individual tests can swap fixtures/filters without re-mocking;
 // it's read fresh on every useTrails() call. filters.locationSlugs starts non-empty so
 // activeFilterCount > 0 by default — that's what gates the "Copy link" button (TrailList.tsx:755).
-const { DEFAULT_FILTERS, mockTrailsState } = vi.hoisted(() => {
+const { DEFAULT_FILTERS, mockTrailsState, mockLocationsState } = vi.hoisted(() => {
     const defaultFilters = {
         lengthBuckets: [],
         elevationGainBuckets: [],
@@ -69,6 +69,14 @@ const { DEFAULT_FILTERS, mockTrailsState } = vi.hoisted(() => {
         mockTrailsState: {
             trails: [] as unknown[],
             filters: { ...defaultFilters } as Record<string, unknown>,
+        },
+        // #1507: mutable so the location-chip test below can flip on `locations_page` and seed a
+        // location tree without disturbing every other test in this file, which relies on the
+        // Advanced Filters "Location" Autocomplete (TrailList.tsx:840) staying unrendered — it's
+        // gated on both `isEnabled('locations_page')` and a non-empty locationMenuItems list.
+        mockLocationsState: {
+            locationsPageEnabled: false,
+            tree: [] as { slug: string; name: string; nameEn: string | null; totalTrailsCount: number; children: unknown[] }[],
         },
     };
 });
@@ -123,10 +131,14 @@ vi.mock('../hooks/useRecentlyViewed', () => ({
     useRecentlyViewed: () => ({ recentSlugs: [] }),
 }));
 vi.mock('../hooks/useLocations', () => ({
-    useLocationTree: () => ({ tree: [] }),
+    useLocationTree: () => ({ tree: mockLocationsState.tree }),
 }));
 vi.mock('../hooks/useFeatureFlags', () => ({
-    useFeatureFlags: () => ({ flags: {}, loaded: true, isEnabled: () => false }),
+    useFeatureFlags: () => ({
+        flags: {},
+        loaded: true,
+        isEnabled: (flag: string) => flag === 'locations_page' && mockLocationsState.locationsPageEnabled,
+    }),
 }));
 vi.mock('../hooks/useEvents', () => ({
     useEvents: () => ({ events: [], loading: false, error: null, refresh: vi.fn() }),
@@ -266,5 +278,47 @@ describe('TrailList copy buttons show the copied checkmark when writeText resolv
 
         expect(screen.getByTestId('CheckIcon')).not.toBeNull();
         expect(screen.queryByTestId('FormatListBulletedIcon')).toBeNull();
+    });
+});
+
+// #1507: the selected-location Chip's delete ("x") icon had a sub-44px tap target at 375px —
+// fixed via a ::before overlay on `.MuiChip-deleteIcon` (TrailList.tsx:859-889) that expands the
+// clickable region to 44x44px without growing the chip's own layout box (unlike FILTER_CHIP_SX,
+// which resizes the whole chip and stays reserved for the Advanced Filters toggle pills per
+// #1487/PR #1505). jsdom doesn't run layout, so pixel-accurate hit-area size can't be asserted
+// here — this guards the behavior instead: selecting a location renders a removable Chip, and
+// clicking its delete icon still removes it and clears the Autocomplete's selection, proving the
+// sx addition didn't break `renderTags`/`handleLocationSelect`. The sx values themselves (width:
+// 44, height: 44, centered via translate(-50%, -50%)) are the cited evidence for the touch-target
+// size per the issue's "no rendered check available" fallback.
+describe('TrailList location filter Chip delete icon (#1507)', () => {
+    afterEach(() => {
+        mockLocationsState.locationsPageEnabled = false;
+        mockLocationsState.tree = [];
+    });
+
+    it('selecting a location renders a Chip, and clicking its delete icon removes it', async () => {
+        mockLocationsState.locationsPageEnabled = true;
+        mockLocationsState.tree = [
+            { slug: 'capital-region', name: 'Capital Region', nameEn: null, totalTrailsCount: 5, children: [] },
+        ];
+        mockTrailsState.trails = [makeTrail()];
+        mockTrailsState.filters = { ...DEFAULT_FILTERS };
+        renderTrailList();
+
+        // The Location Autocomplete lives inside the Advanced Filters panel, collapsed by default.
+        fireEvent.click(screen.getByRole('button', { name: 'filters' }));
+
+        const input = screen.getByLabelText('Location');
+        fireEvent.mouseDown(input);
+        const option = await screen.findByText('Capital Region');
+        fireEvent.click(option);
+
+        expect(screen.getByText('Capital Region')).not.toBeNull();
+        const deleteIcon = screen.getByTestId('CancelIcon');
+
+        fireEvent.click(deleteIcon);
+
+        expect(screen.queryByText('Capital Region')).toBeNull();
     });
 });

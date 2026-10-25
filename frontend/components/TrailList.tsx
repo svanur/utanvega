@@ -858,7 +858,33 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 )}
                                 renderTags={(value, getTagProps) =>
                                     value.map((opt, index) => (
-                                        <Chip {...getTagProps({ index })} key={opt.slug} label={loc(opt.name, opt.nameEn) ?? opt.name} size="small" />
+                                        <Chip
+                                            {...getTagProps({ index })}
+                                            key={opt.slug}
+                                            label={loc(opt.name, opt.nameEn) ?? opt.name}
+                                            size="small"
+                                            // #1507: the visible chip stays size="small" (~24px) so it keeps
+                                            // fitting inside the Autocomplete input, but its delete ("x") icon
+                                            // is the actual tap target and needs a >=44x44px hit area (iOS/Android
+                                            // a11y guideline). A ::before overlay centered on the icon expands the
+                                            // clickable region without growing the chip's own layout box, unlike
+                                            // FILTER_CHIP_SX (which resizes the whole chip and is reserved for the
+                                            // Advanced Filters toggle pills — see #1487/PR #1505).
+                                            sx={{
+                                                '& .MuiChip-deleteIcon': {
+                                                    position: 'relative',
+                                                    '&::before': {
+                                                        content: '""',
+                                                        position: 'absolute',
+                                                        top: '50%',
+                                                        left: '50%',
+                                                        width: 44,
+                                                        height: 44,
+                                                        transform: 'translate(-50%, -50%)',
+                                                    },
+                                                },
+                                            }}
+                                        />
                                     ))
                                 }
                             />
