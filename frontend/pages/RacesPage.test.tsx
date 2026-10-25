@@ -6,7 +6,7 @@
 // TrailMapView.test.tsx's jsdom-opt-in + RTL + vi.hoisted pattern; the rest of the frontend suite
 // runs under vitest.config.ts's global `environment: 'node'`.
 import React, { useEffect } from 'react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, cleanup, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -395,9 +395,27 @@ describe('RacesPage copy buttons do not show success on a rejected clipboard wri
 // block) so a regression that broke the "copied" checkmark entirely, not just the reject-path
 // bug, would also be caught.
 describe('RacesPage copy buttons show the copied checkmark when writeText resolves (#1512)', () => {
+    // #1521: each handler below arms a real 2000ms setTimeout (RacesPage.tsx:710-715/:732-742/
+    // :1909-1913) to reset the checkmark back to the copy icon, and that setTimeout is still live
+    // when the test returns if nothing advances it. Fake timers here, advanced well past 2000ms
+    // and torn down in afterEach, so nothing outlives the test.
+    //
+    // This also happens to settle RacesPage.tsx:268-280's one-time swipe-hint timer (1200ms, then
+    // a nested 800ms) — reachable in principle on every renderRacesPage() call in this file, but
+    // under *real* timers (every other describe block above) the component unmounts via the
+    // top-level afterEach(cleanup) well before 1200ms of real wall-clock time passes, and the
+    // effect's own `return () => clearTimeout(timer)` cancels it — so it was never actually
+    // left pending in those blocks. Here, advancing fake time by more than 2000ms does fire it for
+    // real; advancing comfortably past both its 1200ms and nested 800ms (i.e. past the 2000ms
+    // mark) rather than stopping exactly at 2000ms keeps that settle deterministic too.
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
     afterEach(() => {
         // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
         delete navigator.clipboard;
+        vi.useRealTimers();
     });
 
     function stubResolvingClipboard() {
@@ -424,6 +442,13 @@ describe('RacesPage copy buttons show the copied checkmark when writeText resolv
 
         expect(screen.getByTestId('CheckIcon')).not.toBeNull();
         expect(screen.queryByTestId('ContentCopyIcon')).toBeNull();
+
+        // Run the 2000ms reset timer (RacesPage.tsx:710-715) to completion inside act() — the
+        // callback updates React state — plus the swipe-hint timer chain past its own 2000ms
+        // total, so neither is left pending once the test returns.
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
     });
 
     it('Copy list button swaps to CheckIcon when writeText resolves', async () => {
@@ -442,6 +467,12 @@ describe('RacesPage copy buttons show the copied checkmark when writeText resolv
 
         expect(screen.getByTestId('CheckIcon')).not.toBeNull();
         expect(screen.queryByTestId('FormatListBulletedIcon')).toBeNull();
+
+        // Run the 2000ms reset timer (RacesPage.tsx:732-742) to completion inside act() — same
+        // reasoning as the Copy URL test above.
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
     });
 
     // #1498/#1512: same resolve-path parity for the Site QR dialog's copy button as the two
@@ -470,5 +501,11 @@ describe('RacesPage copy buttons show the copied checkmark when writeText resolv
 
         expect(within(dialog).getByTestId('CheckIcon')).not.toBeNull();
         expect(within(dialog).queryByTestId('ContentCopyIcon')).toBeNull();
+
+        // Run the dialog's own 2000ms reset timer (RacesPage.tsx:1909-1913) to completion inside
+        // act() — same reasoning as the two tests above.
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
     });
 });
