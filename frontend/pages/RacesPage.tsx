@@ -111,6 +111,19 @@ type ViewMode = 'list' | 'map' | 'table';
 // also grow unrelated chips elsewhere (status/badge chips) that aren't filter pills.
 const FILTER_CHIP_SX = { cursor: 'pointer', minHeight: 44, minWidth: 44 };
 
+// #1510: a {key, label} option — shared shape for the race-distance bucket pills below. Looking a
+// label up by key (used by the "Copy list" clipboard summary) and rendering the Chip for that same
+// option (used by the filter panel) both read from one options array now, rather than each keeping
+// its own hand-copied label map (see activeFilterLines below and PR #1508).
+interface BucketOption<K extends string = string> {
+    key: K;
+    label: string;
+}
+
+function bucketLabel<K extends string>(options: readonly BucketOption<K>[], key: K): string {
+    return options.find(opt => opt.key === key)?.label ?? key;
+}
+
 
 type RacesPageProps = {
     mode: PaletteMode;
@@ -384,13 +397,24 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         filters.distanceBuckets.length,
     [filters]);
 
-    // #1495: one Key: Value line per currently active filter for the "Copy list" clipboard text's
-    // "Filters:" section, same sections/order as activeFilterCount above. The bucket/option label
-    // text below is hand-duplicated from the Chip arrays further down this file (same t() keys/
-    // literal strings, including the race-distance buckets TrailList.tsx's own lengthBuckets Chips
-    // use) rather than refactoring those arrays to share this lookup — kept small and commented so
-    // the two stay easy to eyeball in sync, same "duplicated, kept in sync by hand" precedent as
-    // _site.ts's BOT_USER_AGENT_PATTERN.
+    // #1510: shared by the activeFilterLines memo below and the matching Chip-rendering section
+    // further down this file — was a hand-copied label map duplicated between the two (see PR
+    // #1508's comment here, now superseded). Same key/label set as TrailList.tsx's own
+    // lengthBucketOptions, but kept page-scoped rather than hoisted into a cross-page helper: trail
+    // length and race distance are different filter concepts that happen to share bucket wording.
+    const distanceBucketOptions = useMemo((): BucketOption<RaceDistanceBucket>[] => [
+        { key: '<10', label: '< 10 km' },
+        { key: '10-21', label: '10–21 km' },
+        { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
+        { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
+        { key: '100+', label: '100 km+' },
+    ], [t]);
+
+    // #1495/#1510: one Key: Value line per currently active filter for the "Copy list" clipboard
+    // text's "Filters:" section, same sections/order as activeFilterCount above. Race-distance
+    // labels are looked up from distanceBucketOptions above (also used by the matching
+    // Chip-rendering section further down this file) via bucketLabel() — a single source of truth
+    // instead of the hand-copied label map PR #1508 left here.
     const activeFilterLines = useMemo((): ActiveFilterLine[] => {
         const lines: ActiveFilterLine[] = [];
 
@@ -445,21 +469,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         }
 
         if (filters.distanceBuckets.length > 0) {
-            const distanceBucketLabels: Record<string, string> = {
-                '<10': '< 10 km',
-                '10-21': '10–21 km',
-                '21-42': t('filters.halfMarathon', 'Half–Marathon'),
-                '42-100': t('filters.marathonTo100', 'Marathon–100 km'),
-                '100+': '100 km+',
-            };
             lines.push({
                 label: t('races.filters.raceDistance', 'Race distance'),
-                value: filters.distanceBuckets.map(b => distanceBucketLabels[b] ?? b).join(', '),
+                value: filters.distanceBuckets.map(b => bucketLabel(distanceBucketOptions, b)).join(', '),
             });
         }
 
         return lines;
-    }, [filters, t]);
+    }, [filters, t, distanceBucketOptions]);
 
     const filterOptions = useMemo(() => {
         const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
@@ -823,13 +840,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.raceDistance', 'Race distance')}</Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
-                                {([
-                                    { key: '<10', label: '< 10 km' },
-                                    { key: '10-21', label: '10–21 km' },
-                                    { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
-                                    { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
-                                    { key: '100+', label: '100 km+' },
-                                ] as const).map(({ key, label }) => {
+                                {distanceBucketOptions.map(({ key, label }) => {
                                     const selected = filters.distanceBuckets.includes(key);
                                     return (
                                         <Chip

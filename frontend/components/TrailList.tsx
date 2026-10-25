@@ -86,6 +86,19 @@ import CancelIcon from '@mui/icons-material/Cancel';
 
 type ViewMode = 'list' | 'map' | 'table';
 
+// #1510: a {key, label} option — shared shape for the bucket pills below. Looking a label up by
+// key (used by the "Copy list" clipboard summary) and rendering the Chip for that same option
+// (used by the Advanced Filters panel) both read from one options array per bucket now, rather
+// than each keeping its own hand-copied label map/array (see activeFilterLines below and PR #1508).
+interface BucketOption {
+    key: string;
+    label: string;
+}
+
+function bucketLabel(options: readonly BucketOption[], key: string): string {
+    return options.find(opt => opt.key === key)?.label ?? key;
+}
+
 // #1487/#1506: selectable filter/toggle pills (Advanced Filters panel, Activity Type pills,
 // discovery tab chips) need a >=44x44px touch target (iOS/Android a11y guideline) — MUI's
 // size="small" Chip renders ~24px tall by default. Bumping both dimensions here, local to this
@@ -501,55 +514,61 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         return Array.from(tagMap.values()).sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name));
     }, [trails, loc]);
 
-    // #1495: one Key: Value line per currently active filter for the "Copy list" clipboard text's
-    // "Filters:" section, same sections/order as activeFilterCount above. The bucket/option label
-    // text below is hand-duplicated from the Chip arrays further down this file (same t() keys/
-    // literal strings) rather than refactoring those arrays to share this lookup — kept small and
-    // commented so the two stay easy to eyeball in sync, same "duplicated, kept in sync by hand"
-    // precedent as _site.ts's BOT_USER_AGENT_PATTERN.
+    // #1510: one options array per bucket, shared by the activeFilterLines memo below and the
+    // matching Chip-rendering section further down this file — was two independent hand-copied
+    // label sets per bucket (see PR #1508's comment here, now superseded).
+    const lengthBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<10', label: '< 10 km' },
+        { key: '10-21', label: '10–21 km' },
+        { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
+        { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
+        { key: '100+', label: '100 km+' },
+    ], [t]);
+
+    const elevationGainBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<200', label: '< 200 m' },
+        { key: '200-500', label: '200–500 m' },
+        { key: '500-1000', label: '500–1000 m' },
+        { key: '1000+', label: '1000 m+' },
+    ], []);
+
+    const climbRatioBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<20', label: t('filters.climbRatioBuckets.under20', '< 20 m/km') },
+        { key: '20-35', label: t('filters.climbRatioBuckets.20to35', '20–35 m/km') },
+        { key: '35-50', label: t('filters.climbRatioBuckets.35to50', '35–50 m/km') },
+        { key: '50+', label: t('filters.climbRatioBuckets.over50', '50+ m/km') },
+    ], [t]);
+
+    const nearMeBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<10', label: '< 10 km' },
+        { key: '10-25', label: '10–25 km' },
+        { key: '25-50', label: '25–50 km' },
+        { key: '50-100', label: '50–100 km' },
+        { key: '100+', label: '100 km+' },
+    ], []);
+
+    // #1495/#1510: one Key: Value line per currently active filter for the "Copy list" clipboard
+    // text's "Filters:" section, same sections/order as activeFilterCount above. Bucket/option
+    // labels are looked up from the shared *BucketOptions arrays above (also used by the matching
+    // Chip-rendering section further down this file) via bucketLabel() — a single source of truth
+    // instead of the two hand-copied label maps PR #1508 left here.
     const activeFilterLines = React.useMemo((): ActiveFilterLine[] => {
         const lines: ActiveFilterLine[] = [];
 
-        const lengthBucketLabels: Record<string, string> = {
-            '<10': '< 10 km',
-            '10-21': '10–21 km',
-            '21-42': t('filters.halfMarathon', 'Half–Marathon'),
-            '42-100': t('filters.marathonTo100', 'Marathon–100 km'),
-            '100+': '100 km+',
-        };
         if (filters.lengthBuckets.length > 0) {
-            lines.push({ label: t('filters.trailLength'), value: filters.lengthBuckets.map(b => lengthBucketLabels[b] ?? b).join(', ') });
+            lines.push({ label: t('filters.trailLength'), value: filters.lengthBuckets.map(b => bucketLabel(lengthBucketOptions, b)).join(', ') });
         }
 
-        const elevationBucketLabels: Record<string, string> = {
-            '<200': '< 200 m',
-            '200-500': '200–500 m',
-            '500-1000': '500–1000 m',
-            '1000+': '1000 m+',
-        };
         if (filters.elevationGainBuckets.length > 0) {
-            lines.push({ label: t('filters.elevationGain'), value: filters.elevationGainBuckets.map(b => elevationBucketLabels[b] ?? b).join(', ') });
+            lines.push({ label: t('filters.elevationGain'), value: filters.elevationGainBuckets.map(b => bucketLabel(elevationGainBucketOptions, b)).join(', ') });
         }
 
-        const climbRatioLabels: Record<string, string> = {
-            '<20': t('filters.climbRatioBuckets.under20', '< 20 m/km'),
-            '20-35': t('filters.climbRatioBuckets.20to35', '20–35 m/km'),
-            '35-50': t('filters.climbRatioBuckets.35to50', '35–50 m/km'),
-            '50+': t('filters.climbRatioBuckets.over50', '50+ m/km'),
-        };
         if (filters.climbRatioBuckets.length > 0) {
-            lines.push({ label: t('filters.climbRatio'), value: filters.climbRatioBuckets.map(b => climbRatioLabels[b] ?? b).join(', ') });
+            lines.push({ label: t('filters.climbRatio'), value: filters.climbRatioBuckets.map(b => bucketLabel(climbRatioBucketOptions, b)).join(', ') });
         }
 
-        const nearMeLabels: Record<string, string> = {
-            '<10': '< 10 km',
-            '10-25': '10–25 km',
-            '25-50': '25–50 km',
-            '50-100': '50–100 km',
-            '100+': '100 km+',
-        };
         if (filters.distanceBuckets.length > 0) {
-            lines.push({ label: t('races.nearMe.label', 'Near me'), value: filters.distanceBuckets.map(b => nearMeLabels[b] ?? b).join(', ') });
+            lines.push({ label: t('races.nearMe.label', 'Near me'), value: filters.distanceBuckets.map(b => bucketLabel(nearMeBucketOptions, b)).join(', ') });
         }
 
         if (filters.difficulties.length > 0) {
@@ -585,7 +604,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }
 
         return lines;
-    }, [filters, selectedLocationItems, availableTags, loc, t]);
+    }, [filters, selectedLocationItems, availableTags, loc, t, lengthBucketOptions, elevationGainBucketOptions, climbRatioBucketOptions, nearMeBucketOptions]);
 
     const locationRestored = React.useRef(false);
 
@@ -955,13 +974,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 {t('filters.trailLength')}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<10', label: '< 10 km' },
-                                    { key: '10-21', label: '10–21 km' },
-                                    { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
-                                    { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
-                                    { key: '100+', label: '100 km+' },
-                                ] as const).map(({ key, label }) => {
+                                {lengthBucketOptions.map(({ key, label }) => {
                                     const selected = filters.lengthBuckets.includes(key);
                                     return (
                                         <Chip
@@ -989,12 +1002,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 {t('filters.elevationGain')}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<200', label: '< 200 m' },
-                                    { key: '200-500', label: '200–500 m' },
-                                    { key: '500-1000', label: '500–1000 m' },
-                                    { key: '1000+', label: '1000 m+' },
-                                ] as const).map(({ key, label }) => {
+                                {elevationGainBucketOptions.map(({ key, label }) => {
                                     const selected = filters.elevationGainBuckets.includes(key);
                                     return (
                                         <Chip
@@ -1022,12 +1030,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 {t('filters.climbRatio')}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<20', label: t('filters.climbRatioBuckets.under20', '< 20 m/km') },
-                                    { key: '20-35', label: t('filters.climbRatioBuckets.20to35', '20–35 m/km') },
-                                    { key: '35-50', label: t('filters.climbRatioBuckets.35to50', '35–50 m/km') },
-                                    { key: '50+', label: t('filters.climbRatioBuckets.over50', '50+ m/km') },
-                                ] as const).map(({ key, label }) => {
+                                {climbRatioBucketOptions.map(({ key, label }) => {
                                     const selected = filters.climbRatioBuckets.includes(key);
                                     return (
                                         <Chip
@@ -1116,13 +1119,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     {t('races.nearMe.label', 'Near me')}
                                 </Typography>
                                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                    {([
-                                        { key: '<10', label: '< 10 km' },
-                                        { key: '10-25', label: '10–25 km' },
-                                        { key: '25-50', label: '25–50 km' },
-                                        { key: '50-100', label: '50–100 km' },
-                                        { key: '100+', label: '100 km+' },
-                                    ] as const).map(({ key, label }) => {
+                                    {nearMeBucketOptions.map(({ key, label }) => {
                                         const selected = filters.distanceBuckets.includes(key);
                                         return (
                                             <Chip
