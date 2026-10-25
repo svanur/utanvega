@@ -158,6 +158,13 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     const [listCopied, setListCopied] = React.useState(false);
     const listCopiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // #1524: clear pending copy-revert timers on unmount — otherwise the
+    // setLinkCopied/setListCopied(false) callback fires after unmount.
+    React.useEffect(() => () => {
+        if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+        if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+    }, []);
+
     const activeFilterCount = React.useMemo(() =>
         filters.lengthBuckets.length +
         filters.elevationGainBuckets.length +

@@ -200,6 +200,15 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [siteQROpen, setSiteQROpen] = useState(false);
     const [siteQRCopied, setSiteQRCopied] = useState(false);
+    const siteQRCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // #1524: clear pending copy-revert timers on unmount — otherwise the
+    // setXCopied(false) callback fires after unmount.
+    useEffect(() => () => {
+        if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+        if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+        if (siteQRCopiedTimer.current) clearTimeout(siteQRCopiedTimer.current);
+    }, []);
     const [shareEventSlug, setShareEventSlug] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationLoading, setLocationLoading] = useState(false);
@@ -1909,7 +1918,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     onClick={() => {
                                         navigator.clipboard.writeText(siteUrl).then(() => {
                                             setSiteQRCopied(true);
-                                            setTimeout(() => setSiteQRCopied(false), 2000);
+                                            if (siteQRCopiedTimer.current) clearTimeout(siteQRCopiedTimer.current);
+                                            siteQRCopiedTimer.current = setTimeout(() => setSiteQRCopied(false), 2000);
                                         }).catch(() => {});
                                     }}
                                     sx={{ textTransform: 'none' }}
