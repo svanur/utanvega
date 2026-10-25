@@ -81,6 +81,7 @@ function makeSeriesRace(overrides: Partial<SeriesRaceDto> = {}): SeriesRaceDto {
         dateOfRace: '2026-07-01',
         startTime: null,
         distanceLabel: null,
+        trailElevationGain: null,
         ticketStatus: 'Available',
         registrationUrl: null,
         ...overrides,

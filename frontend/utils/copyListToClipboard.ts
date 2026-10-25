@@ -67,13 +67,7 @@ export function toCopyableEventRows(
         if (row.kind === 'series-race') {
             const eventName = loc(row.event.name, row.event.nameEn) ?? row.event.name;
             const raceName = loc(row.race.raceName, row.race.raceNameEn) ?? row.race.raceName;
-            // #1495: SeriesRaceDto (backend/Application/Events/Queries/GetEvents/EventDto.cs)
-            // carries no elevation field today — only the full RaceDto used by the single-event
-            // detail pages (CompetitionDetailPage/EditionHistoryPage) does. Read it defensively off
-            // the race object rather than widening SeriesRaceDto's declared TS shape to a field the
-            // API doesn't actually send yet, so this starts rendering the moment it does, without
-            // lying about today's contract in the meantime.
-            const elevationGain = (row.race as { trailElevationGain?: number | null }).trailElevationGain ?? null;
+            const elevationGain = row.race.trailElevationGain ?? null;
             return { dateStr: row.rowDate, name: `${eventName} · ${raceName}`, distanceLabel: row.race.distanceLabel, elevationGain };
         }
         // A plain (non-Series) event's `distances` is an aggregate list across all of its races —
