@@ -282,15 +282,17 @@ describe('TrailList copy buttons show the copied checkmark when writeText resolv
 });
 
 // #1507: the selected-location Chip's delete ("x") icon had a sub-44px tap target at 375px —
-// fixed via a ::before overlay on `.MuiChip-deleteIcon` (TrailList.tsx:859-889) that expands the
-// clickable region to 44x44px without growing the chip's own layout box (unlike FILTER_CHIP_SX,
-// which resizes the whole chip and stays reserved for the Advanced Filters toggle pills per
-// #1487/PR #1505). jsdom doesn't run layout, so pixel-accurate hit-area size can't be asserted
-// here — this guards the behavior instead: selecting a location renders a removable Chip, and
-// clicking its delete icon still removes it and clears the Autocomplete's selection, proving the
-// sx addition didn't break `renderTags`/`handleLocationSelect`. The sx values themselves (width:
-// 44, height: 44, centered via translate(-50%, -50%)) are the cited evidence for the touch-target
-// size per the issue's "no rendered check available" fallback.
+// fixed via a ::before overlay on `.MuiChip-deleteIcon` that expands the clickable region to
+// 44x44px without growing the chip's own layout box (unlike FILTER_CHIP_SX, which resizes the
+// whole chip and stays reserved for the Advanced Filters toggle pills per #1487/PR #1505).
+// Review round 1: with 2+ selected locations, a bare 44x44 overlay overflowed the chip's own
+// ~24px-tall, tightly-margined box enough to bleed onto a neighbouring chip's hit area, so the
+// Chip root now also sets `overflow: hidden`, clipping the (already invisible) overlay at the
+// chip's own border and guaranteeing it can never land on a neighbour. jsdom doesn't run layout,
+// so pixel-accurate hit-area size/clipping can't be asserted here — this guards the behavior
+// instead: selecting a location renders a removable Chip, and clicking its delete icon still
+// removes it and clears the Autocomplete's selection, proving the sx addition didn't break
+// `renderTags`/`handleLocationSelect`.
 describe('TrailList location filter Chip delete icon (#1507)', () => {
     afterEach(() => {
         mockLocationsState.locationsPageEnabled = false;
@@ -320,5 +322,46 @@ describe('TrailList location filter Chip delete icon (#1507)', () => {
         fireEvent.click(deleteIcon);
 
         expect(screen.queryByText('Capital Region')).toBeNull();
+    });
+
+    // Review round 1: with only one chip rendered, the test above can't catch the overlapping-
+    // hit-box regression the Tester flagged — two 44x44 overlays on adjacent chips could overlap
+    // and delete the wrong one. jsdom doesn't lay out boxes, so pixel-level overlap can't be
+    // asserted directly; this instead pins each delete icon to its own Chip's DOM subtree (not
+    // the next chip's) and confirms clicking one only ever removes that chip, leaving its
+    // neighbour untouched — the behavior the `overflow: hidden` clip (TrailList.tsx:874) exists
+    // to guarantee regardless of how tight the real on-screen margins are.
+    it('with two selected locations, deleting one chip leaves the other intact', async () => {
+        mockLocationsState.locationsPageEnabled = true;
+        mockLocationsState.tree = [
+            { slug: 'capital-region', name: 'Capital Region', nameEn: null, totalTrailsCount: 5, children: [] },
+            { slug: 'south', name: 'South', nameEn: null, totalTrailsCount: 3, children: [] },
+        ];
+        mockTrailsState.trails = [makeTrail()];
+        mockTrailsState.filters = { ...DEFAULT_FILTERS };
+        renderTrailList();
+
+        fireEvent.click(screen.getByRole('button', { name: 'filters' }));
+
+        const input = screen.getByLabelText('Location');
+        fireEvent.mouseDown(input);
+        fireEvent.click(await screen.findByText('Capital Region'));
+        fireEvent.mouseDown(input);
+        fireEvent.click(await screen.findByText('South'));
+
+        expect(screen.getByText('Capital Region')).not.toBeNull();
+        expect(screen.getByText('South')).not.toBeNull();
+
+        // Each Chip (getTagProps) owns exactly one CancelIcon; find the one that lives inside
+        // "South"'s own chip, not "Capital Region"'s, and confirm deleting it is scoped correctly.
+        const southChip = screen.getByText('South').closest('.MuiChip-root');
+        expect(southChip).not.toBeNull();
+        const southDeleteIcon = southChip!.querySelector('[data-testid="CancelIcon"]');
+        expect(southDeleteIcon).not.toBeNull();
+
+        fireEvent.click(southDeleteIcon!);
+
+        expect(screen.queryByText('South')).toBeNull();
+        expect(screen.getByText('Capital Region')).not.toBeNull();
     });
 });

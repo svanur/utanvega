@@ -870,7 +870,20 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             // clickable region without growing the chip's own layout box, unlike
                                             // FILTER_CHIP_SX (which resizes the whole chip and is reserved for the
                                             // Advanced Filters toggle pills — see #1487/PR #1505).
+                                            //
+                                            // Review round 1 (#1517): a bare 44x44 overlay overflows the chip's
+                                            // own box by ~14px/side, but adjacent tag chips only have a ~4px gap
+                                            // between them (MUI's small Chip deleteIcon margin + Autocomplete's
+                                            // small-tag margin:2), so two overlays could overlap and steal a tap
+                                            // meant for the neighbouring chip's delete icon. `overflow: hidden`
+                                            // on the chip root clips the invisible overlay at the chip's own
+                                            // border — it's already invisible, so this has no visual effect, but
+                                            // it guarantees the hit area can never bleed onto a neighbouring
+                                            // chip, regardless of label length. The tap target is effectively
+                                            // "44x44 capped to this chip's own box", which is at or near 44x44
+                                            // for any chip wide enough to hold a location name.
                                             sx={{
+                                                overflow: 'hidden',
                                                 '& .MuiChip-deleteIcon': {
                                                     position: 'relative',
                                                     '&::before': {
