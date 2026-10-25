@@ -97,6 +97,7 @@ function makeSeriesRace(overrides: Partial<SeriesRaceDto> = {}): SeriesRaceDto {
         dateOfRace: '2026-07-01',
         startTime: null,
         distanceLabel: null,
+        trailElevationGain: null,
         ticketStatus: 'Available',
         registrationUrl: null,
         ...overrides,
@@ -163,13 +164,11 @@ describe('toCopyableEventRows', () => {
         expect(toCopyableEventRows(rows, locIs)[0].distanceLabel).toBe('10 km');
     });
 
-    // #1495: SeriesRaceDto has no declared trailElevationGain field today — read defensively
-    // rather than assuming it's always absent, so this starts working the moment the API sends it.
-    it('reads elevationGain defensively off a series race object that does carry one', () => {
+    // #1509: SeriesRaceDto.trailElevationGain is a real typed field now — no defensive cast needed.
+    it('carries a series race\'s trailElevationGain through', () => {
         const event = makeEvent({ name: 'Powerade Vetrarhlaupin', type: 'Series' });
-        const raceWithElevation = { ...makeSeriesRace({ raceId: 'r1' }), trailElevationGain: 450 };
         const rows: FlattenedEventRow[] = [
-            { kind: 'series-race', event, race: raceWithElevation, rowDate: '2026-10-01' },
+            { kind: 'series-race', event, race: makeSeriesRace({ raceId: 'r1', trailElevationGain: 450 }), rowDate: '2026-10-01' },
         ];
         expect(toCopyableEventRows(rows, locIs)[0].elevationGain).toBe(450);
     });

@@ -16,6 +16,7 @@ public record SeriesRaceDto(
     TimeOnly? StartTime,
     string? DistanceLabel,
     string? DistanceLabelEn,
+    double? TrailElevationGain,
     string TicketStatus,
     string? RegistrationUrl
 );

@@ -2842,6 +2842,144 @@ public class EventHandlerTests : IDisposable
         Assert.Equal(race.Id, dto.RecentlyCompletedSeriesRace!.RaceId);
     }
 
+    // ─── GetEventsQuery — SeriesRaceDto.TrailElevationGain (#1509) ───
+
+    [Fact]
+    public async Task GetEvents_SeriesRaces_PopulatesTrailElevationGain_FromLinkedTrail()
+    {
+        var ev = CreateTestEvent("Powerade vetrarhlaupin");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var trail = CreateTestTrail("Hlaup 1 Trail"); // ElevationGain: 2500 (CreateTestTrail default)
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-1),
+            EndDate = today.AddMonths(1),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            TrailId = trail.Id,
+            Name = "Hlaup 1",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(7),
+            Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        var seriesRace = Assert.Single(dto.SeriesRaces!);
+        Assert.Equal(trail.ElevationGain, seriesRace.TrailElevationGain);
+    }
+
+    [Fact]
+    public async Task GetEvents_SeriesRaces_NoLinkedTrail_TrailElevationGainIsNull()
+    {
+        var ev = CreateTestEvent("Trailless Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-1),
+            EndDate = today.AddMonths(1),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Hlaup 1",
+            DistanceLabel = "10 km",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(7),
+            Status = RaceStatus.Active,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        var seriesRace = Assert.Single(dto.SeriesRaces!);
+        Assert.Null(seriesRace.TrailElevationGain);
+    }
+
+    [Fact]
+    public async Task GetEvents_Series_RecentlyCompletedRace_PopulatesTrailElevationGain()
+    {
+        var ev = CreateTestEvent("Just Raced Series");
+        ev.Type = EventType.Series;
+        ev.ScheduleRule = null;
+        var trail = CreateTestTrail("Hlaup 1 Trail");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var edition = new EventEdition
+        {
+            Id = Guid.NewGuid(),
+            EventId = ev.Id,
+            Year = today.Year,
+            Date = today.AddMonths(-3),
+            EndDate = today.AddMonths(3),
+            RegistrationStatus = RegistrationStatus.Open,
+        };
+        var justRaced = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            TrailId = trail.Id,
+            Name = "Hlaup 1",
+            SortOrder = 0,
+            DateOfRace = today.AddDays(-1),
+            Status = RaceStatus.Completed,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Trails.Add(trail);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(justRaced);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventsQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(new GetEventsQuery(), CancellationToken.None);
+
+        var dto = Assert.Single(result);
+        Assert.NotNull(dto.RecentlyCompletedSeriesRace);
+        Assert.Equal(trail.ElevationGain, dto.RecentlyCompletedSeriesRace!.TrailElevationGain);
+    }
+
     [Fact]
     public async Task GetEvents_Series_RecentlyCompletedRace_BeyondBoundary_ReturnsNull()
     {

@@ -9,7 +9,7 @@ using Utanvega.Backend.Infrastructure.Persistence;
 
 namespace Utanvega.Backend.Application.Events.Queries.GetEvents;
 
-internal record TrailSummary(double Length, string? YoutubeUrl, Core.Entities.TerrainType? TerrainType, Core.Entities.ActivityType ActivityTypeId);
+internal record TrailSummary(double Length, string? YoutubeUrl, Core.Entities.TerrainType? TerrainType, Core.Entities.ActivityType ActivityTypeId, double ElevationGain);
 
 public record GetEventsQuery(bool IncludeHidden = false) : IRequest<List<EventSummaryDto>>, ICacheable
 {
@@ -67,13 +67,13 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
             ? await _context.Trails
                 .AsNoTracking()
                 .Where(t => trailIds.Contains(t.Id))
-                .Select(t => new { t.Id, t.Length, t.YoutubeUrl, t.TerrainType, t.ActivityTypeId })
+                .Select(t => new { t.Id, t.Length, t.YoutubeUrl, t.TerrainType, t.ActivityTypeId, t.ElevationGain })
                 .ToDictionaryAsync(t => t.Id, cancellationToken)
             : [];
 
         TrailSummary? GetTrail(Guid? trailId) =>
             trailId.HasValue && trailSummaries.TryGetValue(trailId.Value, out var ts)
-                ? new TrailSummary(ts.Length, ts.YoutubeUrl, ts.TerrainType, ts.ActivityTypeId)
+                ? new TrailSummary(ts.Length, ts.YoutubeUrl, ts.TerrainType, ts.ActivityTypeId, ts.ElevationGain)
                 : null;
 
         var now = DateTime.UtcNow;
@@ -253,6 +253,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                                     : GetTrail(r.TrailId) is { Length: > 0 } st ? $"{st.Length / 1000.0:0.#} km"
                                     : null,
                                 r.DistanceLabelEn,
+                                GetTrail(r.TrailId)?.ElevationGain,
                                 EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
                                 ed.RegistrationUrl
                             ));
@@ -297,6 +298,7 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                             : GetTrail(recentRace.TrailId) is { Length: > 0 } rst ? $"{rst.Length / 1000.0:0.#} km"
                             : null,
                         recentRace.DistanceLabelEn,
+                        GetTrail(recentRace.TrailId)?.ElevationGain,
                         EditionStatusHelpers.ComputeEffectiveTicketStatus(recentRace.Status, recentRace.TicketStatus, recentEdEffectiveRegStatus).ToString(),
                         recentRaceEdition.RegistrationUrl
                     );
