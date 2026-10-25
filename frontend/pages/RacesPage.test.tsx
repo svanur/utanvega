@@ -388,3 +388,87 @@ describe('RacesPage copy buttons do not show success on a rejected clipboard wri
         expect(within(dialog).getByTestId('ContentCopyIcon')).not.toBeNull();
     });
 });
+
+// #1512: the reject-path tests above only prove the buttons don't show a false positive — they
+// don't prove the success state ever renders at all. These cover the resolve path (mirroring
+// TrailList.test.tsx's #1497 "copy buttons show the copied checkmark when writeText resolves"
+// block) so a regression that broke the "copied" checkmark entirely, not just the reject-path
+// bug, would also be caught.
+describe('RacesPage copy buttons show the copied checkmark when writeText resolves (#1512)', () => {
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+    });
+
+    function stubResolvingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockResolvedValue(undefined) },
+            configurable: true,
+        });
+    }
+
+    it('Copy URL button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const copyIcon = screen.getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            // Flush the resolved microtask through the .then() handler.
+            await Promise.resolve();
+        });
+
+        expect(screen.getByTestId('CheckIcon')).not.toBeNull();
+        expect(screen.queryByTestId('ContentCopyIcon')).toBeNull();
+    });
+
+    it('Copy list button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const listIcon = screen.getByTestId('FormatListBulletedIcon');
+        const listButton = listIcon.closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve();
+        });
+
+        expect(screen.getByTestId('CheckIcon')).not.toBeNull();
+        expect(screen.queryByTestId('FormatListBulletedIcon')).toBeNull();
+    });
+
+    // #1498/#1512: same resolve-path parity for the Site QR dialog's copy button as the two
+    // call sites above — opened via the Site QR Fab (aria-label t('races.shareQR')) first.
+    it('Site QR dialog copy button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const shareQRIcon = screen.getByTestId('QrCode2Icon');
+        const shareQRFab = shareQRIcon.closest('button');
+        expect(shareQRFab).not.toBeNull();
+        fireEvent.click(shareQRFab!);
+
+        // activity=Running also renders the page's own "Copy filter URL" button sharing the same
+        // ContentCopyIcon testid, so the copy button under test must be scoped to the dialog.
+        const dialog = screen.getByRole('dialog');
+        const copyIcon = within(dialog).getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            await Promise.resolve();
+        });
+
+        expect(within(dialog).getByTestId('CheckIcon')).not.toBeNull();
+        expect(within(dialog).queryByTestId('ContentCopyIcon')).toBeNull();
+    });
+});
