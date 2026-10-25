@@ -916,6 +916,20 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                         width: 44,
                                                         height: 44,
                                                         margin: 0,
+                                                        // #1518: MUI clones this element with its own
+                                                        // `MuiChip-deleteIcon MuiChip-deleteIconSmall`
+                                                        // classes (Chip.js), and its `.MuiChip-deleteIconSmall`
+                                                        // margin rule is a 2-class descendant selector
+                                                        // (`& .MuiChip-deleteIconSmall` nested under ChipRoot's
+                                                        // own class) — strictly higher specificity than the
+                                                        // single emotion class the `margin: 0` above compiles
+                                                        // to, so it always wins over the plain override.
+                                                        // Target both of MUI's classes directly so this rule's
+                                                        // specificity (3 classes) beats MUI's (2 classes)
+                                                        // outright, regardless of stylesheet insertion order.
+                                                        '&.MuiChip-deleteIcon.MuiChip-deleteIconSmall': {
+                                                            margin: 0,
+                                                        },
                                                     }}
                                                 >
                                                     <CancelIcon fontSize="small" />
