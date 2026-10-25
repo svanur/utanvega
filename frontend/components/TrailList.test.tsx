@@ -281,18 +281,19 @@ describe('TrailList copy buttons show the copied checkmark when writeText resolv
     });
 });
 
-// #1507: the selected-location Chip's delete ("x") icon had a sub-44px tap target at 375px —
-// fixed via a ::before overlay on `.MuiChip-deleteIcon` that expands the clickable region to
-// 44x44px without growing the chip's own layout box (unlike FILTER_CHIP_SX, which resizes the
-// whole chip and stays reserved for the Advanced Filters toggle pills per #1487/PR #1505).
-// Review round 1: with 2+ selected locations, a bare 44x44 overlay overflowed the chip's own
-// ~24px-tall, tightly-margined box enough to bleed onto a neighbouring chip's hit area, so the
-// Chip root now also sets `overflow: hidden`, clipping the (already invisible) overlay at the
-// chip's own border and guaranteeing it can never land on a neighbour. jsdom doesn't run layout,
-// so pixel-accurate hit-area size/clipping can't be asserted here — this guards the behavior
-// instead: selecting a location renders a removable Chip, and clicking its delete icon still
-// removes it and clears the Autocomplete's selection, proving the sx addition didn't break
-// `renderTags`/`handleLocationSelect`.
+// #1507: the selected-location Chip's delete ("x") icon had a sub-44px tap target at 375px.
+// Review round 1 tried a ::before overlay on `.MuiChip-deleteIcon` plus `overflow: hidden` on the
+// chip root to stop it bleeding onto a neighbouring chip — but that clipped the overlay back down
+// to the chip's own ~24px box, defeating the 44px goal jsdom's fireEvent.click couldn't catch
+// (it skips layout/overflow clipping entirely). Round 2's real fix grows the chip itself
+// (minHeight: 44, the same floor FILTER_CHIP_SX uses for the Advanced Filters toggle pills per
+// #1487/PR #1505) and gives the delete icon a real 44x44 `Box` wrapper as a normal flex child —
+// so the enlarged hit area is counted in the chip's own width and can never overflow onto a
+// neighbour, no clipping hack required. jsdom still doesn't run layout, so pixel-accurate hit-area
+// size can't be asserted here — this guards the behavior instead: selecting a location renders a
+// removable Chip, and clicking its delete icon (now the wrapper `Box`, found the same way via the
+// `CancelIcon` glyph's testid since clicks bubble to the wrapper) still removes it and clears the
+// Autocomplete's selection, proving the markup change didn't break `renderTags`/`handleLocationSelect`.
 describe('TrailList location filter Chip delete icon (#1507)', () => {
     afterEach(() => {
         mockLocationsState.locationsPageEnabled = false;
@@ -324,13 +325,14 @@ describe('TrailList location filter Chip delete icon (#1507)', () => {
         expect(screen.queryByText('Capital Region')).toBeNull();
     });
 
-    // Review round 1: with only one chip rendered, the test above can't catch the overlapping-
-    // hit-box regression the Tester flagged — two 44x44 overlays on adjacent chips could overlap
-    // and delete the wrong one. jsdom doesn't lay out boxes, so pixel-level overlap can't be
-    // asserted directly; this instead pins each delete icon to its own Chip's DOM subtree (not
-    // the next chip's) and confirms clicking one only ever removes that chip, leaving its
-    // neighbour untouched — the behavior the `overflow: hidden` clip (TrailList.tsx:874) exists
-    // to guarantee regardless of how tight the real on-screen margins are.
+    // With only one chip rendered, the test above can't catch an overlapping-hit-box regression
+    // — e.g. if a future change went back to an overlay that bled past its own chip and stole a
+    // neighbour's tap. jsdom doesn't lay out boxes, so pixel-level overlap can't be asserted
+    // directly; this instead pins each delete icon to its own Chip's DOM subtree (not the next
+    // chip's) and confirms clicking one only ever removes that chip, leaving its neighbour
+    // untouched — the behavior the round-2 `Box` wrapper (TrailList.tsx, `deleteIcon` prop) keeps
+    // guaranteed by construction, since the hit area is part of this chip's own layout box and
+    // never needs to overflow into the next one.
     it('with two selected locations, deleting one chip leaves the other intact', async () => {
         mockLocationsState.locationsPageEnabled = true;
         mockLocationsState.tree = [
