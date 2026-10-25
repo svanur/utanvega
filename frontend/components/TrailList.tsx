@@ -82,6 +82,7 @@ import { formatTrailListForClipboard, formatListHeading, formatActiveFiltersSumm
 import type { ActiveFilterLine } from '../utils/copyListToClipboard';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 type ViewMode = 'list' | 'map' | 'table';
 
@@ -858,7 +859,51 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 )}
                                 renderTags={(value, getTagProps) =>
                                     value.map((opt, index) => (
-                                        <Chip {...getTagProps({ index })} key={opt.slug} label={loc(opt.name, opt.nameEn) ?? opt.name} size="small" />
+                                        <Chip
+                                            {...getTagProps({ index })}
+                                            key={opt.slug}
+                                            label={loc(opt.name, opt.nameEn) ?? opt.name}
+                                            size="small"
+                                            // #1507: the delete ("x") icon is this chip's only interactive
+                                            // part and needs a >=44x44px tap target (iOS/Android a11y
+                                            // guideline), but MUI's size="small" Chip is only ~24px tall.
+                                            //
+                                            // Review round 1 (#1517) tried an invisible ::before overlay on
+                                            // the icon to expand its hit area without resizing the chip.
+                                            // `overflow: hidden` on the chip then had to clip that overlay
+                                            // back down to the chip's own ~24px box to stop it bleeding onto
+                                            // a neighbouring chip — which defeated the 44px goal in the one
+                                            // place it mattered (real browser hit-testing; jsdom's
+                                            // fireEvent.click ignores layout clipping, so the round-1 tests
+                                            // didn't catch it).
+                                            //
+                                            // Real fix: grow the chip's own footprint (minHeight: 44, the
+                                            // same floor FILTER_CHIP_SX uses for the Advanced Filters toggle
+                                            // pills — see #1487/PR #1505) and give the delete icon a real
+                                            // 44x44 layout box via a custom `deleteIcon` wrapper, instead of
+                                            // an absolutely-positioned overlay. Because the wrapper is a
+                                            // normal flex child, it's included in the chip's own width —
+                                            // there is nothing to overflow or clip, so it can never bleed
+                                            // onto the next chip. The "x" glyph inside stays visually small
+                                            // so the chip doesn't look oversized next to the Autocomplete
+                                            // input.
+                                            deleteIcon={
+                                                <Box
+                                                    component="span"
+                                                    sx={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        width: 44,
+                                                        height: 44,
+                                                        margin: 0,
+                                                    }}
+                                                >
+                                                    <CancelIcon fontSize="small" />
+                                                </Box>
+                                            }
+                                            sx={{ minHeight: 44 }}
+                                        />
                                     ))
                                 }
                             />
