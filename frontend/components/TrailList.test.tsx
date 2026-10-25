@@ -7,7 +7,7 @@
 // adds the missing regression guard. Follows RacesPage.test.tsx's jsdom-opt-in + RTL + vi.hoisted
 // pattern; the rest of the frontend suite runs under vitest.config.ts's global `environment: 'node'`.
 import React from 'react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -231,9 +231,18 @@ describe('TrailList copy buttons do not show success on a rejected clipboard wri
 // path so a regression that broke the "copied" checkmark entirely (not just the reject-path
 // bug) would also be caught.
 describe('TrailList copy buttons show the copied checkmark when writeText resolves (#1497)', () => {
+    // #1521: each handler arms a real 2000ms setTimeout (TrailList.tsx:784/:815) to reset the
+    // checkmark back to the copy icon. Without fake timers that setTimeout is still live when the
+    // test returns, leaking into later tests/files. Fake timers here, advanced past 2000ms and torn
+    // down in afterEach, so nothing outlives the test.
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
     afterEach(() => {
         // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
         delete navigator.clipboard;
+        vi.useRealTimers();
     });
 
     function stubResolvingClipboard() {
@@ -260,6 +269,13 @@ describe('TrailList copy buttons show the copied checkmark when writeText resolv
 
         expect(screen.getByTestId('CheckIcon')).not.toBeNull();
         expect(screen.queryByTestId('ContentCopyIcon')).toBeNull();
+
+        // Run the 2000ms reset timer (TrailList.tsx:784) to completion inside act() — the
+        // callback calls setLinkCopied(false), a React state update — so nothing is left pending
+        // once the test returns.
+        await act(async () => {
+            vi.advanceTimersByTime(2000);
+        });
     });
 
     it('Copy list button swaps to CheckIcon when writeText resolves', async () => {
@@ -278,6 +294,12 @@ describe('TrailList copy buttons show the copied checkmark when writeText resolv
 
         expect(screen.getByTestId('CheckIcon')).not.toBeNull();
         expect(screen.queryByTestId('FormatListBulletedIcon')).toBeNull();
+
+        // Run the 2000ms reset timer (TrailList.tsx:815) to completion inside act() — same
+        // reasoning as the Copy link test above.
+        await act(async () => {
+            vi.advanceTimersByTime(2000);
+        });
     });
 });
 
