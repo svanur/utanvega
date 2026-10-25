@@ -200,7 +200,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                             visitor skimming the grid would see only rain numbers first. */}
                         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                             <WbSunnyIcon fontSize="small" sx={{ color: 'warning.main' }} />
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box data-testid="sunshine-tile" sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
                                     {formatDecimal(climate.averageSunshineHours, i18n.language)} {t('climate.sunshineUnit')} · {t(sunshineLabelKey)}
                                 </Typography>
@@ -222,7 +222,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         </Stack>
                         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                             <WaterDropIcon fontSize="small" color="info" />
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box data-testid="precipitation-tile" sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
                                     {precipitationChancePct}% · {t(precipitationLabelKey)}
                                 </Typography>

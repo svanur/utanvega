@@ -142,8 +142,7 @@ describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
 
         // #1461: the "h" unit now comes from t('climate.sunshineUnit') instead of a literal —
         // this test's i18next has no resources, so it renders as the untranslated key.
-        const sunshineText = screen.getByText('5.0 climate.sunshineUnit · climate.sunshineModerate');
-        const sunshineBox = sunshineText.closest('div')!;
+        const sunshineBox = screen.getByTestId('sunshine-tile');
         const sunshineStack = sunshineBox.parentElement!;
 
         // jsdom's getComputedStyle normalizes MUI's `minWidth: 0` sx value (a bare number,
@@ -165,8 +164,7 @@ describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
             />
         );
 
-        const precipitationText = screen.getByText('60% · climate.rainHeavy');
-        const precipitationBox = precipitationText.closest('div')!;
+        const precipitationBox = screen.getByTestId('precipitation-tile');
         const precipitationStack = precipitationBox.parentElement!;
 
         expect(getComputedStyle(precipitationBox).minWidth).toBe('0');
