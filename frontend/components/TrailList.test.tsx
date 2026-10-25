@@ -389,3 +389,84 @@ describe('TrailList location filter Chip delete icon (#1507)', () => {
         expect(screen.getByText('Capital Region')).not.toBeNull();
     });
 });
+
+// #1524: linkCopiedTimer/listCopiedTimer (TrailList.tsx:157/159) armed a real 2000ms setTimeout
+// on a successful copy but were never cleared on unmount — so unmounting within that window left
+// the timer live, and its callback's setLinkCopied/setListCopied(false) then fired a React "state
+// update on an unmounted component" warning (surfaced via console.error). Fake timers so the
+// still-pending callback can be advanced to past 2000ms *after* unmount, inside the same act()
+// call, without waiting on real wall-clock time.
+describe('TrailList copy buttons do not leak timer state updates after unmount (#1524)', () => {
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+        consoleErrorSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
+        vi.useRealTimers();
+    });
+
+    function stubResolvingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockResolvedValue(undefined) },
+            configurable: true,
+        });
+    }
+
+    it('Copy link button: unmounting right after a successful copy logs no console error/warn', async () => {
+        stubResolvingClipboard();
+        mockTrailsState.trails = [makeTrail()];
+        mockTrailsState.filters = { ...DEFAULT_FILTERS, locationSlugs: ['reykjavik'] };
+        const { unmount } = renderTrailList();
+
+        const copyButton = screen.getByTestId('ContentCopyIcon').closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            await Promise.resolve();
+        });
+
+        unmount();
+
+        // The pre-#1524 bug only surfaces once the orphaned 2000ms timer actually fires.
+        await act(async () => {
+            vi.advanceTimersByTime(2000);
+        });
+
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+
+    it('Copy list button: unmounting right after a successful copy logs no console error/warn', async () => {
+        stubResolvingClipboard();
+        mockTrailsState.trails = [makeTrail()];
+        mockTrailsState.filters = { ...DEFAULT_FILTERS };
+        const { unmount } = renderTrailList();
+
+        const listButton = screen.getByTestId('FormatListBulletedIcon').closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve();
+        });
+
+        unmount();
+
+        await act(async () => {
+            vi.advanceTimersByTime(2000);
+        });
+
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+});
