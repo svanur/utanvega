@@ -35,16 +35,20 @@ interface TrailMapViewProps {
     fallbackCenter?: { lat: number; lng: number } | null;
 }
 
-function ChangeView({ bounds, followMe, userLocation }: { 
-    bounds: L.LatLngBoundsExpression | null, 
+function ChangeView({ bounds, followMe, userLocation, containerReady }: {
+    bounds: L.LatLngBoundsExpression | null,
     followMe: boolean,
-    userLocation: { lat: number; lng: number } | null 
+    userLocation: { lat: number; lng: number } | null,
+    // #1535: bumped once MapInvalidateSize has corrected the container's real size, so fitBounds
+    // re-runs against the true size instead of leaving the first (possibly zero/lazy-loaded) fit
+    // in place — without this, part of a route can be cut off after the container resizes.
+    containerReady: boolean,
 }) {
     const map = useMap();
 
     useMapEvents({
         dragstart: () => {
-            // We'll handle disabling followMe via a prop callback if needed, 
+            // We'll handle disabling followMe via a prop callback if needed,
             // but since ChangeView is a child, we'll use a simpler approach in the main component
         },
     });
@@ -53,7 +57,7 @@ function ChangeView({ bounds, followMe, userLocation }: {
         if (!followMe && bounds && (bounds as L.LatLngBounds).isValid()) {
             map.fitBounds(bounds, { padding: [50, 50] });
         }
-    }, [bounds, map, followMe]);
+    }, [bounds, map, followMe, containerReady]);
 
     useEffect(() => {
         if (followMe && userLocation) {
@@ -72,13 +76,19 @@ const ACTIVITY_COLORS: Record<string, string> = {
 };
 
 // Must be stable components (not inline) to avoid Leaflet re-registration
-function MapInvalidateSize() {
+function MapInvalidateSize({ onReady }: { onReady: () => void }) {
     const map = useMap();
     useEffect(() => {
         // Fix tiles not rendering when map is lazy-loaded into a container
-        const timer = setTimeout(() => map.invalidateSize(), 200);
+        const timer = setTimeout(() => {
+            map.invalidateSize();
+            // #1535: signal ChangeView to re-fit bounds now that the container's real size is
+            // known — without this, fitBounds (run earlier against the stale/zero size) can leave
+            // part of a route cut off.
+            onReady();
+        }, 200);
         return () => clearTimeout(timer);
-    }, [map]);
+    }, [map, onReady]);
     return null;
 }
 
@@ -106,6 +116,10 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     const isDark = theme.palette.mode === 'dark';
     const [followMe, setFollowMe] = useState(false);
     const [showTracks, setShowTracks] = useState(true);
+    // #1535: flips once after MapInvalidateSize's delayed invalidateSize() has corrected the
+    // container's real size, so ChangeView's fitBounds re-runs against that size.
+    const [containerReady, setContainerReady] = useState(false);
+    const handleContainerReady = useCallback(() => setContainerReady(true), []);
     const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
     const [selectionSource, setSelectionSource] = useState<'pin' | 'track' | null>(null);
     const { geometries } = useTrailGeometries();
@@ -314,7 +328,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                     zoom={10} 
                     style={{ height: '100%', width: '100%' }}
                 >
-                    <MapInvalidateSize />
+                    <MapInvalidateSize onReady={handleContainerReady} />
                     <MapDragHandler onDrag={handleDrag} onMapClick={handleMapClick} ignoreClickRef={ignoreMapClick} />
                 <LayersControl key={isDark ? 'dark' : 'light'} position="topleft">
                         <LayersControl.BaseLayer checked={!isDark} name={t('map.street')}>
@@ -383,7 +397,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
 
                 {markerCluster}
 
-                {bounds && <ChangeView bounds={bounds} followMe={followMe} userLocation={userLocation} />}
+                {bounds && <ChangeView bounds={bounds} followMe={followMe} userLocation={userLocation} containerReady={containerReady} />}
             </MapContainer>
 
                 {/* Minimal info strip for selected track (only on track click, not pin click) */}
