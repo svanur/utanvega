@@ -9,7 +9,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Trail } from '../hooks/useTrails';
 
@@ -152,6 +152,38 @@ describe('TrailMapView hide/show-tracks toggle does not re-fit the map (#1303)',
         // The `bounds` memo (and therefore ChangeView's fitBounds effect) must not react to
         // showTracks — only `visibleGeometries` (which gates rendered <Polyline>s) should.
         expect(mockFitBounds.mock.calls.length).toBe(callsBeforeToggle);
+    });
+});
+
+describe('TrailMapView re-fits bounds after container is corrected (#1535)', () => {
+    beforeEach(() => {
+        mockFitBounds.mockClear();
+        mockGeometries.current = [
+            { slug: 'laugavegur', activityType: 'Hiking', coordinates: [[64.0, -19.0], [63.8, -19.3], [63.5, -19.6]] },
+        ];
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('calls fitBounds again once MapInvalidateSize\'s 200ms timer fires', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrail()]} userLocation={null} />
+            </MemoryRouter>
+        );
+
+        const callsOnMount = mockFitBounds.mock.calls.length;
+        expect(callsOnMount).toBeGreaterThan(0);
+
+        // Mirrors MapInvalidateSize's own setTimeout(..., 200) (TrailMapView.tsx:79-89) — this is
+        // the container-size-correction tick that must trigger a re-fit, not merely an
+        // invalidateSize(), or a lazy-loaded map can still show a cut-off route (#1535).
+        act(() => { vi.advanceTimersByTime(200); });
+
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(callsOnMount);
     });
 });
 
