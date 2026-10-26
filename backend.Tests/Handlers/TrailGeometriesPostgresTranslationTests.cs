@@ -78,12 +78,12 @@ public class TrailGeometriesPostgresTranslationTests
         return Factory.CreateLineString(coordinates);
     }
 
-    private static Trail NewTrail(string name, double length, LineString line) => new()
+    private static Trail NewTrail(string name, double length, LineString line, TrailStatus status = TrailStatus.Published) => new()
     {
         Id = Guid.NewGuid(),
         Name = name,
         Slug = name.ToLowerInvariant().Replace(" ", "-"),
-        Status = TrailStatus.Published,
+        Status = status,
         ActivityTypeId = ActivityType.Hiking,
         Type = TrailType.Loop,
         Difficulty = Difficulty.Easy,
@@ -191,5 +191,34 @@ public class TrailGeometriesPostgresTranslationTests
             Assert.Equal(point.Y, feature.Coordinates[i][0], precision: 6);
             Assert.Equal(point.X, feature.Coordinates[i][1], precision: 6);
         }
+    }
+
+    [SkippableFact]
+    public async Task EventOnlyTrail_IsIncluded_DraftTrailIsNot()
+    {
+        var connectionString = ConnectionString;
+        Skip.If(string.IsNullOrWhiteSpace(connectionString),
+            "Set GEOMETRIES_TEST_POSTGRES to run this against a real Postgres/PostGIS instance.");
+        RequireLocalDatabase(connectionString!);
+
+        // #1534: a trail attached only to a race (Status == EventOnly) must still draw its route
+        // line on the map, matching GetTrailBySlugQuery's existing Published/EventOnly allow-list
+        // (#1321) for the trail's own summary data. A Draft trail stays excluded — the fix adds
+        // exactly one status, not every non-Published one.
+        var line = ZigzagLine(pointCount: 61, amplitudeDegrees: 0.000005);
+        var eventOnlyTrail = NewTrail("Event Only Trail", length: 0, line, status: TrailStatus.EventOnly);
+        var draftTrail = NewTrail("Draft Trail", length: 0, line, status: TrailStatus.Draft);
+
+        await using var context = new UtanvegaDbContext(OptionsFor(connectionString!));
+        await context.Database.EnsureDeletedAsync();
+        await context.Database.EnsureCreatedAsync();
+        context.Trails.AddRange(eventOnlyTrail, draftTrail);
+        await context.SaveChangesAsync();
+
+        var handler = new GetTrailGeometriesQueryHandler(context);
+        var result = await handler.Handle(new GetTrailGeometriesQuery(), CancellationToken.None);
+
+        var feature = Assert.Single(result);
+        Assert.Equal(eventOnlyTrail.Slug, feature.Slug);
     }
 }
