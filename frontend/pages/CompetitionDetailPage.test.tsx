@@ -12,7 +12,7 @@
 // non-cancelled event fixture — not a general-purpose page harness (out of scope per #1442).
 import React from 'react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -20,7 +20,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from '../i18n/en.json';
 import { createAppTheme } from '../theme';
-import type { EventDetail } from '../hooks/useEvents';
+import type { EventDetail, EventEditionDto, RaceDto } from '../hooks/useEvents';
 import type { EventClimate } from '../hooks/useTrails';
 
 // Mirrors RacesPage.test.tsx:20-24 — vitest.config.ts doesn't set `globals: true`, so RTL's
@@ -170,6 +170,74 @@ function makeClimate(overrides: Partial<EventClimate> = {}): EventClimate {
     };
 }
 
+// Minimal fixtures for the #1533 Series checklist case — a Series event's isRaceWeek comes from
+// computeRaceDayFlags's own seriesRaceDates branch (derived from event.editions' races, not
+// event.daysUntil — see eventUtils.ts:401-409), so exercising it needs real edition/race data
+// rather than just a daysUntil override.
+function makeRace(overrides: Partial<RaceDto> = {}): RaceDto {
+    return {
+        id: 'race-1',
+        eventEditionId: 'edition-1',
+        trailId: null,
+        trailName: null,
+        trailSlug: null,
+        name: 'Race',
+        nameEn: null,
+        distanceLabel: null,
+        cutoffMinutes: null,
+        description: null,
+        descriptionEn: null,
+        status: 'Confirmed',
+        sortOrder: 0,
+        ticketStatus: null,
+        maxParticipants: null,
+        itraPoints: null,
+        certifiedBy: null,
+        certifiedByEn: null,
+        prizeMoney: null,
+        championshipCategory: null,
+        championshipCategoryEn: null,
+        dateOfRace: null,
+        startTime: null,
+        trailDistanceMeters: null,
+        trailElevationGain: null,
+        trailTerrainType: null,
+        trailDifficulty: null,
+        trailActivityType: null,
+        activityType: null,
+        ...overrides,
+    };
+}
+
+function makeEdition(overrides: Partial<EventEditionDto> = {}): EventEditionDto {
+    return {
+        id: 'edition-1',
+        eventId: 'event-1',
+        year: 2026,
+        date: null,
+        endDate: null,
+        title: null,
+        titleEn: null,
+        registrationUrl: null,
+        resultsUrl: null,
+        galleries: [],
+        notes: null,
+        notesEn: null,
+        registrationStatus: null,
+        trailId: null,
+        trailName: null,
+        trailSlug: null,
+        races: [],
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: null,
+        status: 'Active',
+        effectiveCancelled: false,
+        primaryElevationProfile: null,
+        primaryTerrainType: null,
+        ...overrides,
+    };
+}
+
 function renderCompetitionDetailPage(event: EventDetail) {
     mockEvent.current = event;
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -238,5 +306,35 @@ describe('CompetitionDetailPage climate section (#1460)', () => {
         renderCompetitionDetailPage(makeEvent({ locationName: null, gpxPointLat: 64.25, gpxPointLng: -21.13 }));
 
         expect(climateCardMock).not.toHaveBeenCalled();
+    });
+});
+
+// #1533: showChecklist was missing the event.type gate every other race-only section already has
+// (lines 789/1051/1058/1065/1092) — a Social event with a running activityType and daysUntil
+// inside the 0-7 isRaceWeek window (see computeRaceDayFlags in eventUtils.ts) rendered the "Race
+// day checklist" card anyway, live at /events/bleika-hlaupid. daysUntil=3 keeps isRaceDay (and so
+// firstRaceStarted) false without needing to mock currentTime or visibleRaces.
+describe('CompetitionDetailPage race day checklist (#1533)', () => {
+    it('does not render the checklist for a Social event within its race week', () => {
+        renderCompetitionDetailPage(makeEvent({ type: 'Social', daysUntil: 3 }));
+
+        expect(screen.queryByText('Race day checklist')).toBeNull();
+    });
+
+    it('still renders the checklist for a Race event within its race week', () => {
+        renderCompetitionDetailPage(makeEvent({ type: 'Race', daysUntil: 3 }));
+
+        expect(screen.getByText('Race day checklist')).not.toBeNull();
+    });
+
+    it('still renders the checklist for a Series event within its race week', () => {
+        const raceDate = new Date();
+        raceDate.setDate(raceDate.getDate() + 3);
+        const dateOfRace = raceDate.toISOString().slice(0, 10);
+        const edition = makeEdition({ date: dateOfRace, races: [makeRace({ dateOfRace })] });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', daysUntil: 3, editions: [edition] }));
+
+        expect(screen.getByText('Race day checklist')).not.toBeNull();
     });
 });
