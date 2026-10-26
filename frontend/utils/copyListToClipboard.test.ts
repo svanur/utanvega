@@ -287,6 +287,14 @@ describe('formatEventListForClipboard', () => {
         expect(neither.split('\n').at(-1)).toBe('  • Race C');
     });
 
+    // #1530: a flat trail/loop's real elevationGain of 0 must still render, not be treated as
+    // "unset" — only null/undefined mean "no linked trail data yet". appendDistanceElevation's
+    // `!= null` check already gets this right; this pins it against a future `?? null`/truthy slip.
+    it('renders elevationGain: 0 as "· 0 m", not omitted', () => {
+        const text = formatEventListForClipboard([{ dateStr: '2026-09-20', name: 'Race D', elevationGain: 0 }], makeT('is'));
+        expect(text.split('\n').at(-1)).toBe('  • Race D · 0 m');
+    });
+
     // #1495: spliced in right after the date-range header, before the first day group.
     it('inserts the "Filters:" block between the date-range header and the first day group', () => {
         const text = formatEventListForClipboard(
@@ -401,5 +409,12 @@ describe('formatTrailListForClipboard', () => {
 
         const neither = formatTrailListForClipboard([{ name: 'Esjan', lengthKm: null, elevationGain: null }]);
         expect(neither).toBe('• Esjan');
+    });
+
+    // #1530: same "0 is a real value" guarantee as formatEventListForClipboard above, for the
+    // trail-list renderer sharing the same appendDistanceElevation helper.
+    it('renders elevationGain: 0 as "· 0 m", not omitted', () => {
+        const text = formatTrailListForClipboard([{ name: 'Flatey', lengthKm: 5, elevationGain: 0 }]);
+        expect(text).toBe('• Flatey · 5.0 km · 0 m');
     });
 });
