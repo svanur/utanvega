@@ -392,7 +392,7 @@ function HistoryRaceCard({
                             <Chip label={`${(race.trailDistanceMeters / 1000).toFixed(1)} km`} size="small" variant="outlined" />
                         </Tooltip>
                     )}
-                    {race.trailElevationGain && (
+                    {race.trailElevationGain != null && (
                         <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
                             <Chip icon={<TerrainIcon />} label={`↑ ${Math.round(race.trailElevationGain)} m`} size="small" variant="outlined" />
                         </Tooltip>
