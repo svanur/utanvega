@@ -45,7 +45,9 @@ public class GetTrailGeometriesQueryHandler : IRequestHandler<GetTrailGeometries
                            END
                        ) AS "GeoJson"
                 FROM "Trails"
-                WHERE "Status" = 'Published' AND "GpxData" IS NOT NULL
+                -- EventOnly mirrors GetTrailBySlugQuery's allow-list (#1321): a trail attached only
+                -- to a race shouldn't show its map pin without its route line (#1534).
+                WHERE "Status" IN ('Published', 'EventOnly') AND "GpxData" IS NOT NULL
             """)
             .ToListAsync(cancellationToken);
 
