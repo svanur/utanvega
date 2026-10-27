@@ -832,6 +832,10 @@
             }
         },
         "changelog": {
+            "v1_17_3": {
+                "title": "Stjórnborð: nöfn viðburða, leiða og keppnishlaupa ekki þýdd sjálfkrafa.",
+                "description": "Takkinn \"Translate to EN\" í stjórnborði keyrði séreiginnöfn (nöfn viðburða, leiða og keppnishlaupa) í gegnum þýðingarþjónustu, sem skilaði brengluðum enskum nöfnum. Nöfn eru nú afrituð óbreytt, en lýsingar og önnur svæði eru þýdd eins og áður."
+            },
             "v1_17_2": {
                 "title": "Litaðar leiðir á viðburðakorti, afritun lista og síun eftir hækkunarhlutfalli",
                 "description": "Kort viðburða lita nú hverja leið sérstaklegt og má smella á hlaup í listanum til að auðkenna það á kortinu. Nú er hægt að afrita lista yfir leiðir og viðburði á klippispjaldið sem forsniðinn lista, með fyrirsögn, virkum síum, vegalengd/hækkun og tengil til baka á síðuna. Ný síun fyrir hækkunarhlutfall (m/km) var bætt við Nánari síur leiða, og hlaupaseríu-síður sýna nú hækkun. Í stjórnborði krefjast viðburðaútgáfur nú upphafsdags á undan lokadegi, og gátlisti keppnisdags birtist aðeins fyrir Hlaup/Seríu-viðburði."
