@@ -130,7 +130,6 @@ const VISUALLY_HIDDEN_SX = {
   width: '1px',
   height: '1px',
   padding: 0,
-  margin: '-1px',
   overflow: 'hidden',
   clip: 'rect(0, 0, 0, 0)',
   whiteSpace: 'nowrap',
@@ -315,6 +314,9 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
   const isApproximateScheduleCloneRef = useRef(false);
   const editionStatusHelperId = useId();
   const startDateHelperId = useId();
+  // #1365: separate id from startDateHelperId above — that one is only for the
+  // Approximate-schedule clone nudge, this one is for the "End date needs a Start date" block.
+  const startDateRequiredHelperId = useId();
   const registrationStatusHelperId = useId();
   // #970: explicit id/labelId pairing so these two Selects have an accessible name reachable via
   // getByLabelText — mirrors #964's fix for EditionDetailsStep's own Status/Registration status
@@ -361,6 +363,10 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
   const derivedStartDate = isDateDerivedFromRaces ? seriesDatedRaceDates[0] : null;
   const derivedEndDate = isDateDerivedFromRaces ? seriesDatedRaceDates[seriesDatedRaceDates.length - 1] : null;
   const derivedDateTooltip = 'Derived from race dates — edit races to change this';
+  // #1365: the issue owner's decision — events are scheduled start-first, so an End date with
+  // no Start date isn't a real pattern. Doesn't apply to a Series edition whose dates are
+  // derived from its races (isDateDerivedFromRaces) — that pairing is computed, not typed.
+  const startDateMissingForEndDate = !isDateDerivedFromRaces && !!form.endDate && !form.date;
 
   const handleSave = async () => {
     const input = {
@@ -530,7 +536,10 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
                   disabled={isDateDerivedFromRaces}
                   slotProps={{ textField: {
                     size: 'small', fullWidth: true,
-                    'aria-describedby': isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined,
+                    error: startDateMissingForEndDate,
+                    'aria-describedby': startDateMissingForEndDate
+                      ? startDateRequiredHelperId
+                      : (isApproximateScheduleCloneRef.current && !form.date ? startDateHelperId : undefined),
                   } }} />
               </Box>
             </Tooltip>
@@ -545,7 +554,11 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
               </Box>
             </Tooltip>
           </Stack>
-          {isApproximateScheduleCloneRef.current && !form.date && (
+          {startDateMissingForEndDate ? (
+            <FormHelperText id={startDateRequiredHelperId} error sx={{ mt: -1.5 }}>
+              Start date is required when an End date is set.
+            </FormHelperText>
+          ) : isApproximateScheduleCloneRef.current && !form.date && (
             <FormHelperText id={startDateHelperId} sx={{ mt: -1.5 }}>
               This event&apos;s schedule is approximate — set next year&apos;s date manually.
             </FormHelperText>
@@ -653,7 +666,7 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
       </DialogContent>
       <DialogActions>
         <Button onClick={handleCancelOrDismiss} disabled={saving}>Cancel</Button>
-        <Button variant="contained" onClick={() => void handleSave()} disabled={saving}>
+        <Button variant="contained" onClick={() => void handleSave()} disabled={saving || startDateMissingForEndDate}>
           {saving ? 'Saving…' : isNew ? 'Add edition' : 'Save edition'}
         </Button>
       </DialogActions>

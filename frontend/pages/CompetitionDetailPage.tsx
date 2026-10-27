@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
@@ -78,6 +78,9 @@ import { useTrailWeather, useEventClimate, useTrailsBySlugs } from '../hooks/use
 import { useLocations } from '../hooks/useLocations';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { TrailMapView } from '../components/TrailMapView';
+import { EventTrailLegend } from '../components/EventTrailLegend';
+import { computeSortedSlugs } from '../components/trailRouteColors';
+import { useTrailGeometries } from '../hooks/useTrailGeometries';
 
 import { splitMinutes } from '../utils/cutoffTime';
 
@@ -455,7 +458,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [isRaceDay, visibleRaces, currentTime]);
     const isRunningEvent = RUN_ACTIVITY_TYPES.has(event?.activityType ?? '') ||
         visibleRaces.some(r => RUN_ACTIVITY_TYPES.has(r.activityType ?? '') || RUN_ACTIVITY_TYPES.has(r.trailActivityType ?? ''));
-    const showChecklist = isRaceWeek && !firstRaceStarted && isRunningEvent;
+    const showChecklist = (event?.type === 'Race' || event?.type === 'Series') && isRaceWeek && !firstRaceStarted && isRunningEvent;
 
     const showEditionSections = currentEditions.length > 1;
     const primaryEdition = useMemo(
@@ -579,6 +582,29 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // event can legitimately link trails that aren't meant for general browsing (#1321).
     const eventTrailSlugsArray = useMemo(() => Array.from(eventTrailSlugs), [eventTrailSlugs]);
     const { trails: eventTrails } = useTrailsBySlugs(eventTrailSlugsArray);
+
+    // #1543: selection lifted out of TrailMapView so EventTrailLegend (rendered alongside it below)
+    // can read/drive the same highlight state as clicking a pin or a route — see
+    // TrailMapView.tsx:142-151 for the controlled/uncontrolled split this feeds into.
+    const [selectedTrailSlug, setSelectedTrailSlug] = useState<string | null>(null);
+    const [selectedTrailSource, setSelectedTrailSource] = useState<'pin' | 'track' | null>(null);
+    const handleTrailSelectionChange = useCallback((slug: string | null, source: 'pin' | 'track' | null) => {
+        setSelectedTrailSlug(slug);
+        setSelectedTrailSource(source);
+    }, []);
+
+    // Same useTrailGeometries() query TrailMapView itself calls (react-query dedupes by queryKey,
+    // so this is not a second network fetch) — needed here only to compute the same sortedSlugs
+    // list via computeSortedSlugs(), so EventTrailLegend's swatches never disagree with the map's.
+    const { geometries: eventTrailGeometries } = useTrailGeometries();
+    const eventTrailSortedSlugs = useMemo(
+        () => computeSortedSlugs(eventTrails, eventTrailGeometries),
+        [eventTrails, eventTrailGeometries],
+    );
+    const eventTrailLegendEntries = useMemo(
+        () => eventTrails.map(trail => ({ slug: trail.slug, name: trail.name })),
+        [eventTrails],
+    );
 
     const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
         bib: false,
@@ -840,20 +866,41 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     )}
 
                     {(mapPin || eventTrails.length > 0) && (
-                        <Box
-                            sx={{
-                                mt: 2,
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                height: '400px',
-                                width: '100%',
-                                maxWidth: '100%',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                            }}
-                        >
-                            <TrailMapView trails={eventTrails} userLocation={null} fallbackCenter={mapPin} />
-                        </Box>
+                        <>
+                            {/* #1543: separate from the unrelated races list at racesWithAnchors.map
+                                (CompetitionDetailPage.tsx:~1113 below) — this list only drives map
+                                selection, and only renders once there's more than one race's route
+                                to distinguish (EventTrailLegend.tsx). */}
+                            <Box sx={{ mt: 2 }}>
+                                <EventTrailLegend
+                                    entries={eventTrailLegendEntries}
+                                    sortedSlugs={eventTrailSortedSlugs}
+                                    selectedSlug={selectedTrailSlug}
+                                    onSelectionChange={handleTrailSelectionChange}
+                                />
+                            </Box>
+                            <Box
+                                sx={{
+                                    mt: 1,
+                                    borderRadius: 2,
+                                    overflow: 'hidden',
+                                    width: '100%',
+                                    maxWidth: '100%',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                }}
+                            >
+                                <TrailMapView
+                                    trails={eventTrails}
+                                    userLocation={null}
+                                    fallbackCenter={mapPin}
+                                    selectedSlug={selectedTrailSlug}
+                                    selectionSource={selectedTrailSource}
+                                    onSelectionChange={handleTrailSelectionChange}
+                                    height="400px"
+                                />
+                            </Box>
+                        </>
                     )}
 
                     <Box sx={{ mt: 2.5 }}>
@@ -1549,12 +1596,12 @@ function RaceCard({
                             <Chip icon={<CalendarTodayIcon />} label={raceDateTime} size="small" variant="outlined" />
                         </Tooltip>
                     )}
-                    {race.trailDistanceMeters && (
+                    {race.trailDistanceMeters != null && (
                         <Tooltip title={t('races.trailDistance', { defaultValue: 'Trail distance' })}>
                             <Chip label={`${(race.trailDistanceMeters / 1000).toFixed(1)} km`} size="small" variant="outlined" />
                         </Tooltip>
                     )}
-                    {race.trailElevationGain && (
+                    {race.trailElevationGain != null && (
                         <Tooltip title={t('races.elevationGain', { defaultValue: 'Elevation gain' })}>
                             <Chip icon={<TerrainIcon />} label={`↑ ${Math.round(race.trailElevationGain)} m`} size="small" variant="outlined" />
                         </Tooltip>

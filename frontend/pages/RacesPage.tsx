@@ -47,6 +47,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import { QRCodeSVG } from 'qrcode.react';
 import HistoryIcon from '@mui/icons-material/History';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -75,6 +76,8 @@ import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
+import { toCopyableEventRows, formatEventListForClipboard, formatListHeading, formatActiveFiltersSummary } from '../utils/copyListToClipboard';
+import type { ActiveFilterLine } from '../utils/copyListToClipboard';
 import { applyFilters, eventFiltersEqual, eventMonths, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
 import { trackViewModeChange, trackSiteQROpen } from '../utils/analytics';
 import { useLocalize } from '../utils/localize';
@@ -101,6 +104,25 @@ const EventTableView = lazy(() => import('../components/EventTableView'));
 const EventMapView = lazy(() => import('../components/EventMapView'));
 
 type ViewMode = 'list' | 'map' | 'table';
+
+// #1487: selectable filter pills in the filter panel need a >=44x44px touch target (iOS/Android
+// a11y guideline) — MUI's size="small" Chip renders ~24px tall by default. Bumping both
+// dimensions here, local to this file, rather than a blanket MuiChip theme override, which would
+// also grow unrelated chips elsewhere (status/badge chips) that aren't filter pills.
+const FILTER_CHIP_SX = { cursor: 'pointer', minHeight: 44, minWidth: 44 };
+
+// #1510: a {key, label} option — shared shape for the race-distance bucket pills below. Looking a
+// label up by key (used by the "Copy list" clipboard summary) and rendering the Chip for that same
+// option (used by the filter panel) both read from one options array now, rather than each keeping
+// its own hand-copied label map (see activeFilterLines below and PR #1508).
+interface BucketOption<K extends string = string> {
+    key: K;
+    label: string;
+}
+
+function bucketLabel<K extends string>(options: readonly BucketOption<K>[], key: K): string {
+    return options.find(opt => opt.key === key)?.label ?? key;
+}
 
 
 type RacesPageProps = {
@@ -173,9 +195,20 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
     const [showFilters, setShowFilters] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
     const linkCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [listCopied, setListCopied] = useState(false);
+    const listCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [filters, setFilters] = useState<EventFilters>(DEFAULT_FILTERS);
     const [siteQROpen, setSiteQROpen] = useState(false);
     const [siteQRCopied, setSiteQRCopied] = useState(false);
+    const siteQRCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // #1524: clear pending copy-revert timers on unmount — otherwise the
+    // setXCopied(false) callback fires after unmount.
+    useEffect(() => () => {
+        if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+        if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+        if (siteQRCopiedTimer.current) clearTimeout(siteQRCopiedTimer.current);
+    }, []);
     const [shareEventSlug, setShareEventSlug] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [locationLoading, setLocationLoading] = useState(false);
@@ -286,7 +319,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
         const next: EventFilters = {
             activityTypes: activity ? activity.split(',') : [],
-            months: months ? months.split(',').map(Number) : [],
+            // URL is 1-indexed (human-facing month numbers, e.g. months=12 for December) while
+            // internal filter state stays 0-indexed (JS Date.getMonth() convention, used by pill
+            // selection and eventHasMonthInSet) — convert at this boundary only.
+            months: months ? months.split(',').map(n => Number(n) - 1) : [],
             locations: locations ? locations.split(',') : [],
             itraAny,
             // itraAny and itraPoints are mutually exclusive filters (see activeFilterCount below,
@@ -328,7 +364,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         set('q', search || null);
         set('all', search && includeAllEvents ? 'true' : null);
         set('activity', filters.activityTypes.length ? filters.activityTypes.join(',') : null);
-        set('months', filters.months.length ? filters.months.join(',') : null);
+        // Convert back to 1-indexed for the URL — mirrors the parse effect above.
+        set('months', filters.months.length ? filters.months.map(m => m + 1).join(',') : null);
         set('locations', filters.locations.length ? filters.locations.join(',') : null);
         set('itraAny', filters.itraAny ? 'true' : null);
         set('itraPoints', !filters.itraAny && filters.itraPoints.length ? filters.itraPoints.join(',') : null);
@@ -368,6 +405,87 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         (filters.favoritesOnly ? 1 : 0) +
         filters.distanceBuckets.length,
     [filters]);
+
+    // #1510: shared by the activeFilterLines memo below and the matching Chip-rendering section
+    // further down this file — was a hand-copied label map duplicated between the two (see PR
+    // #1508's comment here, now superseded). Same key/label set as TrailList.tsx's own
+    // lengthBucketOptions, but kept page-scoped rather than hoisted into a cross-page helper: trail
+    // length and race distance are different filter concepts that happen to share bucket wording.
+    const distanceBucketOptions = useMemo((): BucketOption<RaceDistanceBucket>[] => [
+        { key: '<10', label: '< 10 km' },
+        { key: '10-21', label: '10–21 km' },
+        { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
+        { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
+        { key: '100+', label: '100 km+' },
+    ], [t]);
+
+    // #1495/#1510: one Key: Value line per currently active filter for the "Copy list" clipboard
+    // text's "Filters:" section, same sections/order as activeFilterCount above. Race-distance
+    // labels are looked up from distanceBucketOptions above (also used by the matching
+    // Chip-rendering section further down this file) via bucketLabel() — a single source of truth
+    // instead of the hand-copied label map PR #1508 left here.
+    const activeFilterLines = useMemo((): ActiveFilterLine[] => {
+        const lines: ActiveFilterLine[] = [];
+
+        if (filters.activityTypes.length > 0) {
+            lines.push({
+                label: t('races.filters.activityType'),
+                value: filters.activityTypes.map(type => t(`races.activityTypes.${type}`, type)).join(', '),
+            });
+        }
+
+        if (filters.months.length > 0) {
+            const months = t('races.months', { returnObjects: true }) as string[];
+            lines.push({ label: t('races.filters.month', 'Month'), value: filters.months.map(idx => months[idx]).join(', ') });
+        }
+
+        if (filters.locations.length > 0) {
+            lines.push({ label: t('trail.location'), value: filters.locations.join(', ') });
+        }
+
+        if (filters.itraAny) {
+            lines.push({ label: 'ITRA', value: '✓' });
+        } else if (filters.itraPoints.length > 0) {
+            lines.push({ label: t('races.filters.itraPoints'), value: filters.itraPoints.map(pts => `ITRA ${pts}`).join(', ') });
+        }
+
+        if (filters.certifications.length > 0) {
+            lines.push({ label: t('races.filters.certifications'), value: filters.certifications.join(', ') });
+        }
+
+        if (filters.championships.length > 0) {
+            lines.push({ label: t('races.filters.championships'), value: filters.championships.join(', ') });
+        }
+
+        if (filters.weekendOnly) {
+            lines.push({ label: t('races.filters.weekendOnly'), value: '✓' });
+        }
+
+        if (filters.thisWeekOnly) {
+            lines.push({ label: t('races.filters.thisWeek'), value: '✓' });
+        }
+
+        if (filters.nextWeekOnly) {
+            lines.push({ label: t('races.filters.nextWeek'), value: '✓' });
+        }
+
+        if (filters.mountainRaceOnly) {
+            lines.push({ label: t('races.mountainRace', 'Mountain race'), value: '✓' });
+        }
+
+        if (filters.favoritesOnly) {
+            lines.push({ label: t('races.filters.favoritesOnly'), value: '✓' });
+        }
+
+        if (filters.distanceBuckets.length > 0) {
+            lines.push({
+                label: t('races.filters.raceDistance', 'Race distance'),
+                value: filters.distanceBuckets.map(b => bucketLabel(distanceBucketOptions, b)).join(', '),
+            });
+        }
+
+        return lines;
+    }, [filters, t, distanceBucketOptions]);
 
     const filterOptions = useMemo(() => {
         const visible = events.filter(e => e.status !== 'Hidden' && e.status !== 'Unlisted');
@@ -599,15 +717,43 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             size="small"
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
-                                                navigator.clipboard.writeText(window.location.href);
-                                                setLinkCopied(true);
-                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
-                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                navigator.clipboard.writeText(window.location.href).then(() => {
+                                                    setLinkCopied(true);
+                                                    if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                    linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
                                             }}
                                         >
                                             {linkCopied
                                                 ? <CheckIcon fontSize="small" color="success" />
                                                 : <ContentCopyIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                {/* #1483: unlike the Copy-URL button above, this is NOT gated on
+                                    activeFilterCount > 0 — copying the full unfiltered list is a
+                                    valid use case too, so it only needs a non-empty result set. */}
+                                {flattenedUpcoming.length > 0 && (
+                                    <Tooltip title={listCopied ? t('common.listCopied') : t('common.copyList')}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ mr: 0.5 }}
+                                            onClick={() => {
+                                                const heading = formatListHeading('events', t, window.location.hostname);
+                                                const filterLines = formatActiveFiltersSummary(activeFilterLines, t);
+                                                const rows = toCopyableEventRows(flattenedUpcoming, loc);
+                                                const list = formatEventListForClipboard(rows, t, filterLines);
+                                                const fullText = [heading, '', list, '', window.location.href].join('\n');
+                                                navigator.clipboard.writeText(fullText).then(() => {
+                                                    setListCopied(true);
+                                                    if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+                                                    listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
+                                            }}
+                                        >
+                                            {listCopied
+                                                ? <CheckIcon fontSize="small" color="success" />
+                                                : <FormatListBulletedIcon fontSize="small" />}
                                         </IconButton>
                                     </Tooltip>
                                 )}
@@ -676,7 +822,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {filterOptions.activityTypes.length > 0 && (
                             <Box sx={{ mb: 1.5 }}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.activityType')}</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                     {filterOptions.activityTypes.map(type => {
                                         const selected = filters.activityTypes.includes(type);
                                         return (
@@ -691,7 +837,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ...f,
                                                     activityTypes: selected ? f.activityTypes.filter(x => x !== type) : [...f.activityTypes, type],
                                                 }))}
-                                                sx={{ cursor: 'pointer' }}
+                                                sx={FILTER_CHIP_SX}
                                             />
                                         );
                                     })}
@@ -702,14 +848,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* Race distance */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.raceDistance', 'Race distance')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                {([
-                                    { key: '<10', label: '< 10 km' },
-                                    { key: '10-21', label: '10–21 km' },
-                                    { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
-                                    { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
-                                    { key: '100+', label: '100 km+' },
-                                ] as const).map(({ key, label }) => {
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
+                                {distanceBucketOptions.map(({ key, label }) => {
                                     const selected = filters.distanceBuckets.includes(key);
                                     return (
                                         <Chip
@@ -724,7 +864,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ? f.distanceBuckets.filter(b => b !== key)
                                                     : [...f.distanceBuckets, key],
                                             }))}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -734,14 +874,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* Month */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.month', 'Month')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 <Chip
                                     label={t('races.filters.allMonths', 'All')}
                                     size="small"
                                     variant={filters.months.length === 0 ? 'filled' : 'outlined'}
                                     color={filters.months.length === 0 ? 'primary' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, months: [] }))}
-                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                    sx={{ ...FILTER_CHIP_SX, fontWeight: 600 }}
                                 />
                                 {(t('races.months', { returnObjects: true }) as string[]).map((name, idx) => {
                                     const selected = filters.months.includes(idx);
@@ -753,7 +893,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             variant={selected ? 'filled' : 'outlined'}
                                             color={selected ? 'primary' : 'default'}
                                             onClick={() => toggleMonth(idx)}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -763,14 +903,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* Week */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.week', 'Week')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 <Chip
                                     label={t('races.filters.thisWeek', 'This week')}
                                     size="small"
                                     variant={filters.thisWeekOnly ? 'filled' : 'outlined'}
                                     color={filters.thisWeekOnly ? 'primary' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, thisWeekOnly: !f.thisWeekOnly, nextWeekOnly: false }))}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                                 <Chip
                                     label={t('races.filters.nextWeek', 'Next week')}
@@ -778,7 +918,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     variant={filters.nextWeekOnly ? 'filled' : 'outlined'}
                                     color={filters.nextWeekOnly ? 'primary' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, nextWeekOnly: !f.nextWeekOnly, thisWeekOnly: false }))}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             </Box>
                         </Box>
@@ -786,14 +926,14 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                         {/* ITRA points */}
                         <Box sx={{ mb: 1.5 }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.itraPoints')}</Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                 <Chip
                                     label="ITRA"
                                     size="small"
                                     variant={filters.itraAny ? 'filled' : 'outlined'}
                                     color={filters.itraAny ? 'warning' : 'default'}
                                     onClick={() => setFilters(f => ({ ...f, itraAny: !f.itraAny, itraPoints: [] }))}
-                                    sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                    sx={{ ...FILTER_CHIP_SX, fontWeight: 600 }}
                                 />
                                 {[0, 1, 2, 3, 4, 5].map(pts => {
                                     const selected = !filters.itraAny && filters.itraPoints.includes(pts);
@@ -811,7 +951,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ? f.itraPoints.filter(x => x !== pts)
                                                     : [...f.itraPoints, pts],
                                             }))}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -824,7 +964,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 {filterOptions.championships.length > 0 && (
                                     <Box sx={{ flex: 1, minWidth: 140 }}>
                                         <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.championships')}</Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                             {filterOptions.championships.map(ch => {
                                                 const selected = filters.championships.includes(ch);
                                                 return (
@@ -838,7 +978,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             ...f,
                                                             championships: selected ? f.championships.filter(x => x !== ch) : [...f.championships, ch],
                                                         }))}
-                                                        sx={{ cursor: 'pointer' }}
+                                                        sx={FILTER_CHIP_SX}
                                                     />
                                                 );
                                             })}
@@ -848,7 +988,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 {filterOptions.certifications.length > 0 && (
                                     <Box sx={{ flex: 1, minWidth: 140 }}>
                                         <Typography variant="caption" color="text.secondary" fontWeight={600}>{t('races.filters.certifications')}</Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
                                             {filterOptions.certifications.map(cert => {
                                                 const selected = filters.certifications.includes(cert);
                                                 return (
@@ -862,7 +1002,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             ...f,
                                                             certifications: selected ? f.certifications.filter(x => x !== cert) : [...f.certifications, cert],
                                                         }))}
-                                                        sx={{ cursor: 'pointer' }}
+                                                        sx={FILTER_CHIP_SX}
                                                     />
                                                 );
                                             })}
@@ -1776,9 +1916,11 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     startIcon={siteQRCopied ? <CheckIcon /> : <ContentCopyIcon />}
                                     color={siteQRCopied ? 'success' : 'primary'}
                                     onClick={() => {
-                                        navigator.clipboard.writeText(siteUrl);
-                                        setSiteQRCopied(true);
-                                        setTimeout(() => setSiteQRCopied(false), 2000);
+                                        navigator.clipboard.writeText(siteUrl).then(() => {
+                                            setSiteQRCopied(true);
+                                            if (siteQRCopiedTimer.current) clearTimeout(siteQRCopiedTimer.current);
+                                            siteQRCopiedTimer.current = setTimeout(() => setSiteQRCopied(false), 2000);
+                                        }).catch(() => {});
                                     }}
                                     sx={{ textTransform: 'none' }}
                                 >

@@ -15,6 +15,9 @@
         "collapse": "Collapse",
         "copyLink": "Copy filter URL",
         "copied": "Copied!",
+        "copyList": "Copy list",
+        "listCopied": "List copied!",
+        "filtersHeading": "Filters:",
         "dataLoadUnavailable": "We couldn't load data right now. Check your internet connection and try again."
     },
     "auth": {
@@ -264,6 +267,13 @@
         "halfMarathon": "Half–Marathon",
         "marathonTo100": "Marathon–100 km",
         "elevationGain": "Elevation Gain",
+        "climbRatio": "Climb ratio",
+        "climbRatioBuckets": {
+            "under20": "< 20 m/km",
+            "20to35": "20–35 m/km",
+            "35to50": "35–50 m/km",
+            "over50": "50+ m/km"
+        },
         "elevationLoss": "Elevation Loss",
         "duration": "Est. Duration",
         "distanceFromYou": "Distance from You",
@@ -341,6 +351,8 @@
         "viewDetails": "View Details",
         "showTracks": "Show trail tracks",
         "hideTracks": "Hide trail tracks",
+        "raceRoutes": "Race routes",
+        "selectRouteAriaLabel": "Highlight {{name}} on the map",
         "topo": "Topographic",
         "street": "Street",
         "dark": "Dark"
@@ -571,7 +583,7 @@
     },
     "climate": {
         "title": "Climate Normals",
-        "avgHighLow": "Average high / low",
+        "avgHighLow": "Average low to high",
         "avgPrecipitation": "Avg. precipitation",
         "chanceOfRain": "Chance of rain",
         "avgSunshine": "Avg. sunshine",
@@ -586,7 +598,7 @@
         "location": "Location",
         "approximateLocation": "Estimated for a broad area",
         "date": "Date",
-        "basedOnYears": "What this date has usually looked like over the past {{years}} years — not a forecast.",
+        "basedOnYears": "An overview of weather conditions in the area over the past {{years}} years, during the time the event takes place. — This is not a probability calculation or a forecast for the weather at the next event. You can click 'View trail' above to see weather forecast.",
         "unavailable": "Historical climate data unavailable"
     },
     "privacy": {
@@ -820,6 +832,10 @@
             }
         },
         "changelog": {
+            "v1_17_2": {
+                "title": "Colored event route map, clipboard-copy for lists, and bigger tap targets across filters",
+                "description": "Event maps now color each route by trail and let you tap a race in the list to highlight it on the map, and the route's name/distance/elevation chip no longer gets clipped at the bottom of the map. Trails and events lists can now be copied to the clipboard as a formatted list, with a heading, the active filters, distance/elevation, and a link back to the page. Chips across Advanced Filters, location search, activity-type pills and discovery tabs now have full 44x44px tap targets on mobile. A new climb ratio (m/km) filter was added to Trails' Advanced Filters, and race series pages now show elevation gain. In admin, event editions now require a start date before an end date, and the race-day checklist only shows for Race/Series events."
+            },
             "v1_17_1": {
                 "title": "Simplified climate card, and locale-correct decimals for climate and weather",
                 "description": "The climate card on event pages now resolves weather normals from the event's location only, dropping the GPS-pin/point-to-point start-finish split that made the card more confusing than useful. Decimal numbers and the sunshine-hour unit on the climate and weather cards now render with a comma on the Icelandic site instead of always showing a period, via a shared formatting utility."
@@ -1481,6 +1497,15 @@
             "Thursday",
             "Friday",
             "Saturday"
+        ],
+        "weekdaysShort": [
+            "Sun",
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat"
         ],
         "ordinals": [
             "",

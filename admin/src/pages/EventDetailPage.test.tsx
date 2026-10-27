@@ -237,6 +237,40 @@ describe('EditionDialogInner — Start/End date disabled and derived for a Serie
   });
 });
 
+// #1365: the issue owner's decision — events are scheduled start-first, so End date with no
+// Start date isn't a real scheduling pattern. Blocks Save client-side rather than letting a
+// 400 from CreateEditionCommandValidator/UpdateEditionCommandValidator surface after submit.
+function getSaveButton() {
+  return screen.getByRole('button', { name: /add edition|save edition/i }) as HTMLButtonElement;
+}
+
+describe('EditionDialogInner — Start date required once End date is set (#1365)', () => {
+  afterEach(cleanup);
+
+  it('disables Save and shows an inline error once End date is set with no Start date', () => {
+    renderEditionDialog();
+
+    expect(getSaveButton().disabled).toBe(false);
+
+    fireEvent.change(getEndDateInput(), { target: { value: '08/01/2026' } });
+
+    expect(getSaveButton().disabled).toBe(true);
+    expect(screen.getByText('Start date is required when an End date is set.')).not.toBe(null);
+  });
+
+  it('re-enables Save once Start date is filled in', () => {
+    renderEditionDialog();
+
+    fireEvent.change(getEndDateInput(), { target: { value: '08/01/2026' } });
+    expect(getSaveButton().disabled).toBe(true);
+
+    fireEvent.change(getStartDateInput(), { target: { value: '07/01/2026' } });
+
+    expect(getSaveButton().disabled).toBe(false);
+    expect(screen.queryByText('Start date is required when an End date is set.')).toBe(null);
+  });
+});
+
 // #1024: handleCycleEditionStatus (the chip labeled with the edition's own EditionStatus, e.g.
 // "Active" — not the Status *Select* covered above) fires a bare, non-awaited apiFetch PUT and,
 // unlike its sibling handleToggleEditionNeedsReview, never called invalidateEventsList() on
@@ -617,6 +651,15 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
   // no regression test — a future edit could reintroduce the bug silently. This asserts the
   // *computed* style of one of the three aria-live status boxes the constant is applied to; the
   // other two (cancelStatusId, deleteStatusId) share the same sx constant, so one box is enough.
+  //
+  // #1402 follow-up: the original version of this test couldn't assert margin at all — Stack's
+  // injected spacing rules (specificity 0,1,2) always beat the element's own sx rule (0,1,0), so
+  // getComputedStyle never reflected VISUALLY_HIDDEN_SX's declared `margin: -1px`, and the test
+  // fell back to scanning document.styleSheets for the emotion-generated rule instead. The owner's
+  // fix was to drop `margin` from VISUALLY_HIDDEN_SX entirely — width/height/clip/overflow alone
+  // already fully hide the element, so the negative margin was never load-bearing. That removes
+  // the need for the workaround: there's nothing left on the element's own rule to lose the
+  // cascade to, so getComputedStyle now faithfully shows whichever margin Stack actually applies.
   it('renders the Mark edition Completed status region visually hidden via a 1px clip box (#1384)', async () => {
     mockState.eventDetail = buildEventDetailFixture();
 
@@ -635,35 +678,15 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     expect(computed.width).toBe('1px');
     expect(computed.height).toBe('1px');
 
-    // margin can't be asserted the same way: this Box sits inside a `<Stack spacing={0.5}>`
-    // (the edition-row action Stack), and MUI's Stack spacing implementation injects its own
-    // `> :not(style) ~ :not(style) { margin-left: … }` + `> :not(style):not(style) { margin: 0 }`
-    // rules whose specificity (0,1,2) beats this element's own single-class sx rule (0,1,0) —
-    // so Stack's margin always wins the cascade and getComputedStyle(statusBox).margin never
-    // reflects VISUALLY_HIDDEN_SX's declared value, correct or buggy. That's true in a real
-    // browser too, not a jsdom quirk — confirmed by dumping document.styleSheets during
-    // development of this test. So instead this reads the emotion-generated rule attached
-    // directly to the element's own class (the thing VISUALLY_HIDDEN_SX actually compiles to),
-    // which is exactly where #1278's bare-number-vs-px-string bug lived.
-    const ownClass = Array.from(statusBox.classList).find(c => c.startsWith('css-'));
-    if (!ownClass) throw new Error('Status box has no emotion-generated class');
-    let ownRuleCssText: string | undefined;
-    for (const sheet of Array.from(document.styleSheets)) {
-      let cssRules: CSSRuleList;
-      try {
-        cssRules = sheet.cssRules;
-      } catch {
-        continue;
-      }
-      for (const rule of Array.from(cssRules)) {
-        if (rule instanceof CSSStyleRule && rule.selectorText === `.${ownClass}`) {
-          ownRuleCssText = rule.cssText;
-          break;
-        }
-      }
-      if (ownRuleCssText) break;
-    }
-    if (!ownRuleCssText) throw new Error(`No own-class CSS rule found for .${ownClass}`);
-    expect(ownRuleCssText).toContain('margin: -1px');
+    // margin: VISUALLY_HIDDEN_SX no longer declares one (#1402) — this Box sits inside a
+    // `<Stack spacing={0.5}>` (the edition-row action Stack), whose injected
+    // `> :not(style) ~ :not(style) { margin-left: 4px }` + `> :not(style) { margin: 0 }` rules
+    // (specificity 0,1,2) always beat this element's own single-class sx rule (0,1,0) regardless
+    // of what VISUALLY_HIDDEN_SX declares — so asserting the resolved value here, rather than
+    // asserting it mirrors VISUALLY_HIDDEN_SX, is what makes this test honest about who actually
+    // controls margin on this element. The Complete button isn't the Stack's first child, so
+    // Stack's sibling-margin rule applies: 0 on three sides, 4px (0.5 * 8px theme spacing) on the
+    // left.
+    expect(computed.margin).toBe('0px 0px 0px 4px');
   });
 });

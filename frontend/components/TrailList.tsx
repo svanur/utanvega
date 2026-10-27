@@ -34,6 +34,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import FilterIcon from '@mui/icons-material/FilterList';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import ListIcon from '@mui/icons-material/List';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import TableChartIcon from '@mui/icons-material/TableChart';
@@ -77,10 +78,33 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
 import { isOngoingPastDayTwo } from '../utils/eventUtils';
+import { formatTrailListForClipboard, formatListHeading, formatActiveFiltersSummary } from '../utils/copyListToClipboard';
+import type { ActiveFilterLine } from '../utils/copyListToClipboard';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 type ViewMode = 'list' | 'map' | 'table';
+
+// #1510: a {key, label} option — shared shape for the bucket pills below. Looking a label up by
+// key (used by the "Copy list" clipboard summary) and rendering the Chip for that same option
+// (used by the Advanced Filters panel) both read from one options array per bucket now, rather
+// than each keeping its own hand-copied label map/array (see activeFilterLines below and PR #1508).
+interface BucketOption {
+    key: string;
+    label: string;
+}
+
+function bucketLabel(options: readonly BucketOption[], key: string): string {
+    return options.find(opt => opt.key === key)?.label ?? key;
+}
+
+// #1487/#1506: selectable filter/toggle pills (Advanced Filters panel, Activity Type pills,
+// discovery tab chips) need a >=44x44px touch target (iOS/Android a11y guideline) — MUI's
+// size="small" Chip renders ~24px tall by default. Bumping both dimensions here, local to this
+// file, rather than a blanket MuiChip theme override, which would also grow unrelated chips
+// elsewhere (status/count badges, race card tags) that are passive, not interactive.
+const FILTER_CHIP_SX = { cursor: 'pointer', minHeight: 44, minWidth: 44 };
 
 interface TrailListProps {
     tagSlug?: string;
@@ -131,10 +155,20 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     const [showAdvanced, setShowAdvanced] = React.useState(false);
     const [linkCopied, setLinkCopied] = React.useState(false);
     const linkCopiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [listCopied, setListCopied] = React.useState(false);
+    const listCopiedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // #1524: clear pending copy-revert timers on unmount — otherwise the
+    // setLinkCopied/setListCopied(false) callback fires after unmount.
+    React.useEffect(() => () => {
+        if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+        if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+    }, []);
 
     const activeFilterCount = React.useMemo(() =>
         filters.lengthBuckets.length +
         filters.elevationGainBuckets.length +
+        filters.climbRatioBuckets.length +
         filters.distanceBuckets.length +
         filters.difficulties.length +
         (filters.locationSlugs.length > 0 ? 1 : 0) +
@@ -313,6 +347,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
         const length = searchParams.get('length');
         const elevation = searchParams.get('elevation');
+        const climbratio = searchParams.get('climbratio');
         const nearme = searchParams.get('nearme');
         const locations = searchParams.get('locations');
         const tags = searchParams.get('tags');
@@ -320,6 +355,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
 
         if (length) updates.lengthBuckets = length.split(',');
         if (elevation) updates.elevationGainBuckets = elevation.split(',');
+        if (climbratio) updates.climbRatioBuckets = climbratio.split(',');
         if (nearme) updates.distanceBuckets = nearme.split(',');
         if (locations) updates.locationSlugs = locations.split(',');
         if (tags) updates.selectedTags = tags.split(',');
@@ -350,6 +386,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         if (filters.difficulties.length > 0) params.set('difficulty', filters.difficulties.join(','));
         if (filters.lengthBuckets.length > 0) params.set('length', filters.lengthBuckets.join(','));
         if (filters.elevationGainBuckets.length > 0) params.set('elevation', filters.elevationGainBuckets.join(','));
+        if (filters.climbRatioBuckets.length > 0) params.set('climbratio', filters.climbRatioBuckets.join(','));
         if (filters.distanceBuckets.length > 0) params.set('nearme', filters.distanceBuckets.join(','));
         // Write only user-selected (top-level) slugs, not the expanded descendant set
         if (selectedLocationItems.length > 0) params.set('locations', selectedLocationItems.map(i => i.slug).join(','));
@@ -362,7 +399,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         setSearchParams(params, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchQuery, filters.selectedActivityTypes, filters.difficulties, filters.lengthBuckets,
-        filters.elevationGainBuckets, filters.distanceBuckets, selectedLocationItems,
+        filters.elevationGainBuckets, filters.climbRatioBuckets, filters.distanceBuckets, selectedLocationItems,
         filters.selectedTags, filters.favoritesOnly, filters.offlineOnly, filters.sortBy, viewMode]);
 
     // Runs after the sync effect on first flush — marks init done so sync starts writing
@@ -438,6 +475,23 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, [trails, filters.favoritesOnly, filters.offlineOnly, favoritesSet, isOffline, hiddenSlugs, hidingSlugsSet]);
     React.useEffect(() => { filteredTrailsRef.current = filteredTrails; }, [filteredTrails]);
 
+    // #1483: name + primary location (same "lowest order wins" tiebreak TrailCard already uses
+    // for its own location chip) for the "Copy list" clipboard text — a flat list, no date
+    // grouping, unlike the events list's copy util.
+    const copyableTrails = React.useMemo(() => filteredTrails.map(trail => {
+        const primaryLocation = trail.locations.length > 0
+            ? [...trail.locations].sort((a, b) => a.order - b.order)[0]
+            : null;
+        return {
+            name: trail.name,
+            location: primaryLocation ? (loc(primaryLocation.name, primaryLocation.nameEn) ?? primaryLocation.name) : null,
+            // #1495: trail.length is meters (matches the /1000 km conversion useTrails.ts's own
+            // sort/filter buckets already use), trail.elevationGain is meters already.
+            lengthKm: trail.length / 1000,
+            elevationGain: trail.elevationGain,
+        };
+    }), [filteredTrails, loc]);
+
     // Gather trail names for the slot machine display
     const slotTrailNames = React.useMemo(() => {
         const names = filteredTrails.map(t => t.name);
@@ -466,6 +520,98 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
         }));
         return Array.from(tagMap.values()).sort((a, b) => (loc(a.name, a.nameEn) ?? a.name).localeCompare(loc(b.name, b.nameEn) ?? b.name));
     }, [trails, loc]);
+
+    // #1510: one options array per bucket, shared by the activeFilterLines memo below and the
+    // matching Chip-rendering section further down this file — was two independent hand-copied
+    // label sets per bucket (see PR #1508's comment here, now superseded).
+    const lengthBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<10', label: '< 10 km' },
+        { key: '10-21', label: '10–21 km' },
+        { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
+        { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
+        { key: '100+', label: '100 km+' },
+    ], [t]);
+
+    const elevationGainBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<200', label: '< 200 m' },
+        { key: '200-500', label: '200–500 m' },
+        { key: '500-1000', label: '500–1000 m' },
+        { key: '1000+', label: '1000 m+' },
+    ], []);
+
+    const climbRatioBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<20', label: t('filters.climbRatioBuckets.under20', '< 20 m/km') },
+        { key: '20-35', label: t('filters.climbRatioBuckets.20to35', '20–35 m/km') },
+        { key: '35-50', label: t('filters.climbRatioBuckets.35to50', '35–50 m/km') },
+        { key: '50+', label: t('filters.climbRatioBuckets.over50', '50+ m/km') },
+    ], [t]);
+
+    const nearMeBucketOptions = React.useMemo((): BucketOption[] => [
+        { key: '<10', label: '< 10 km' },
+        { key: '10-25', label: '10–25 km' },
+        { key: '25-50', label: '25–50 km' },
+        { key: '50-100', label: '50–100 km' },
+        { key: '100+', label: '100 km+' },
+    ], []);
+
+    // #1495/#1510: one Key: Value line per currently active filter for the "Copy list" clipboard
+    // text's "Filters:" section, same sections/order as activeFilterCount above. Bucket/option
+    // labels are looked up from the shared *BucketOptions arrays above (also used by the matching
+    // Chip-rendering section further down this file) via bucketLabel() — a single source of truth
+    // instead of the two hand-copied label maps PR #1508 left here.
+    const activeFilterLines = React.useMemo((): ActiveFilterLine[] => {
+        const lines: ActiveFilterLine[] = [];
+
+        if (filters.lengthBuckets.length > 0) {
+            lines.push({ label: t('filters.trailLength'), value: filters.lengthBuckets.map(b => bucketLabel(lengthBucketOptions, b)).join(', ') });
+        }
+
+        if (filters.elevationGainBuckets.length > 0) {
+            lines.push({ label: t('filters.elevationGain'), value: filters.elevationGainBuckets.map(b => bucketLabel(elevationGainBucketOptions, b)).join(', ') });
+        }
+
+        if (filters.climbRatioBuckets.length > 0) {
+            lines.push({ label: t('filters.climbRatio'), value: filters.climbRatioBuckets.map(b => bucketLabel(climbRatioBucketOptions, b)).join(', ') });
+        }
+
+        if (filters.distanceBuckets.length > 0) {
+            lines.push({ label: t('races.nearMe.label', 'Near me'), value: filters.distanceBuckets.map(b => bucketLabel(nearMeBucketOptions, b)).join(', ') });
+        }
+
+        if (filters.difficulties.length > 0) {
+            lines.push({ label: t('filters.difficulty'), value: filters.difficulties.map(d => t(`difficulty.${d.toLowerCase()}`)).join(', ') });
+        }
+
+        if (filters.locationSlugs.length > 0) {
+            const names = selectedLocationItems.map(item => loc(item.name, item.nameEn) ?? item.name);
+            lines.push({ label: t('filters.location'), value: names.length > 0 ? names.join(', ') : t('filters.allLocations') });
+        }
+
+        if (filters.selectedActivityTypes.length > 0) {
+            const value = filters.selectedActivityTypes
+                .map(type => t(`difficulty.${type.charAt(0).toLowerCase() + type.slice(1)}`))
+                .join(', ');
+            lines.push({ label: t('races.filters.activityType'), value });
+        }
+
+        if (filters.selectedTags.length > 0) {
+            const names = filters.selectedTags.map(slug => {
+                const tag = availableTags.find(candidate => candidate.slug === slug);
+                return tag ? (loc(tag.name, tag.nameEn) ?? tag.name) : slug;
+            });
+            lines.push({ label: t('filters.tags'), value: names.join(', ') });
+        }
+
+        if (filters.favoritesOnly) {
+            lines.push({ label: t('filters.showFavoritesOnly'), value: '✓' });
+        }
+
+        if (filters.offlineOnly) {
+            lines.push({ label: t('filters.showOfflineOnly'), value: '✓' });
+        }
+
+        return lines;
+    }, [filters, selectedLocationItems, availableTags, loc, t, lengthBucketOptions, elevationGainBucketOptions, climbRatioBucketOptions, nearMeBucketOptions]);
 
     const locationRestored = React.useRef(false);
 
@@ -639,15 +785,47 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                             size="small"
                                             sx={{ mr: 0.5 }}
                                             onClick={() => {
-                                                navigator.clipboard.writeText(window.location.href);
-                                                setLinkCopied(true);
-                                                if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
-                                                linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                navigator.clipboard.writeText(window.location.href).then(() => {
+                                                    setLinkCopied(true);
+                                                    if (linkCopiedTimer.current) clearTimeout(linkCopiedTimer.current);
+                                                    linkCopiedTimer.current = setTimeout(() => setLinkCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
                                             }}
                                         >
                                             {linkCopied
                                                 ? <CheckIcon fontSize="small" color="success" />
                                                 : <ContentCopyIcon fontSize="small" />}
+                                        </IconButton>
+                                    </Tooltip>
+                                )}
+                                {/* #1483: unlike the Copy-URL button above, this is NOT gated on
+                                    activeFilterCount > 0 — copying the full unfiltered list is a
+                                    valid use case too, so it only needs a non-empty result set. */}
+                                {filteredTrails.length > 0 && (
+                                    <Tooltip title={listCopied ? t('common.listCopied') : t('common.copyList')}>
+                                        <IconButton
+                                            size="small"
+                                            sx={{ mr: 0.5 }}
+                                            onClick={() => {
+                                                const heading = formatListHeading('trails', t, window.location.hostname);
+                                                const filterLines = formatActiveFiltersSummary(activeFilterLines, t);
+                                                const list = formatTrailListForClipboard(copyableTrails);
+                                                const fullText = [
+                                                    heading, '',
+                                                    ...(filterLines.length > 0 ? [...filterLines, ''] : []),
+                                                    list, '',
+                                                    window.location.href,
+                                                ].join('\n');
+                                                navigator.clipboard.writeText(fullText).then(() => {
+                                                    setListCopied(true);
+                                                    if (listCopiedTimer.current) clearTimeout(listCopiedTimer.current);
+                                                    listCopiedTimer.current = setTimeout(() => setListCopied(false), 2000);
+                                                }).catch(() => { /* clipboard write failed — leave UI in its pre-copy state */ });
+                                            }}
+                                        >
+                                            {listCopied
+                                                ? <CheckIcon fontSize="small" color="success" />
+                                                : <FormatListBulletedIcon fontSize="small" />}
                                         </IconButton>
                                     </Tooltip>
                                 )}
@@ -707,7 +885,65 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 )}
                                 renderTags={(value, getTagProps) =>
                                     value.map((opt, index) => (
-                                        <Chip {...getTagProps({ index })} key={opt.slug} label={loc(opt.name, opt.nameEn) ?? opt.name} size="small" />
+                                        <Chip
+                                            {...getTagProps({ index })}
+                                            key={opt.slug}
+                                            label={loc(opt.name, opt.nameEn) ?? opt.name}
+                                            size="small"
+                                            // #1507: the delete ("x") icon is this chip's only interactive
+                                            // part and needs a >=44x44px tap target (iOS/Android a11y
+                                            // guideline), but MUI's size="small" Chip is only ~24px tall.
+                                            //
+                                            // Review round 1 (#1517) tried an invisible ::before overlay on
+                                            // the icon to expand its hit area without resizing the chip.
+                                            // `overflow: hidden` on the chip then had to clip that overlay
+                                            // back down to the chip's own ~24px box to stop it bleeding onto
+                                            // a neighbouring chip — which defeated the 44px goal in the one
+                                            // place it mattered (real browser hit-testing; jsdom's
+                                            // fireEvent.click ignores layout clipping, so the round-1 tests
+                                            // didn't catch it).
+                                            //
+                                            // Real fix: grow the chip's own footprint (minHeight: 44, the
+                                            // same floor FILTER_CHIP_SX uses for the Advanced Filters toggle
+                                            // pills — see #1487/PR #1505) and give the delete icon a real
+                                            // 44x44 layout box via a custom `deleteIcon` wrapper, instead of
+                                            // an absolutely-positioned overlay. Because the wrapper is a
+                                            // normal flex child, it's included in the chip's own width —
+                                            // there is nothing to overflow or clip, so it can never bleed
+                                            // onto the next chip. The "x" glyph inside stays visually small
+                                            // so the chip doesn't look oversized next to the Autocomplete
+                                            // input.
+                                            deleteIcon={
+                                                <Box
+                                                    component="span"
+                                                    sx={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        width: 44,
+                                                        height: 44,
+                                                        margin: 0,
+                                                        // #1518: MUI clones this element with its own
+                                                        // `MuiChip-deleteIcon MuiChip-deleteIconSmall`
+                                                        // classes (Chip.js), and its `.MuiChip-deleteIconSmall`
+                                                        // margin rule is a 2-class descendant selector
+                                                        // (`& .MuiChip-deleteIconSmall` nested under ChipRoot's
+                                                        // own class) — strictly higher specificity than the
+                                                        // single emotion class the `margin: 0` above compiles
+                                                        // to, so it always wins over the plain override.
+                                                        // Target both of MUI's classes directly so this rule's
+                                                        // specificity (3 classes) beats MUI's (2 classes)
+                                                        // outright, regardless of stylesheet insertion order.
+                                                        '&.MuiChip-deleteIcon.MuiChip-deleteIconSmall': {
+                                                            margin: 0,
+                                                        },
+                                                    }}
+                                                >
+                                                    <CancelIcon fontSize="small" />
+                                                </Box>
+                                            }
+                                            sx={{ minHeight: 44 }}
+                                        />
                                     ))
                                 }
                             />
@@ -720,7 +956,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('races.filters.activityType')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {ALL_ACTIVITY_TYPES.filter(type => trails.some(t => t.activityType === type)).map(type => {
                                     const selected = filters.selectedActivityTypes.includes(type);
                                     const icon = {
@@ -745,7 +981,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                 const updated = selected ? current.filter(t => t !== type) : [...current, type];
                                                 setFilters(f => ({ ...f, selectedActivityTypes: updated }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -758,14 +994,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('filters.trailLength')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<10', label: '< 10 km' },
-                                    { key: '10-21', label: '10–21 km' },
-                                    { key: '21-42', label: t('filters.halfMarathon', 'Half–Marathon') },
-                                    { key: '42-100', label: t('filters.marathonTo100', 'Marathon–100 km') },
-                                    { key: '100+', label: '100 km+' },
-                                ] as const).map(({ key, label }) => {
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {lengthBucketOptions.map(({ key, label }) => {
                                     const selected = filters.lengthBuckets.includes(key);
                                     return (
                                         <Chip
@@ -780,7 +1010,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     : [...filters.lengthBuckets, key];
                                                 setFilters(f => ({ ...f, lengthBuckets: next }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -792,13 +1022,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('filters.elevationGain')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                {([
-                                    { key: '<200', label: '< 200 m' },
-                                    { key: '200-500', label: '200–500 m' },
-                                    { key: '500-1000', label: '500–1000 m' },
-                                    { key: '1000+', label: '1000 m+' },
-                                ] as const).map(({ key, label }) => {
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {elevationGainBucketOptions.map(({ key, label }) => {
                                     const selected = filters.elevationGainBuckets.includes(key);
                                     return (
                                         <Chip
@@ -813,7 +1038,35 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     : [...filters.elevationGainBuckets, key];
                                                 setFilters(f => ({ ...f, elevationGainBuckets: next }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
+                                        />
+                                    );
+                                })}
+                            </Box>
+                        </Grid>
+
+                        {/* 4b. Climb ratio (m/km = elevationGain / (length/1000)) */}
+                        <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
+                                {t('filters.climbRatio')}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {climbRatioBucketOptions.map(({ key, label }) => {
+                                    const selected = filters.climbRatioBuckets.includes(key);
+                                    return (
+                                        <Chip
+                                            key={key}
+                                            label={label}
+                                            size="small"
+                                            variant={selected ? 'filled' : 'outlined'}
+                                            color={selected ? 'primary' : 'default'}
+                                            onClick={() => {
+                                                const next = selected
+                                                    ? filters.climbRatioBuckets.filter(b => b !== key)
+                                                    : [...filters.climbRatioBuckets, key];
+                                                setFilters(f => ({ ...f, climbRatioBuckets: next }));
+                                            }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -825,7 +1078,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                             <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                 {t('filters.difficulty')}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                 {(['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme'] as const).map(d => {
                                     const selected = filters.difficulties.includes(d);
                                     return (
@@ -841,7 +1094,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     : [...filters.difficulties, d];
                                                 setFilters(f => ({ ...f, difficulties: next }));
                                             }}
-                                            sx={{ cursor: 'pointer' }}
+                                            sx={FILTER_CHIP_SX}
                                         />
                                     );
                                 })}
@@ -852,7 +1105,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         {tagsEnabled && availableTags.length > 0 && (
                             <Grid item xs={12}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 0.75, display: 'block' }}>{t('filters.tags')}</Typography>
-                                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                     {availableTags.map(tag => {
                                         const selected = filters.selectedTags.includes(tag.slug);
                                         return (
@@ -867,10 +1120,10 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                     handleFilterChange('selectedTags', next);
                                                 }}
                                                 sx={{
+                                                    ...FILTER_CHIP_SX,
                                                     backgroundColor: selected ? (tag.color || 'primary.main') : undefined,
                                                     color: selected ? '#fff' : undefined,
                                                     borderColor: tag.color || undefined,
-                                                    cursor: 'pointer',
                                                 }}
                                                 variant={selected ? 'filled' : 'outlined'}
                                             />
@@ -886,14 +1139,8 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                 <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ display: 'block', mb: 0.75 }}>
                                     {t('races.nearMe.label', 'Near me')}
                                 </Typography>
-                                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                                    {([
-                                        { key: '<10', label: '< 10 km' },
-                                        { key: '10-25', label: '10–25 km' },
-                                        { key: '25-50', label: '25–50 km' },
-                                        { key: '50-100', label: '50–100 km' },
-                                        { key: '100+', label: '100 km+' },
-                                    ] as const).map(({ key, label }) => {
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                    {nearMeBucketOptions.map(({ key, label }) => {
                                         const selected = filters.distanceBuckets.includes(key);
                                         return (
                                             <Chip
@@ -908,7 +1155,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                                         : [...filters.distanceBuckets, key];
                                                     setFilters(f => ({ ...f, distanceBuckets: next }));
                                                 }}
-                                                sx={{ cursor: 'pointer' }}
+                                                sx={FILTER_CHIP_SX}
                                             />
                                         );
                                     })}
@@ -968,9 +1215,11 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             </Collapse>
 
             {/* Activity Type pills — Trail Run + Road Run always visible; other types behind feature flag */}
+            {/* #1506: these are real toggle controls (same defect class as #1487's Advanced Filters
+                chips), so they get the same >=44x44px touch target via FILTER_CHIP_SX. */}
             <Box
                 display="flex"
-                gap={0.5}
+                gap={1}
                 mb={2}
                 flexWrap="nowrap"
                 overflow="auto"
@@ -986,7 +1235,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         const selected = filters.selectedActivityTypes.includes('TrailRunning');
                         setFilters(f => ({ ...f, selectedActivityTypes: selected ? f.selectedActivityTypes.filter(x => x !== 'TrailRunning') : [...f.selectedActivityTypes, 'TrailRunning'] }));
                     }}
-                    sx={{ cursor: 'pointer' }}
+                    sx={FILTER_CHIP_SX}
                 />
                 <Chip
                     icon={<DirectionsRunIcon fontSize="small" />}
@@ -998,7 +1247,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         const selected = filters.selectedActivityTypes.includes('Running');
                         setFilters(f => ({ ...f, selectedActivityTypes: selected ? f.selectedActivityTypes.filter(x => x !== 'Running') : [...f.selectedActivityTypes, 'Running'] }));
                     }}
-                    sx={{ cursor: 'pointer' }}
+                    sx={FILTER_CHIP_SX}
                 />
                 {isEnabled('activity_pills') && ALL_ACTIVITY_TYPES
                     .filter(type => type !== 'TrailRunning' && type !== 'Running' && trails.some(t => t.activityType === type))
@@ -1032,11 +1281,14 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                         fontWeight: selected ? 'bold' : 'normal',
                                         opacity: selected ? 1 : 0.6,
                                         fontSize: '0.75rem',
-                                        height: 26,
+                                        // #1506: 44px-tall equivalent of the old height: 26 — label hides on
+                                        // xs (icon-only), so minWidth also goes to 44 there to keep the
+                                        // collapsed pill square-ish and tappable.
+                                        minHeight: 44,
                                         '& .MuiChip-label': { display: { xs: 'none', sm: 'block' }, px: 0.75 },
                                         '& .MuiChip-icon': { mx: { xs: 0, sm: undefined }, fontSize: '1rem' },
                                         px: { xs: 0.5, sm: undefined },
-                                        minWidth: { xs: 32, sm: undefined },
+                                        minWidth: { xs: 44, sm: undefined },
                                         justifyContent: 'center',
                                     }}
                                 />
@@ -1065,7 +1317,9 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
             {isEnabled('discovery_carousel') && (trendingTrails.length > 0 || recentTrails.length > 0 || upcomingCompetitions.length > 0) && viewMode === 'list' && !searchQuery && !filters.favoritesOnly && !tagSlug && (
                 <Box mb={3}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                        <Box display="flex" gap={0.5} flexWrap="wrap">
+                        {/* #1506: discovery tab chips are toggle controls like the Advanced Filters
+                            pills, so they get the same >=44x44px touch target via FILTER_CHIP_SX. */}
+                        <Box display="flex" gap={1} flexWrap="wrap">
                             {trendingTrails.length > 0 && (
                                 <Chip
                                     icon={<WhatshotIcon />}
@@ -1074,7 +1328,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     variant={discoveryTab === 'trending' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'trending' ? 'warning' : 'default'}
                                     onClick={() => handleDiscoveryTabChange('trending')}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             )}
                             {recentTrails.length > 0 && (
@@ -1085,7 +1339,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     variant={discoveryTab === 'recent' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'recent' ? 'primary' : 'default'}
                                     onClick={() => handleDiscoveryTabChange('recent')}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             )}
                             {isEnabled('races_page') && upcomingCompetitions.length > 0 && (
@@ -1096,7 +1350,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                                     variant={discoveryTab === 'races' ? 'filled' : 'outlined'}
                                     color={discoveryTab === 'races' ? 'success' : 'default'}
                                     onClick={() => handleDiscoveryTabChange('races')}
-                                    sx={{ cursor: 'pointer' }}
+                                    sx={FILTER_CHIP_SX}
                                 />
                             )}
                         </Box>

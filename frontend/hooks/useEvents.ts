@@ -36,6 +36,7 @@ export interface SeriesRaceDto {
     dateOfRace: string | null;
     startTime: string | null;
     distanceLabel: string | null;
+    trailElevationGain: number | null;
     ticketStatus: string;
     registrationUrl: string | null;
 }

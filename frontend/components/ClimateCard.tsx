@@ -21,6 +21,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import type { EventClimate } from '../hooks/useTrails';
 import { formatDecimal } from '../utils/formatDecimal';
+import { getClimateBackground } from '../utils/getClimateBackground';
 
 interface ClimateCardProps {
     climate: EventClimate | null;
@@ -40,48 +41,6 @@ function getClimateIcon(climate: EventClimate): string {
     if (climate.precipitationChance >= 0.2) return '🌦️';
     if (climate.averageHigh >= 15) return '☀️';
     return '⛅';
-}
-
-// #1448: subtle background wash per getClimateIcon's own bucket — reuses that classification
-// rather than re-deriving it, so the two never drift apart. Each pair fades from a low-alpha
-// tint (left) to fully transparent (right), so the Paper's own theme.palette.background.paper
-// still shows through — a wash, not a banner — and text/stat contrast is unaffected since
-// nothing opaque sits behind it. Dark variants use a lower alpha than light ones, since the
-// same alpha reads more strongly against a dark background.
-function getClimateBackground(climate: EventClimate): { light: string; dark: string } {
-    if (climate.averageLow <= 0 && climate.precipitationChance >= 0.3) {
-        // snow — pale blue
-        return {
-            light: 'linear-gradient(135deg, rgba(187, 222, 251, 0.45) 0%, rgba(187, 222, 251, 0) 100%)',
-            dark: 'linear-gradient(135deg, rgba(100, 181, 246, 0.16) 0%, rgba(100, 181, 246, 0) 100%)',
-        };
-    }
-    if (climate.precipitationChance >= 0.5) {
-        // heavy rain — slate blue
-        return {
-            light: 'linear-gradient(135deg, rgba(144, 164, 174, 0.4) 0%, rgba(144, 164, 174, 0) 100%)',
-            dark: 'linear-gradient(135deg, rgba(120, 144, 156, 0.18) 0%, rgba(120, 144, 156, 0) 100%)',
-        };
-    }
-    if (climate.precipitationChance >= 0.2) {
-        // showers — light blue
-        return {
-            light: 'linear-gradient(135deg, rgba(179, 229, 252, 0.4) 0%, rgba(179, 229, 252, 0) 100%)',
-            dark: 'linear-gradient(135deg, rgba(79, 195, 247, 0.14) 0%, rgba(79, 195, 247, 0) 100%)',
-        };
-    }
-    if (climate.averageHigh >= 15) {
-        // sunny — warm yellow
-        return {
-            light: 'linear-gradient(135deg, rgba(255, 224, 130, 0.4) 0%, rgba(255, 224, 130, 0) 100%)',
-            dark: 'linear-gradient(135deg, rgba(255, 183, 77, 0.14) 0%, rgba(255, 183, 77, 0) 100%)',
-        };
-    }
-    // cloudy — neutral grey
-    return {
-        light: 'linear-gradient(135deg, rgba(207, 216, 220, 0.4) 0%, rgba(207, 216, 220, 0) 100%)',
-        dark: 'linear-gradient(135deg, rgba(144, 164, 174, 0.14) 0%, rgba(144, 164, 174, 0) 100%)',
-    };
 }
 
 // #1446: short qualitative reads for the precipitation-chance and sunshine stats, so a visitor
@@ -193,7 +152,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 1 }}>
                             <Typography sx={{ fontSize: '1.2rem', lineHeight: 1 }}>{icon}</Typography>
                             <Typography variant="body2" fontWeight="bold">
-                                {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
+                                {Math.round(climate.averageLow)} - {Math.round(climate.averageHigh)} °C
                             </Typography>
                             <Stack direction="row" alignItems="center" spacing={0.3}>
                                 <AirIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
@@ -219,7 +178,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         <Typography sx={{ fontSize: '2.5rem', lineHeight: 1 }}>{icon}</Typography>
                         <Box>
                             <Typography variant="h5" fontWeight="bold" sx={{ lineHeight: 1.1 }}>
-                                {Math.round(climate.averageHigh)}° / {Math.round(climate.averageLow)}°C
+                                {Math.round(climate.averageLow)} - {Math.round(climate.averageHigh)} °C
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 {t('climate.avgHighLow')}
@@ -241,7 +200,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                             visitor skimming the grid would see only rain numbers first. */}
                         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                             <WbSunnyIcon fontSize="small" sx={{ color: 'warning.main' }} />
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box data-testid="sunshine-tile" sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
                                     {formatDecimal(climate.averageSunshineHours, i18n.language)} {t('climate.sunshineUnit')} · {t(sunshineLabelKey)}
                                 </Typography>
@@ -263,7 +222,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                         </Stack>
                         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
                             <WaterDropIcon fontSize="small" color="info" />
-                            <Box sx={{ minWidth: 0 }}>
+                            <Box data-testid="precipitation-tile" sx={{ minWidth: 0 }}>
                                 <Typography variant="body2" fontWeight="bold">
                                     {precipitationChancePct}% · {t(precipitationLabelKey)}
                                 </Typography>
@@ -303,9 +262,13 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                                     </Typography>
                                     {/* #1414: the resolved coordinate came from a broad Location
                                         (Country/Area/Region) — signal that the numbers above are
-                                        an estimate, not tied to this event's exact spot. */}
+                                        an estimate, not tied to this event's exact spot.
+                                        #1418: no noWrap here — this caption is long enough in
+                                        Icelandic to clip at a 375px tile width with no tooltip to
+                                        recover the text, so it's left to wrap to a second line
+                                        instead of truncating. */}
                                     {climate.isApproximate && (
-                                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontStyle: 'italic' }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontStyle: 'italic' }}>
                                             {t('climate.approximateLocation')}
                                         </Typography>
                                     )}

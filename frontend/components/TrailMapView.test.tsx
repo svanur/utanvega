@@ -9,7 +9,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Trail } from '../hooks/useTrails';
 
@@ -22,7 +22,7 @@ afterEach(cleanup);
 // #1303: mockFitBounds and mockGeometries are read by the react-leaflet/useTrailGeometries mocks
 // below. vi.hoisted is required because vi.mock(...) factories are hoisted above imports/consts —
 // referencing an un-hoisted outer variable from inside them throws a ReferenceError.
-const { mockFitBounds, mockGeometries, mockMap } = vi.hoisted(() => {
+const { mockFitBounds, mockGeometries, mockMap, polylineSpy } = vi.hoisted(() => {
     const fitBounds = vi.fn();
     return {
         mockFitBounds: fitBounds,
@@ -33,6 +33,10 @@ const { mockFitBounds, mockGeometries, mockMap } = vi.hoisted(() => {
         // per call would make `map` look like a changed dependency on every re-render, masking
         // #1303's showTracks-triggered-refit bug behind an unrelated false positive.
         mockMap: { fitBounds, setView: vi.fn(), getZoom: () => 10, invalidateSize: vi.fn() },
+        // #1543: captures every <Polyline> render's props (pathOptions, positions, eventHandlers)
+        // so tests can assert per-slug color/dashArray without needing Leaflet's real SVG renderer,
+        // and can simulate a track click by calling the captured eventHandlers.click directly.
+        polylineSpy: vi.fn(),
     };
 });
 
@@ -59,7 +63,20 @@ vi.mock('react-leaflet', () => ({
         </div>
     ),
     Popup: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-    Polyline: () => null,
+    // #1543: renders a thin, queryable stand-in (rather than `() => null`) carrying pathOptions as
+    // data-* attributes, plus forwards to polylineSpy so a test can also grab the raw eventHandlers
+    // and fire a click without going through jsdom's (absent) SVG layout.
+    Polyline: (props: { positions: unknown; pathOptions?: { color?: string; dashArray?: string; opacity?: number; weight?: number }; eventHandlers?: { click?: (e: unknown) => void } }) => {
+        polylineSpy(props);
+        return (
+            <div
+                data-testid="polyline"
+                data-color={props.pathOptions?.color}
+                data-dash={props.pathOptions?.dashArray ?? ''}
+                data-opacity={props.pathOptions?.opacity}
+            />
+        );
+    },
     useMap: () => mockMap,
     useMapEvents: () => null,
     LayersControl: Object.assign(
@@ -155,6 +172,38 @@ describe('TrailMapView hide/show-tracks toggle does not re-fit the map (#1303)',
     });
 });
 
+describe('TrailMapView re-fits bounds after container is corrected (#1535)', () => {
+    beforeEach(() => {
+        mockFitBounds.mockClear();
+        mockGeometries.current = [
+            { slug: 'laugavegur', activityType: 'Hiking', coordinates: [[64.0, -19.0], [63.8, -19.3], [63.5, -19.6]] },
+        ];
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('calls fitBounds again once MapInvalidateSize\'s 200ms timer fires', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrail()]} userLocation={null} />
+            </MemoryRouter>
+        );
+
+        const callsOnMount = mockFitBounds.mock.calls.length;
+        expect(callsOnMount).toBeGreaterThan(0);
+
+        // Mirrors MapInvalidateSize's own setTimeout(..., 200) (TrailMapView.tsx:79-89) — this is
+        // the container-size-correction tick that must trigger a re-fit, not merely an
+        // invalidateSize(), or a lazy-loaded map can still show a cut-off route (#1535).
+        act(() => { vi.advanceTimersByTime(200); });
+
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(callsOnMount);
+    });
+});
+
 describe('TrailMapView fallbackCenter marker (#1309)', () => {
     const fallbackCenter = { lat: 64.118779, lng: -21.837029 };
 
@@ -199,5 +248,177 @@ describe('TrailMapView fallbackCenter marker (#1309)', () => {
         );
 
         expect(screen.queryAllByTestId('marker')).toHaveLength(0);
+    });
+});
+
+// #1543: two races sharing the same activityType must no longer render pixel-identical routes —
+// verified against the rendered geo.slug set (distinct colors per slug), not just activityType.
+describe('TrailMapView per-trail-slug route coloring (#1543)', () => {
+    beforeEach(() => {
+        polylineSpy.mockClear();
+    });
+
+    it('assigns a different color to each slug when activityType is identical', () => {
+        mockGeometries.current = [
+            { slug: 'race-a', activityType: 'TrailRunning', coordinates: [[64.0, -19.0], [63.9, -19.1]] },
+            { slug: 'race-b', activityType: 'TrailRunning', coordinates: [[64.1, -19.2], [64.0, -19.3]] },
+        ];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView
+                    trails={[makeTrail({ id: 'a', slug: 'race-a' }), makeTrail({ id: 'b', slug: 'race-b' })]}
+                    userLocation={null}
+                />
+            </MemoryRouter>
+        );
+
+        const polylines = screen.getAllByTestId('polyline');
+        expect(polylines).toHaveLength(2);
+        const colors = polylines.map(p => p.getAttribute('data-color'));
+        expect(new Set(colors).size).toBe(2);
+    });
+
+    it('is stable per slug across a re-render triggered by an unrelated prop change', () => {
+        mockGeometries.current = [
+            { slug: 'race-a', activityType: 'TrailRunning', coordinates: [[64.0, -19.0], [63.9, -19.1]] },
+            { slug: 'race-b', activityType: 'TrailRunning', coordinates: [[64.1, -19.2], [64.0, -19.3]] },
+        ];
+        const trails = [makeTrail({ id: 'a', slug: 'race-a' }), makeTrail({ id: 'b', slug: 'race-b' })];
+
+        const { rerender } = render(
+            <MemoryRouter>
+                <TrailMapView trails={trails} userLocation={null} />
+            </MemoryRouter>
+        );
+        const colorsBefore = screen.getAllByTestId('polyline').map(p => p.getAttribute('data-color'));
+
+        // Same trails (new array reference), unrelated userLocation change — should not reshuffle
+        // which color belongs to which slug.
+        rerender(
+            <MemoryRouter>
+                <TrailMapView trails={[...trails]} userLocation={{ lat: 1, lng: 1 }} />
+            </MemoryRouter>
+        );
+        const colorsAfter = screen.getAllByTestId('polyline').map(p => p.getAttribute('data-color'));
+
+        expect(colorsAfter).toEqual(colorsBefore);
+    });
+
+    it('cycles dashArray (solid/dashed/dotted) once the number of distinct slugs exceeds the palette size', () => {
+        const paletteSize = 9; // TRAIL_ROUTE_PALETTE.length in trailRouteColors.ts
+        mockGeometries.current = Array.from({ length: paletteSize + 1 }, (_, i) => ({
+            slug: `race-${i}`,
+            activityType: 'TrailRunning',
+            coordinates: [[64.0, -19.0], [63.9, -19.1]] as [number, number][],
+        }));
+        const trails = mockGeometries.current.map((g, i) => makeTrail({ id: String(i), slug: g.slug }));
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={trails} userLocation={null} />
+            </MemoryRouter>
+        );
+
+        const polylines = screen.getAllByTestId('polyline');
+        expect(polylines).toHaveLength(paletteSize + 1);
+        // The (paletteSize+1)-th slug reuses the first slug's color but must not reuse its dash —
+        // otherwise the two would render pixel-identical despite #1543's requirement.
+        expect(polylines[paletteSize].getAttribute('data-color')).toBe(polylines[0].getAttribute('data-color'));
+        expect(polylines[paletteSize].getAttribute('data-dash')).not.toBe(polylines[0].getAttribute('data-dash'));
+    });
+
+    it('turns the clicked route red and dims the others, then clears on re-click (uncontrolled)', () => {
+        mockGeometries.current = [
+            { slug: 'race-a', activityType: 'TrailRunning', coordinates: [[64.0, -19.0], [63.9, -19.1]] },
+            { slug: 'race-b', activityType: 'TrailRunning', coordinates: [[64.1, -19.2], [64.0, -19.3]] },
+        ];
+        render(
+            <MemoryRouter>
+                <TrailMapView
+                    trails={[makeTrail({ id: 'a', slug: 'race-a' }), makeTrail({ id: 'b', slug: 'race-b' })]}
+                    userLocation={null}
+                />
+            </MemoryRouter>
+        );
+
+        // Each render re-invokes the Polyline mock for both slugs with a fresh (that render's)
+        // closure — always read the *latest* pair of calls, not the first match, or a click would
+        // fire a stale closure holding a stale `selectedSlug` and never toggle off.
+        const latestCallFor = (slug: string) => {
+            const latestPair = polylineSpy.mock.calls.slice(-2).map(([p]) => p);
+            const geo = mockGeometries.current.find(g => g.slug === slug)!;
+            return latestPair.find(p => p.positions === geo.coordinates)!;
+        };
+
+        const fakeEvent = { originalEvent: { stopPropagation: vi.fn() } };
+        act(() => { latestCallFor('race-a').eventHandlers.click(fakeEvent); });
+
+        const afterClick = screen.getAllByTestId('polyline');
+        expect(afterClick[0].getAttribute('data-color')).toBe('#f44336');
+        expect(afterClick[1].getAttribute('data-opacity')).toBe('0.15');
+
+        // Re-clicking the same route clears the selection (toggle-off-on-reclick, same semantics
+        // as TrailMapView.tsx's own click handler and EventTrailLegend's).
+        act(() => { latestCallFor('race-a').eventHandlers.click(fakeEvent); });
+
+        const afterSecondClick = screen.getAllByTestId('polyline');
+        expect(afterSecondClick[0].getAttribute('data-color')).not.toBe('#f44336');
+        expect(afterSecondClick[1].getAttribute('data-opacity')).not.toBe('0.15');
+    });
+});
+
+// #1543: controlled selection — lets a sibling component (EventTrailLegend on CompetitionDetailPage)
+// drive/read the same highlight state TrailMapView's own pin/track clicks use.
+describe('TrailMapView controlled selection (#1543)', () => {
+    beforeEach(() => {
+        polylineSpy.mockClear();
+        mockGeometries.current = [
+            { slug: 'race-a', activityType: 'TrailRunning', coordinates: [[64.0, -19.0], [63.9, -19.1]] },
+            { slug: 'race-b', activityType: 'TrailRunning', coordinates: [[64.1, -19.2], [64.0, -19.3]] },
+        ];
+    });
+
+    it('highlights the slug passed via the selectedSlug prop, not internal state', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView
+                    trails={[makeTrail({ id: 'a', slug: 'race-a' }), makeTrail({ id: 'b', slug: 'race-b' })]}
+                    userLocation={null}
+                    selectedSlug="race-b"
+                    selectionSource="track"
+                    onSelectionChange={vi.fn()}
+                />
+            </MemoryRouter>
+        );
+
+        const polylines = screen.getAllByTestId('polyline');
+        expect(polylines[0].getAttribute('data-opacity')).toBe('0.15');
+        expect(polylines[1].getAttribute('data-color')).toBe('#f44336');
+    });
+
+    it('calls onSelectionChange instead of mutating its own state when a route is clicked', () => {
+        const onSelectionChange = vi.fn();
+        render(
+            <MemoryRouter>
+                <TrailMapView
+                    trails={[makeTrail({ id: 'a', slug: 'race-a' }), makeTrail({ id: 'b', slug: 'race-b' })]}
+                    userLocation={null}
+                    selectedSlug={null}
+                    selectionSource={null}
+                    onSelectionChange={onSelectionChange}
+                />
+            </MemoryRouter>
+        );
+
+        const fakeEvent = { originalEvent: { stopPropagation: vi.fn() } };
+        const latestPair = polylineSpy.mock.calls.slice(-2).map(([p]) => p);
+        const raceAProps = latestPair.find(p => p.positions === mockGeometries.current[0].coordinates)!;
+        act(() => { raceAProps.eventHandlers.click(fakeEvent); });
+
+        expect(onSelectionChange).toHaveBeenCalledWith('race-a', 'track');
+        // Controlled: the parent hasn't re-passed a new selectedSlug, so the map's own rendering
+        // must not have highlighted anything on its own.
+        expect(screen.getAllByTestId('polyline')[0].getAttribute('data-color')).not.toBe('#f44336');
     });
 });

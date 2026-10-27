@@ -102,8 +102,6 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
             trail.Difficulty.ToString(),
             (trail.GpxData as LineString)?.StartPoint.Y,
             (trail.GpxData as LineString)?.StartPoint.X,
-            (trail.GpxData as LineString)?.EndPoint.Y,
-            (trail.GpxData as LineString)?.EndPoint.X,
             trail.TrailLocations
                 .OrderBy(tl => tl.Order)
                 .Select(tl => new LocationInfoDto(tl.LocationId, tl.Location.Name, tl.Location.NameEn, tl.Location.Slug, tl.Order, tl.Role.ToString(), tl.Location.Center?.Y, tl.Location.Center?.X))

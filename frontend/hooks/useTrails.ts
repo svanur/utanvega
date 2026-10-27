@@ -59,6 +59,7 @@ export type SortOption = 'distance' | 'name' | 'shortest' | 'longest' | 'elevati
 export interface FilterState {
     lengthBuckets: string[];       // '<10' | '10-21' | '21-42' | '42-100' | '100+'
     elevationGainBuckets: string[]; // '<200' | '200-500' | '500-1000' | '1000+'
+    climbRatioBuckets: string[];   // '<20' | '20-35' | '35-50' | '50+' (m/km, elevationGain / (length/1000))
     distanceBuckets: string[];     // '<10' | '10-25' | '25-50' | '50-100' | '100+'
     difficulties: string[];         // multi-select: 'Easy' | 'Moderate' | 'Hard' | 'Expert' | 'Extreme'
     locationSlugs: string[];        // multi-select Autocomplete (location slugs incl. descendants)
@@ -74,6 +75,7 @@ export const ALL_ACTIVITY_TYPES = ['TrailRunning', 'Running', 'Hiking', 'Cycling
 export const DEFAULT_FILTERS: FilterState = {
     lengthBuckets: [],
     elevationGainBuckets: [],
+    climbRatioBuckets: [],
     distanceBuckets: [],
     difficulties: [],
     locationSlugs: [],
@@ -252,6 +254,22 @@ export function useTrails(disableGeolocation = false) {
                     if (b === '200-500') return gain >= 200 && gain < 500;
                     if (b === '500-1000') return gain >= 500 && gain < 1000;
                     if (b === '1000+') return gain >= 1000;
+                    return false;
+                });
+                if (!inBucket) return false;
+            }
+
+            // Climb ratio bucket filter (OR logic) — m/km, same formula TrailDetailsPage shows
+            // per-trail (elevationGain / (length/1000)); length === 0 never matches any bucket
+            // rather than dividing by zero.
+            if (filters.climbRatioBuckets.length > 0) {
+                if (trail.length <= 0) return false;
+                const ratio = trail.elevationGain / (trail.length / 1000);
+                const inBucket = filters.climbRatioBuckets.some(b => {
+                    if (b === '<20') return ratio < 20;
+                    if (b === '20-35') return ratio >= 20 && ratio < 35;
+                    if (b === '35-50') return ratio >= 35 && ratio < 50;
+                    if (b === '50+') return ratio >= 50;
                     return false;
                 });
                 if (!inBucket) return false;

@@ -6,8 +6,8 @@
 // TrailMapView.test.tsx's jsdom-opt-in + RTL + vi.hoisted pattern; the rest of the frontend suite
 // runs under vitest.config.ts's global `environment: 'node'`.
 import React, { useEffect } from 'react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, act, waitFor, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, act, waitFor, cleanup, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -230,5 +230,395 @@ describe('RacesPage URL<->state sync effects settle without ping-ponging (#1026,
         await act(async () => { await Promise.resolve(); });
 
         expect(setSearchParamsSpy).not.toHaveBeenCalled();
+    });
+});
+
+// #1514: the `months` URL param used to serialize filters.months' internal 0-indexed
+// (Date.getMonth()) values verbatim, so a shareable URL read e.g. `months=11` for December —
+// leaking a JS convention into a human-facing URL. The fix converts only at the URL boundary
+// (RacesPage.tsx's parse/serialize effects); pill selection and eventHasMonthInSet stay 0-indexed.
+describe('RacesPage months URL param is 1-indexed (#1514)', () => {
+    const decEvent = makeEvent({
+        id: 'event-dec', slug: 'december-run', name: 'December Run',
+        daysUntil: 40, displayDate: '2026-12-20', nextEditionDate: '2026-12-20',
+    });
+    const janEvent = makeEvent({
+        id: 'event-jan', slug: 'january-run', name: 'January Run',
+        daysUntil: 70, displayDate: '2026-01-10', nextEditionDate: '2026-01-10',
+    });
+
+    it('selects the December pill and filters to December events for ?months=12', async () => {
+        mockEvents.current = [decEvent, janEvent];
+        renderRacesPage('/events?months=12');
+
+        await waitFor(() => {
+            expect(screen.getByText('December Run')).not.toBeNull();
+            expect(screen.queryByText('January Run')).toBeNull();
+        });
+
+        // "Dec" renders in two places (the always-mounted filter-drawer month list and the
+        // quick-filter pills row) — both are driven by the same filters.months value, so every
+        // match must agree on the selected (filled) state.
+        const decChips = screen.getAllByText('Dec').map(el => el.closest('.MuiChip-root'));
+        expect(decChips.length).toBeGreaterThan(0);
+        for (const chip of decChips) {
+            expect(chip).not.toBeNull();
+            expect(chip!.className).toContain('MuiChip-filled');
+        }
+    });
+
+    it('selects the January pill (low end unaffected) for ?months=1', async () => {
+        mockEvents.current = [decEvent, janEvent];
+        renderRacesPage('/events?months=1');
+
+        await waitFor(() => {
+            expect(screen.getByText('January Run')).not.toBeNull();
+            expect(screen.queryByText('December Run')).toBeNull();
+        });
+
+        const janChips = screen.getAllByText('Jan').map(el => el.closest('.MuiChip-root'));
+        expect(janChips.length).toBeGreaterThan(0);
+        for (const chip of janChips) {
+            expect(chip).not.toBeNull();
+            expect(chip!.className).toContain('MuiChip-filled');
+        }
+    });
+
+    it('writes months=12 to the URL, not the internal 0-indexed 11, when December is selected', async () => {
+        mockEvents.current = [decEvent, janEvent];
+        setSearchParamsSpy.mockClear();
+        renderRacesPage('/events?months=12');
+
+        // The parse effect reads months=12 into internal index 11; the serialize effect must then
+        // write 12 back out, not the internal 11 — this is the canonical-URL round-trip the issue
+        // is about, and a regression here would be a sync effect that re-writes `months=11`.
+        await act(async () => { await Promise.resolve(); });
+        const monthsWrites = setSearchParamsSpy.mock.calls
+            .map(([params]) => (params as URLSearchParams).get('months'))
+            .filter((v): v is string => v !== null);
+        for (const v of monthsWrites) {
+            expect(v).toBe('12');
+        }
+    });
+});
+
+// #1489: navigator.clipboard.writeText(...) is a Promise-returning API; the Copy URL and Copy
+// list buttons used to flip to the "copied" checkmark unconditionally, right after firing the
+// call, so a rejected promise (permission denied, insecure context, etc.) still showed a success
+// checkmark for a copy that never happened. These stub writeText to reject and assert the
+// checkmark (CheckIcon, data-testid from @mui/icons-material's createSvgIcon) never appears, while
+// the pre-copy icon (ContentCopyIcon / FormatListBulletedIcon) stays put.
+describe('RacesPage copy buttons do not show success on a rejected clipboard write (#1489)', () => {
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+    });
+
+    function stubRejectingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+            configurable: true,
+        });
+    }
+
+    it('Copy URL button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        // activity=Running makes activeFilterCount > 0, which is what gates the Copy URL button.
+        renderRacesPage('/events?activity=Running');
+
+        const copyIcon = screen.getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            // Flush the rejected microtask through the .catch() handler.
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(screen.queryByTestId('CheckIcon')).toBeNull();
+        expect(screen.getByTestId('ContentCopyIcon')).not.toBeNull();
+    });
+
+    it('Copy list button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const listIcon = screen.getByTestId('FormatListBulletedIcon');
+        const listButton = listIcon.closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(screen.queryByTestId('CheckIcon')).toBeNull();
+        expect(screen.getByTestId('FormatListBulletedIcon')).not.toBeNull();
+    });
+
+    // #1498: same silent-failure pattern as the two call sites above, found in the Site QR
+    // dialog's "Copy site URL" button. That button is only reachable once the dialog is open, so
+    // this opens it via the unconditional Site QR Fab (aria-label t('races.shareQR')) first.
+    it('Site QR dialog copy button keeps the pre-copy icon when writeText rejects', async () => {
+        stubRejectingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const shareQRIcon = screen.getByTestId('QrCode2Icon');
+        const shareQRFab = shareQRIcon.closest('button');
+        expect(shareQRFab).not.toBeNull();
+        fireEvent.click(shareQRFab!);
+
+        // activity=Running also renders the page's own "Copy filter URL" button sharing the same
+        // ContentCopyIcon testid, so the copy button under test must be scoped to the dialog.
+        const dialog = screen.getByRole('dialog');
+        const copyIcon = within(dialog).getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            await Promise.resolve().catch(() => {});
+        });
+
+        expect(within(dialog).queryByTestId('CheckIcon')).toBeNull();
+        expect(within(dialog).getByTestId('ContentCopyIcon')).not.toBeNull();
+    });
+});
+
+// #1512: the reject-path tests above only prove the buttons don't show a false positive — they
+// don't prove the success state ever renders at all. These cover the resolve path (mirroring
+// TrailList.test.tsx's #1497 "copy buttons show the copied checkmark when writeText resolves"
+// block) so a regression that broke the "copied" checkmark entirely, not just the reject-path
+// bug, would also be caught.
+describe('RacesPage copy buttons show the copied checkmark when writeText resolves (#1512)', () => {
+    // #1521: each handler below arms a real 2000ms setTimeout (RacesPage.tsx:710-715/:732-742/
+    // :1909-1913) to reset the checkmark back to the copy icon, and that setTimeout is still live
+    // when the test returns if nothing advances it. Fake timers here, advanced well past 2000ms
+    // and torn down in afterEach, so nothing outlives the test.
+    //
+    // This also happens to settle RacesPage.tsx:268-280's one-time swipe-hint timer (1200ms, then
+    // a nested 800ms) — reachable in principle on every renderRacesPage() call in this file, but
+    // under *real* timers (every other describe block above) the component unmounts via the
+    // top-level afterEach(cleanup) well before 1200ms of real wall-clock time passes, and the
+    // effect's own `return () => clearTimeout(timer)` cancels it — so it was never actually
+    // left pending in those blocks. Here, advancing fake time by more than 2000ms does fire it for
+    // real; advancing comfortably past both its 1200ms and nested 800ms (i.e. past the 2000ms
+    // mark) rather than stopping exactly at 2000ms keeps that settle deterministic too.
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+        vi.useRealTimers();
+    });
+
+    function stubResolvingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockResolvedValue(undefined) },
+            configurable: true,
+        });
+    }
+
+    it('Copy URL button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const copyIcon = screen.getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            // Flush the resolved microtask through the .then() handler.
+            await Promise.resolve();
+        });
+
+        expect(screen.getByTestId('CheckIcon')).not.toBeNull();
+        expect(screen.queryByTestId('ContentCopyIcon')).toBeNull();
+
+        // Run the 2000ms reset timer (RacesPage.tsx:710-715) to completion inside act() — the
+        // callback updates React state — plus the swipe-hint timer chain past its own 2000ms
+        // total, so neither is left pending once the test returns.
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
+    });
+
+    it('Copy list button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const listIcon = screen.getByTestId('FormatListBulletedIcon');
+        const listButton = listIcon.closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve();
+        });
+
+        expect(screen.getByTestId('CheckIcon')).not.toBeNull();
+        expect(screen.queryByTestId('FormatListBulletedIcon')).toBeNull();
+
+        // Run the 2000ms reset timer (RacesPage.tsx:732-742) to completion inside act() — same
+        // reasoning as the Copy URL test above.
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
+    });
+
+    // #1498/#1512: same resolve-path parity for the Site QR dialog's copy button as the two
+    // call sites above — opened via the Site QR Fab (aria-label t('races.shareQR')) first.
+    it('Site QR dialog copy button swaps to CheckIcon when writeText resolves', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        renderRacesPage('/events?activity=Running');
+
+        const shareQRIcon = screen.getByTestId('QrCode2Icon');
+        const shareQRFab = shareQRIcon.closest('button');
+        expect(shareQRFab).not.toBeNull();
+        fireEvent.click(shareQRFab!);
+
+        // activity=Running also renders the page's own "Copy filter URL" button sharing the same
+        // ContentCopyIcon testid, so the copy button under test must be scoped to the dialog.
+        const dialog = screen.getByRole('dialog');
+        const copyIcon = within(dialog).getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            await Promise.resolve();
+        });
+
+        expect(within(dialog).getByTestId('CheckIcon')).not.toBeNull();
+        expect(within(dialog).queryByTestId('ContentCopyIcon')).toBeNull();
+
+        // Run the dialog's own 2000ms reset timer (RacesPage.tsx:1909-1913) to completion inside
+        // act() — same reasoning as the two tests above.
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
+    });
+});
+
+// #1524: linkCopiedTimer/listCopiedTimer (RacesPage.tsx:197/199) and the Site QR dialog's own
+// siteQRCopiedTimer each arm a real 2000ms setTimeout on a successful copy but were never cleared
+// on unmount — so unmounting within that window left the timer live, and its callback's
+// setXCopied(false) then fired a React "state update on an unmounted component" warning (surfaced
+// via console.error). Fake timers so the still-pending callback can be advanced past 2000ms
+// *after* unmount, inside the same act() call, without waiting on real wall-clock time.
+describe('RacesPage copy buttons do not leak timer state updates after unmount (#1524)', () => {
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        // @ts-expect-error -- test-only override of a browser API jsdom doesn't implement
+        delete navigator.clipboard;
+        consoleErrorSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
+        vi.useRealTimers();
+    });
+
+    function stubResolvingClipboard() {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: { writeText: vi.fn().mockResolvedValue(undefined) },
+            configurable: true,
+        });
+    }
+
+    it('Copy URL button: unmounting right after a successful copy logs no console error/warn', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        const { unmount } = renderRacesPage('/events?activity=Running');
+
+        const copyButton = screen.getByTestId('ContentCopyIcon').closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            await Promise.resolve();
+        });
+
+        unmount();
+
+        // The pre-#1524 bug only surfaces once the orphaned 2000ms timer actually fires.
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
+
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+
+    it('Copy list button: unmounting right after a successful copy logs no console error/warn', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        const { unmount } = renderRacesPage('/events?activity=Running');
+
+        const listButton = screen.getByTestId('FormatListBulletedIcon').closest('button');
+        expect(listButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(listButton!);
+            await Promise.resolve();
+        });
+
+        unmount();
+
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
+
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+
+    // #1524: the Site QR dialog copy button had no timer ref at all before this fix, so it's the
+    // most direct regression guard for the acceptance criterion that it's now stored in a ref and
+    // cleared on unmount — opened via the Site QR Fab (aria-label t('races.shareQR')) first, same
+    // as the resolve/reject-path tests above.
+    it('Site QR dialog copy button: unmounting right after a successful copy logs no console error/warn', async () => {
+        stubResolvingClipboard();
+        mockEvents.current = [runningEvent, trailEvent];
+        const { unmount } = renderRacesPage('/events?activity=Running');
+
+        const shareQRIcon = screen.getByTestId('QrCode2Icon');
+        const shareQRFab = shareQRIcon.closest('button');
+        expect(shareQRFab).not.toBeNull();
+        fireEvent.click(shareQRFab!);
+
+        const dialog = screen.getByRole('dialog');
+        const copyIcon = within(dialog).getByTestId('ContentCopyIcon');
+        const copyButton = copyIcon.closest('button');
+        expect(copyButton).not.toBeNull();
+
+        await act(async () => {
+            fireEvent.click(copyButton!);
+            await Promise.resolve();
+        });
+
+        unmount();
+
+        await act(async () => {
+            vi.advanceTimersByTime(2100);
+        });
+
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 });

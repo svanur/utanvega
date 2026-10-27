@@ -8,9 +8,9 @@
 // standing up a real backend.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, cleanup } from '@testing-library/react';
+import { renderHook, waitFor, act, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useTrailsBySlugs, useTrailBySlug, type Trail } from './useTrails';
+import { useTrails, useTrailsBySlugs, useTrailBySlug, type Trail } from './useTrails';
 
 afterEach(cleanup);
 
@@ -140,5 +140,59 @@ describe('useTrailsBySlugs does not collide with useTrailBySlug in a shared Quer
         // as if it were a raw Trail, `.slug` would be undefined here.
         expect(bySlugs.result.current.trails[0]?.slug).toBe('laugavegur');
         expect(fetch).toHaveBeenCalledTimes(2);
+    });
+});
+
+// #1482: climb ratio (m/km = elevationGain / (length/1000)) bucket filter — same OR-across-selected-
+// buckets pattern as the pre-existing elevationGainBuckets filter it mirrors.
+describe('useTrails climbRatioBuckets filter (#1482)', () => {
+    // flat (10 m/km), moderate (~27 m/km), steep (~43 m/km), extreme (~67 m/km)
+    const flat = makeTrail('flat', { length: 10000, elevationGain: 100 });
+    const moderate = makeTrail('moderate', { length: 10000, elevationGain: 270 });
+    const steep = makeTrail('steep', { length: 10000, elevationGain: 430 });
+    const extreme = makeTrail('extreme', { length: 10000, elevationGain: 670 });
+    const zeroLength = makeTrail('zero-length', { length: 0, elevationGain: 50 });
+
+    beforeEach(() => {
+        vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([flat, moderate, steep, extreme, zeroLength]),
+        } as Response)));
+    });
+
+    it('returns all trails when no climb-ratio bucket is selected', async () => {
+        const { result } = renderHook(() => useTrails(true), { wrapper });
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        expect(result.current.trails.map(t => t.slug).sort()).toEqual(
+            ['extreme', 'flat', 'moderate', 'steep', 'zero-length'].sort()
+        );
+    });
+
+    it('filters to only the "<20" bucket', async () => {
+        const { result } = renderHook(() => useTrails(true), { wrapper });
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        act(() => result.current.setFilters(f => ({ ...f, climbRatioBuckets: ['<20'] })));
+
+        expect(result.current.trails.map(t => t.slug)).toEqual(['flat']);
+    });
+
+    it('OR-combines multiple selected buckets', async () => {
+        const { result } = renderHook(() => useTrails(true), { wrapper });
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        act(() => result.current.setFilters(f => ({ ...f, climbRatioBuckets: ['20-35', '50+'] })));
+
+        expect(result.current.trails.map(t => t.slug).sort()).toEqual(['extreme', 'moderate'].sort());
+    });
+
+    it('excludes zero-length trails from every bucket rather than dividing by zero', async () => {
+        const { result } = renderHook(() => useTrails(true), { wrapper });
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        act(() => result.current.setFilters(f => ({ ...f, climbRatioBuckets: ['<20', '20-35', '35-50', '50+'] })));
+
+        expect(result.current.trails.some(t => t.slug === 'zero-length')).toBe(false);
     });
 });
