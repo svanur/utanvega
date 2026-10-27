@@ -387,7 +387,7 @@ function HistoryRaceCard({
                             <Chip icon={<CalendarTodayIcon />} label={raceDateTime} size="small" variant="outlined" />
                         </Tooltip>
                     )}
-                    {race.trailDistanceMeters && (
+                    {race.trailDistanceMeters != null && (
                         <Tooltip title={t('races.trailDistance', { defaultValue: 'Trail distance' })}>
                             <Chip label={`${(race.trailDistanceMeters / 1000).toFixed(1)} km`} size="small" variant="outlined" />
                         </Tooltip>
