@@ -351,6 +351,8 @@
         "viewDetails": "View Details",
         "showTracks": "Show trail tracks",
         "hideTracks": "Hide trail tracks",
+        "raceRoutes": "Race routes",
+        "selectRouteAriaLabel": "Highlight {{name}} on the map",
         "topo": "Topographic",
         "street": "Street",
         "dark": "Dark"

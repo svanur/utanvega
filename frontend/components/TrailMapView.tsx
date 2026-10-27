@@ -9,6 +9,7 @@ import RouteIcon from '@mui/icons-material/Route';
 import { Trail } from '../hooks/useTrails';
 import { useTrailGeometries } from '../hooks/useTrailGeometries';
 import { computeMapBounds } from './trailMapBounds';
+import { computeSortedSlugs, getTrailRouteStyle, toggleTrailSelection } from './trailRouteColors';
 import { Link as RouterLink } from 'react-router-dom';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -33,6 +34,13 @@ interface TrailMapViewProps {
     // zero markers of its own — e.g. an event with no linked trail but a known gpxPointLat/Lng.
     // Optional and unused by existing call sites (LocationDetailsPage), which keep today's behavior.
     fallbackCenter?: { lat: number; lng: number } | null;
+    // #1543: optional controlled selection — lets a sibling component (e.g. CompetitionDetailPage's
+    // EventTrailLegend) read/drive the same highlight state as clicking a pin or a route. Omitted
+    // (undefined, not null) by existing call sites (LocationDetailsPage), which keep today's
+    // uncontrolled internal-state behavior unchanged.
+    selectedSlug?: string | null;
+    selectionSource?: 'pin' | 'track' | null;
+    onSelectionChange?: (slug: string | null, source: 'pin' | 'track' | null) => void;
 }
 
 function ChangeView({ bounds, followMe, userLocation, containerReady }: {
@@ -67,13 +75,6 @@ function ChangeView({ bounds, followMe, userLocation, containerReady }: {
 
     return null;
 }
-
-const ACTIVITY_COLORS: Record<string, string> = {
-    TrailRunning: '#e65100', // deep orange
-    Running: '#1565c0',     // blue
-    Hiking: '#2e7d32',      // green
-    Cycling: '#6a1b9a',     // purple
-};
 
 // Must be stable components (not inline) to avoid Leaflet re-registration
 function MapInvalidateSize({ onReady }: { onReady: () => void }) {
@@ -110,7 +111,14 @@ function MapDragHandler({ onDrag, onMapClick, ignoreClickRef }: {
     return null;
 }
 
-export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation, fallbackCenter = null }) => {
+export const TrailMapView: React.FC<TrailMapViewProps> = ({
+    trails,
+    userLocation,
+    fallbackCenter = null,
+    selectedSlug: selectedSlugProp,
+    selectionSource: selectionSourceProp,
+    onSelectionChange,
+}) => {
     const { t } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -120,8 +128,24 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     // container's real size, so ChangeView's fitBounds re-runs against that size.
     const [containerReady, setContainerReady] = useState(false);
     const handleContainerReady = useCallback(() => setContainerReady(true), []);
-    const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-    const [selectionSource, setSelectionSource] = useState<'pin' | 'track' | null>(null);
+    // #1543: selection is controlled when the caller passes `selectedSlug` at all (even `null`) —
+    // distinguished from the uncontrolled default via `undefined`, same convention MUI itself uses
+    // for controlled/uncontrolled inputs. LocationDetailsPage never passes it, so it keeps today's
+    // internal-state behavior unchanged; CompetitionDetailPage does, so its sibling EventTrailLegend
+    // can read/drive the same state.
+    const isControlled = selectedSlugProp !== undefined;
+    const [internalSelectedSlug, setInternalSelectedSlug] = useState<string | null>(null);
+    const [internalSelectionSource, setInternalSelectionSource] = useState<'pin' | 'track' | null>(null);
+    const selectedSlug = isControlled ? selectedSlugProp : internalSelectedSlug;
+    const selectionSource = isControlled ? (selectionSourceProp ?? null) : internalSelectionSource;
+    const applySelection = useCallback((slug: string | null, source: 'pin' | 'track' | null) => {
+        if (isControlled) {
+            onSelectionChange?.(slug, source);
+        } else {
+            setInternalSelectedSlug(slug);
+            setInternalSelectionSource(source);
+        }
+    }, [isControlled, onSelectionChange]);
     const { geometries } = useTrailGeometries();
 
     const handleFollowMeClick = () => {
@@ -129,7 +153,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     };
 
     const handleDrag = React.useCallback(() => setFollowMe(false), []);
-    const handleMapClick = React.useCallback(() => { setSelectedSlug(null); setSelectionSource(null); }, []);
+    const handleMapClick = React.useCallback(() => applySelection(null, null), [applySelection]);
     const ignoreMapClick = React.useRef(false);
     const trailsWithLocation = useMemo(() => 
         trails.filter(t => t.startLatitude !== null && t.startLongitude !== null && (t.startLatitude !== 0 || t.startLongitude !== 0)),
@@ -155,6 +179,16 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
         if (!showTracks) return [];
         return geometriesForTrails;
     }, [geometriesForTrails, showTracks]);
+
+    // #1543: stable, sorted slug list feeding getTrailRouteStyle — derived from `trails`/`geometries`
+    // (not visibleGeometries) so a slug's assigned color/dash never shifts when showTracks is
+    // toggled off and back on, same independence-from-showTracks `bounds` already relies on above.
+    // Shared with CompetitionDetailPage's EventTrailLegend via the same computeSortedSlugs() call,
+    // so the map and the legend never disagree on which slug gets which color/dash.
+    const sortedSlugs = useMemo(
+        () => computeSortedSlugs(trails, geometries),
+        [trails, geometries],
+    );
 
     const bounds = useMemo(() => {
         const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter);
@@ -193,14 +227,12 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
     }, []);
 
     const handlePopupOpen = useCallback((slug: string) => {
-        setSelectedSlug(slug);
-        setSelectionSource('pin');
-    }, []);
+        applySelection(slug, 'pin');
+    }, [applySelection]);
 
     const handlePopupClose = useCallback(() => {
-        setSelectedSlug(null);
-        setSelectionSource(null);
-    }, []);
+        applySelection(null, null);
+    }, [applySelection]);
 
     const markerCluster = useMemo(() => (
                 <MarkerClusterGroup
@@ -374,12 +406,16 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                 {visibleGeometries.map(geo => {
                     const isSelected = selectedSlug === geo.slug;
                     const isDimmed = selectedSlug !== null && !isSelected;
+                    // #1543: per-trail-slug color/dash (instead of ACTIVITY_COLORS[geo.activityType])
+                    // so same-activityType races on one event no longer render pixel-identical routes.
+                    const { color, dashArray } = getTrailRouteStyle(geo.slug, sortedSlugs);
                     return (
                         <Polyline
                             key={geo.slug}
                             positions={geo.coordinates}
                             pathOptions={{
-                                color: isSelected ? '#f44336' : (ACTIVITY_COLORS[geo.activityType] ?? '#1976d2'),
+                                color: isSelected ? '#f44336' : color,
+                                dashArray: isSelected ? undefined : dashArray,
                                 weight: isSelected ? 5 : 3,
                                 opacity: isDimmed ? 0.15 : isSelected ? 1 : 0.7,
                             }}
@@ -387,8 +423,8 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({ trails, userLocation
                                 click: (e) => {
                                     L.DomEvent.stopPropagation(e.originalEvent);
                                     ignoreMapClick.current = true;
-                                    setSelectedSlug(prev => prev === geo.slug ? null : geo.slug);
-                                    setSelectionSource(prev => prev === 'track' && selectedSlug === geo.slug ? null : 'track');
+                                    const next = toggleTrailSelection(selectedSlug, geo.slug);
+                                    applySelection(next.slug, next.source);
                                 }
                             }}
                         />

@@ -351,6 +351,8 @@
         "viewDetails": "Skoða nánar",
         "showTracks": "Sýna leiðir á korti",
         "hideTracks": "Fela leiðir á korti",
+        "raceRoutes": "Hlaupaleiðir",
+        "selectRouteAriaLabel": "Auðkenna {{name}} á kortinu",
         "topo": "Landslagskort",
         "street": "Vegakort",
         "dark": "Dökkt"
