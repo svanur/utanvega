@@ -415,8 +415,8 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 {trails && trails.length > 0 ? (
                     filteredTrails.length > 0 ? (
                         <Box mt={2}>
-                            <Box sx={{ mb: 4, height: '400px', borderRadius: '16px', overflow: 'hidden' }}>
-                               <TrailMapView trails={filteredTrails} userLocation={userLocation} />
+                            <Box sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
+                               <TrailMapView trails={filteredTrails} userLocation={userLocation} height="400px" />
                             </Box>
                             
                             <Divider sx={{ mb: 4 }} />
