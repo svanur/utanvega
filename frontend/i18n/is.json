@@ -832,6 +832,10 @@
             }
         },
         "changelog": {
+            "v1_17_2": {
+                "title": "Litaðar leiðir á viðburðakorti, afritun lista og síun eftir hækkunarhlutfalli",
+                "description": "Kort viðburða lita nú hverja leið sérstaklegt og má smella á hlaup í listanum til að auðkenna það á kortinu. Nú er hægt að afrita lista yfir leiðir og viðburði á klippispjaldið sem forsniðinn lista, með fyrirsögn, virkum síum, vegalengd/hækkun og tengil til baka á síðuna. Ný síun fyrir hækkunarhlutfall (m/km) var bætt við Nánari síur leiða, og hlaupaseríu-síður sýna nú hækkun. Í stjórnborði krefjast viðburðaútgáfur nú upphafsdags á undan lokadegi, og gátlisti keppnisdags birtist aðeins fyrir Hlaup/Seríu-viðburði."
+            },
             "v1_17_1": {
                 "title": "Einfaldað veðurfarskort, og réttir tugabrotspunktar fyrir veðurfar og veður",
                 "description": "Veðurfarskort viðburðasíðna sækir nú veðurfarsgögn eingöngu út frá staðsetningu viðburðar — GPS-punkts/start-endamarks skiptingin felld niður enda flækti hún kortið meira en hún bætti. Tölur með tugabroti og klukkustunda-einingin fyrir sólskinsstundir á veðurfars- og veðurkortum birtast nú með kommu á íslensku útgáfunni í stað punkts, með sameiginlegu sniðverkfæri."
