@@ -338,3 +338,101 @@ describe('CompetitionDetailPage race day checklist (#1533)', () => {
         expect(screen.getByText('Race day checklist')).not.toBeNull();
     });
 });
+
+// #1532: render-level coverage for RaceCard's trailElevationGain/trailDistanceMeters/
+// cutoffMinutes Chip guards (CompetitionDetailPage.tsx:1552-1571), which this file's #1442 header
+// comment scopes out of its own TrailMapView/ClimateCard coverage.
+//
+// As of #1541 (merged to develop before this branch was cut), all three guards here read `!=
+// null` — the trailDistanceMeters truthy guard this issue's CONTEXT describes as still-outstanding
+// was fixed separately in #1540/#1541. These tests assert the actual current `!= null` behaviour
+// for all three fields (Chip renders at 0, Chip absent at null/undefined) rather than the stale
+// truthy behaviour the issue text describes for trailDistanceMeters.
+//
+// A single edition with a null date (hasNoDate -> current) and one race keeps currentEditions at
+// length 1, so showEditionSections (CompetitionDetailPage.tsx:460, `currentEditions.length > 1`)
+// stays false and rendering goes through the plain racesWithAnchors branch
+// (CompetitionDetailPage.tsx:1093-1113) rather than the per-edition Paper sections — either branch
+// renders the same RaceCard, so this is just the simpler path to it.
+describe('CompetitionDetailPage race Chip guards (#1532)', () => {
+    function renderWithRace(raceOverrides: Partial<RaceDto>) {
+        const edition = makeEdition({ races: [makeRace(raceOverrides)] });
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+    }
+
+    // #1530/#1531 fixed this exact guard from a truthy `race.trailElevationGain &&` (which
+    // swallowed a legitimate 0 m elevation gain as a stray falsy value, rendering no Chip) to
+    // `!= null`. A regression back to the truthy form would make the first assertion below fail
+    // (0 is falsy).
+    describe('elevation gain Chip guard (#1530/#1531 regression guard)', () => {
+        it('renders the elevation Chip when trailElevationGain is 0', () => {
+            renderWithRace({ trailElevationGain: 0 });
+
+            expect(screen.getByText('↑ 0 m')).not.toBeNull();
+        });
+
+        it('omits the elevation Chip when trailElevationGain is null', () => {
+            renderWithRace({ trailElevationGain: null });
+
+            expect(screen.queryByText(/↑ .* m/)).toBeNull();
+        });
+
+        it('omits the elevation Chip when trailElevationGain is undefined', () => {
+            renderWithRace({ trailElevationGain: undefined });
+
+            expect(screen.queryByText(/↑ .* m/)).toBeNull();
+        });
+    });
+
+    // Same guard shape, for cutoffMinutes. formatCutoff(0, t) returns t('races.cutoffHours', {
+    // count: 0 }) -> en.json's plural "other" form, "0 hours time limit".
+    describe('cutoff Chip guard', () => {
+        it('renders the cutoff Chip when cutoffMinutes is 0', () => {
+            renderWithRace({ cutoffMinutes: 0 });
+
+            expect(screen.getByText('0 hours time limit')).not.toBeNull();
+        });
+
+        it('omits the cutoff Chip when cutoffMinutes is null', () => {
+            renderWithRace({ cutoffMinutes: null });
+
+            expect(screen.queryByText(/time limit/)).toBeNull();
+        });
+
+        it('omits the cutoff Chip when cutoffMinutes is undefined', () => {
+            renderWithRace({ cutoffMinutes: undefined });
+
+            expect(screen.queryByText(/time limit/)).toBeNull();
+        });
+    });
+
+    // trailDistanceMeters was fixed to `!= null` in #1540/#1541 (previously the truthy
+    // `race.trailDistanceMeters &&` left over from #1530/#1531, which only touched
+    // elevationGain) — so a genuine 0 m trail distance now also renders its Chip instead of
+    // being swallowed.
+    describe('trail distance Chip guard (#1540/#1541)', () => {
+        it('renders the distance Chip for a positive trailDistanceMeters', () => {
+            renderWithRace({ trailDistanceMeters: 5000 });
+
+            expect(screen.getByText('5.0 km')).not.toBeNull();
+        });
+
+        it('renders the distance Chip when trailDistanceMeters is 0', () => {
+            renderWithRace({ trailDistanceMeters: 0 });
+
+            expect(screen.getByText('0.0 km')).not.toBeNull();
+        });
+
+        it('omits the distance Chip when trailDistanceMeters is null', () => {
+            renderWithRace({ trailDistanceMeters: null });
+
+            expect(screen.queryByText(/km$/)).toBeNull();
+        });
+
+        it('omits the distance Chip when trailDistanceMeters is undefined', () => {
+            renderWithRace({ trailDistanceMeters: undefined });
+
+            expect(screen.queryByText(/km$/)).toBeNull();
+        });
+    });
+});
