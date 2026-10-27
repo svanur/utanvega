@@ -832,6 +832,10 @@
             }
         },
         "changelog": {
+            "v1_17_3": {
+                "title": "Admin: event, trail and race names no longer get machine-translated",
+                "description": "The \"Translate to EN\" button in admin was running proper-noun names (event, trail and race names) through the translation service, producing garbled English names. Names are now copied over as-is, while descriptions and other fields continue to be translated as before."
+            },
             "v1_17_2": {
                 "title": "Colored event route map, clipboard-copy for lists, and bigger tap targets across filters",
                 "description": "Event maps now color each route by trail and let you tap a race in the list to highlight it on the map, and the route's name/distance/elevation chip no longer gets clipped at the bottom of the map. Trails and events lists can now be copied to the clipboard as a formatted list, with a heading, the active filters, distance/elevation, and a link back to the page. Chips across Advanced Filters, location search, activity-type pills and discovery tabs now have full 44x44px tap targets on mobile. A new climb ratio (m/km) filter was added to Trails' Advanced Filters, and race series pages now show elevation gain. In admin, event editions now require a start date before an end date, and the race-day checklist only shows for Race/Series events."
