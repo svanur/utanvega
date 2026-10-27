@@ -247,9 +247,11 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
   };
 
   const handleTranslate = async () => {
+    // #1548: name/nameEn is a proper noun, not prose — DeepL mistranslates trail names.
+    // Pass it through verbatim instead of routing it through the translate API.
     if (!trail.name.trim() && !trail.description.trim()) return;
-    const [nameEn, descEn] = await translate([trail.name, trail.description]);
-    if (nameEn) setTrail(prev => ({ ...prev, nameEn }));
+    const [descEn] = await translate([trail.description]);
+    if (trail.name.trim()) setTrail(prev => ({ ...prev, nameEn: trail.name }));
     if (descEn) setTrail(prev => ({ ...prev, descriptionEn: descEn }));
   };
 
