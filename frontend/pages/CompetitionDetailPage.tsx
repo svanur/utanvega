@@ -884,7 +884,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     mt: 1,
                                     borderRadius: 2,
                                     overflow: 'hidden',
-                                    height: '400px',
                                     width: '100%',
                                     maxWidth: '100%',
                                     border: '1px solid',
@@ -898,6 +897,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     selectedSlug={selectedTrailSlug}
                                     selectionSource={selectedTrailSource}
                                     onSelectionChange={handleTrailSelectionChange}
+                                    height="400px"
                                 />
                             </Box>
                         </>

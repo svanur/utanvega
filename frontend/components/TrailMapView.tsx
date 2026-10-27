@@ -41,6 +41,11 @@ interface TrailMapViewProps {
     selectedSlug?: string | null;
     selectionSource?: 'pin' | 'track' | null;
     onSelectionChange?: (slug: string | null, source: 'pin' | 'track' | null) => void;
+    // #1545: lets a caller that wraps this component in a fixed-height container (e.g.
+    // CompetitionDetailPage, LocationDetailsPage) pass that same height through, so the
+    // bottom-anchored selected-track info chip isn't clipped by an outer container shorter than
+    // the default 70vh. Omitted by TrailList, which keeps today's 70vh behavior unchanged.
+    height?: string;
 }
 
 function ChangeView({ bounds, followMe, userLocation, containerReady }: {
@@ -118,6 +123,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
     selectedSlug: selectedSlugProp,
     selectionSource: selectionSourceProp,
     onSelectionChange,
+    height = '70vh',
 }) => {
     const { t } = useTranslation();
     const theme = useTheme();
@@ -285,9 +291,9 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
     ), [trailsWithLocation, trailIcon, handleMarkerClick, handlePopupOpen, handlePopupClose]);
 
     return (
-        <Box sx={{ 
-            height: '70vh', 
-            width: '100%', 
+        <Box sx={{
+            height,
+            width: '100%',
             borderRadius: 2, 
             overflow: 'hidden', 
             border: '1px solid #ccc', 
