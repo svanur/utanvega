@@ -249,18 +249,20 @@ function EventFormCardInner({ event, linkedTrails = [], onClose, onSaved, onNoti
     setForm(prev => ({ ...prev, schedule: { ...prev.schedule, [k]: v } }));
 
   const handleTranslate = async () => {
+    // #1548: name/nameEn is a proper noun, not prose — DeepL mistranslates event names.
+    // Pass it through verbatim instead of routing it through the translate API.
     const fields = [
-      { key: 'nameEn' as const,          src: form.name },
       { key: 'descriptionEn' as const,   src: form.description },
       { key: 'organizerNameEn' as const, src: form.organizerName },
       { key: 'alertMessageEn' as const,  src: form.alertMessage },
     ].filter(f => f.src?.trim());
-    if (!fields.length) return;
-    const translated = await translate(fields.map(f => f.src));
-    if (!translated) return;
+    if (!fields.length && !form.name.trim()) return;
+    const translated = fields.length ? await translate(fields.map(f => f.src)) : null;
+    if (fields.length && !translated) return;
     setForm(prev => {
       const next = { ...prev };
-      fields.forEach((f, i) => { (next as unknown as Record<string, string>)[f.key] = translated[i] ?? ''; });
+      fields.forEach((f, i) => { (next as unknown as Record<string, string>)[f.key] = translated![i] ?? ''; });
+      if (form.name.trim()) next.nameEn = form.name;
       return next;
     });
   };

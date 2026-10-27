@@ -100,19 +100,21 @@ function RaceFormCardInner({
   const staleTx = race ? raceHasStaleTx(race) : false;
 
   const handleTranslate = async () => {
+    // #1548: name/nameEn is a proper noun, not prose — DeepL mistranslates race names.
+    // Pass it through verbatim instead of routing it through the translate API.
     const fields = [
-      { key: 'nameEn' as const,                src: form.name },
       { key: 'descriptionEn' as const,          src: form.description },
       { key: 'certifiedByEn' as const,          src: form.certifiedBy },
       { key: 'championshipCategoryEn' as const, src: form.championshipCategory },
       { key: 'distanceLabelEn' as const,        src: form.distanceLabel },
     ].filter(f => f.src?.trim());
-    if (!fields.length) return;
-    const translated = await translate(fields.map(f => f.src));
-    if (!translated) return;
+    if (!fields.length && !form.name.trim()) return;
+    const translated = fields.length ? await translate(fields.map(f => f.src)) : null;
+    if (fields.length && !translated) return;
     setForm(prev => {
       const next = { ...prev };
-      fields.forEach((f, i) => { (next as unknown as Record<string, string>)[f.key] = translated[i] ?? ''; });
+      fields.forEach((f, i) => { (next as unknown as Record<string, string>)[f.key] = translated![i] ?? ''; });
+      if (form.name.trim()) next.nameEn = form.name;
       return next;
     });
   };
