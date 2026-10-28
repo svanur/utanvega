@@ -24,6 +24,10 @@ public class UpdateRaceCommandValidator : AbstractValidator<UpdateRaceCommand>
             .GreaterThan(0)
             .When(x => x.CutoffMinutes.HasValue);
 
+        RuleFor(x => x.RegistrationOpensMinutesBeforeRace)
+            .GreaterThanOrEqualTo(0)
+            .When(x => x.RegistrationOpensMinutesBeforeRace.HasValue);
+
         RuleFor(x => x.Status)
             .NotEmpty()
             .Must(EnumValidation.IsDefined<RaceStatus>)

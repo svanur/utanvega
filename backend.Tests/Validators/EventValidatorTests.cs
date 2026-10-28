@@ -825,6 +825,39 @@ public class EventValidatorTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateRace_NegativeRegistrationOpensMinutesBeforeRace_Fails()
+    {
+        var cmd = ValidRaceCommand with { RegistrationOpensMinutesBeforeRace = -10 };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
+    public async Task CreateRace_ZeroRegistrationOpensMinutesBeforeRace_Passes()
+    {
+        // Zero is legitimate here — "registration opens at race start" — unlike CutoffMinutes.
+        var cmd = ValidRaceCommand with { RegistrationOpensMinutesBeforeRace = 0 };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
+    public async Task CreateRace_PositiveRegistrationOpensMinutesBeforeRace_Passes()
+    {
+        var cmd = ValidRaceCommand with { RegistrationOpensMinutesBeforeRace = 1440 };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
+    public async Task CreateRace_NullRegistrationOpensMinutesBeforeRace_Passes()
+    {
+        var cmd = ValidRaceCommand with { RegistrationOpensMinutesBeforeRace = null };
+        var result = await RaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
     public async Task CreateRace_NegativeSortOrder_Fails()
     {
         var cmd = ValidRaceCommand with { SortOrder = -1 };
@@ -985,6 +1018,39 @@ public class EventValidatorTests : IDisposable
         var cmd = ValidUpdateRaceCommand with { ItraPoints = null };
         var result = await UpdateRaceValidator().TestValidateAsync(cmd);
         result.ShouldNotHaveValidationErrorFor(x => x.ItraPoints);
+    }
+
+    [Fact]
+    public async Task UpdateRace_NegativeRegistrationOpensMinutesBeforeRace_Fails()
+    {
+        var cmd = ValidUpdateRaceCommand with { RegistrationOpensMinutesBeforeRace = -10 };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
+    public async Task UpdateRace_ZeroRegistrationOpensMinutesBeforeRace_Passes()
+    {
+        // Zero is legitimate here — "registration opens at race start" — unlike CutoffMinutes.
+        var cmd = ValidUpdateRaceCommand with { RegistrationOpensMinutesBeforeRace = 0 };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
+    public async Task UpdateRace_PositiveRegistrationOpensMinutesBeforeRace_Passes()
+    {
+        var cmd = ValidUpdateRaceCommand with { RegistrationOpensMinutesBeforeRace = 1440 };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
+    public async Task UpdateRace_NullRegistrationOpensMinutesBeforeRace_Passes()
+    {
+        var cmd = ValidUpdateRaceCommand with { RegistrationOpensMinutesBeforeRace = null };
+        var result = await UpdateRaceValidator().TestValidateAsync(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.RegistrationOpensMinutesBeforeRace);
     }
 
     private async Task<(Event ev, EventEdition edition, Race race)> SeedRaceUnderEdition(EditionStatus editionStatus, RaceStatus raceStatus, string slugSuffix)
