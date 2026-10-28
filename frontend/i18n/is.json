@@ -170,6 +170,7 @@
         "getDirections": "Leiðsögn að upphafsstað",
         "downloadGpx": "Hlaða niður GPX skrá",
         "gpxLabel": "GPX",
+        "gpxDownloadFailed": "Ekki tókst að hlaða niður GPX skránni. Vinsamlegast reyndu aftur síðar.",
         "relatedTrails": "Tengdar leiðir",
         "outAndBack": "Fram og til baka",
         "loop": "Hringur",

@@ -196,6 +196,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [videoExpanded, setVideoExpanded] = useState(true);
     const [checkInSearch, setCheckInSearch] = useState('');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [toastSeverity, setToastSeverity] = useState<'info' | 'error'>('info');
     const [nearbyPromptVisible, setNearbyPromptVisible] = useState(false);
     const previousCheckInCountRef = useRef<number | null>(null);
     const suppressRealtimeToastUntilRef = useRef<number>(0);
@@ -304,6 +305,33 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
     const shouldShowCheckInSearch = totalCheckIns > CHECK_IN_SEARCH_THRESHOLD;
 
+    // fetch() instead of a plain <a href download> anchor so a 404 (stale slug,
+    // GPX regeneration race, etc.) shows an in-app toast rather than replacing
+    // the whole SPA with the browser's native error page (#1552).
+    const handleGpxDownload = async () => {
+        if (!trail) return;
+        const url = `${API_URL}/api/v1/trails/${trail.slug}/gpx${i18n.language === 'en' ? '?lang=en' : ''}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                setToastSeverity('error');
+                setToastMessage(t('trail.gpxDownloadFailed'));
+                return;
+            }
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = objectUrl;
+            a.download = `${trail.slug}.gpx`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            trackTrailGpxDownload(trail.slug);
+        } catch {
+            setToastSeverity('error');
+            setToastMessage(t('trail.gpxDownloadFailed'));
+        }
+    };
+
     const handleToggleCheckIn = async () => {
         if (!user) {
             setLoginModalOpen(true);
@@ -315,9 +343,11 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             suppressRealtimeToastUntilRef.current = Date.now() + 2000;
             if (isCheckedIn) {
                 await checkOut();
+                setToastSeverity('info');
                 setToastMessage(t('trail.checkInToastCheckedOut'));
             } else {
                 await checkIn();
+                setToastSeverity('info');
                 setToastMessage(t('trail.checkInToastCheckedIn'));
             }
         } catch (error) {
@@ -331,6 +361,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         try {
             suppressRealtimeToastUntilRef.current = Date.now() + 2000;
             await checkIn();
+            setToastSeverity('info');
             setToastMessage(t('trail.checkInToastRefreshed'));
         } catch (error) {
             setCheckInError(error instanceof Error ? error.message : t('trail.checkInActionFailed'));
@@ -349,8 +380,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             return;
         }
         if (totalCheckIns > previousCount) {
+            setToastSeverity('info');
             setToastMessage(t('trail.checkInToastJoined', { count: totalCheckIns - previousCount }));
         } else if (totalCheckIns < previousCount) {
+            setToastSeverity('info');
             setToastMessage(t('trail.checkInToastLeft', { count: previousCount - totalCheckIns }));
         }
         previousCheckInCountRef.current = totalCheckIns;
@@ -609,10 +642,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 size="small"
                                 variant="outlined"
                                 startIcon={<FileDownloadIcon fontSize="small" />}
-                                component="a"
-                                href={`${API_URL}/api/v1/trails/${trail.slug}/gpx${i18n.language === 'en' ? '?lang=en' : ''}`}
-                                download
-                                onClick={() => trackTrailGpxDownload(trail.slug)}
+                                onClick={handleGpxDownload}
                                 sx={{ minWidth: 44, minHeight: 44 }}
                             >
                                 {t('trail.gpxLabel')}
@@ -956,7 +986,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 onClose={() => setToastMessage(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
-                <Alert severity="info" variant="filled" onClose={() => setToastMessage(null)}>
+                <Alert severity={toastSeverity} variant="filled" onClose={() => setToastMessage(null)}>
                     {toastMessage}
                 </Alert>
             </Snackbar>
