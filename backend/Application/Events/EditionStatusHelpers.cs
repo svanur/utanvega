@@ -52,17 +52,28 @@ public static class EditionStatusHelpers
         if (registrationOpens.HasValue && registrationCloses.HasValue)
         {
             if (now < registrationOpens.Value) return RegistrationStatus.NotStarted;
-            // RegistrationCloses now carries real time-of-day precision (the admin's
-            // DateTimePicker captures the full instant, not just a calendar day), so compare
-            // directly against the stored value — no more rolling forward to the start of the
-            // next day (#1071).
-            if (now >= registrationCloses.Value) return RegistrationStatus.Closed;
+            if (now >= EffectiveRegistrationClosesInstant(registrationCloses.Value)) return RegistrationStatus.Closed;
             return RegistrationStatus.Open;
         }
 
         // No window to compute from — today's behaviour, unchanged.
         return storedStatus;
     }
+
+    // RegistrationCloses now carries real time-of-day precision for editions entered via
+    // EventDetailPage's DateTimePicker (#1071), but two sources still write exact
+    // midnight-UTC: every legacy row saved before #1071, and every new edition created via
+    // EventWizardPage's date-only DatePicker (still YYYY-MM-DD, deliberately out of scope for
+    // this fix — see PR). Comparing those directly against `now` would flip them to Closed at
+    // the start of the closes day instead of the end of it, a full day early. Midnight UTC is
+    // not a plausible *real* closing instant for a race (registration desks don't close at
+    // 00:00:00), so it's safe to read "exactly midnight" as the date-only fudge and roll it
+    // forward to the end of that day; any other time-of-day is a genuine DateTimePicker instant
+    // and is compared as-is. Mirrored in frontend/utils/ticketStatus.ts's hasRegistrationClosed.
+    private static DateTime EffectiveRegistrationClosesInstant(DateTime registrationCloses) =>
+        registrationCloses.TimeOfDay == TimeSpan.Zero
+            ? registrationCloses.AddDays(1)
+            : registrationCloses;
 
     // TicketStatus is stored per-race (set by hand via the admin dropdown, or forced by
     // CancelWithRaces()/CompleteWithRaces()/CreateRaceCommand) but the same "derive live, don't

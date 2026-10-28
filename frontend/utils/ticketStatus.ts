@@ -105,14 +105,23 @@ export function isRegistrationRequiredForRace(ticketStatus: string | null | unde
     return ticketStatus !== 'Free' && ticketStatus !== 'Invitational';
 }
 
-// RegistrationCloses now carries real time-of-day precision (the admin's DateTimePicker captures
-// the full instant, not just a calendar day) — compare directly against the stored instant.
-// Mirrors the backend's EditionStatusHelpers.ComputeEffectiveRegistrationStatus so UI gated on
-// this value (e.g. the resale link) flips at the same moment RegistrationStatus itself would read
-// Closed (#1071).
+// RegistrationCloses now carries real time-of-day precision for editions entered via
+// EventDetailPage's DateTimePicker (#1071), but legacy rows and every edition still created via
+// EventWizardPage's date-only DatePicker store exact midnight-UTC. Comparing those directly
+// against `now` would flip them to Closed a full day early. Midnight UTC isn't a plausible real
+// closing instant, so treat it as the date-only fudge and roll it forward to the end of that day;
+// any other time-of-day is a genuine DateTimePicker instant and is compared as-is. Mirrors the
+// backend's EditionStatusHelpers.ComputeEffectiveRegistrationStatus so UI gated on this value
+// (e.g. the resale link) flips at the same moment RegistrationStatus itself would read Closed.
 export function hasRegistrationClosed(registrationCloses: string | null | undefined, now: Date = new Date()): boolean {
     if (!registrationCloses) return false;
-    return now.getTime() >= new Date(registrationCloses).getTime();
+    const closes = new Date(registrationCloses);
+    const isMidnightUtc = closes.getUTCHours() === 0 && closes.getUTCMinutes() === 0 &&
+        closes.getUTCSeconds() === 0 && closes.getUTCMilliseconds() === 0;
+    const effectiveCloses = isMidnightUtc
+        ? new Date(closes.getTime() + 24 * 60 * 60 * 1000)
+        : closes;
+    return now.getTime() >= effectiveCloses.getTime();
 }
 
 // Per-race equivalent of the registration-window precision above, but for when the race *starts*

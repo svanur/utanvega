@@ -137,6 +137,20 @@ describe('hasRegistrationClosed', () => {
         expect(hasRegistrationClosed(closes, new Date('2026-03-01T08:59:00Z'))).toBe(false);
         expect(hasRegistrationClosed(closes, new Date('2026-03-01T09:00:00Z'))).toBe(true);
     });
+
+    // Legacy rows (and every edition still created via EventWizardPage's date-only DatePicker)
+    // store registrationCloses as exact midnight UTC. Caught in PR #1551 review: comparing that
+    // directly against `now` flipped these a full day early, since midnight is the *start* of
+    // the closes day, not its end.
+    it('stays open through the rest of the closes day when registrationCloses is midnight UTC', () => {
+        const closes = '2026-03-01T00:00:00Z';
+        expect(hasRegistrationClosed(closes, new Date('2026-03-01T23:00:00Z'))).toBe(false);
+    });
+
+    it('closes once the day after a midnight-UTC registrationCloses begins', () => {
+        const closes = '2026-03-01T00:00:00Z';
+        expect(hasRegistrationClosed(closes, new Date('2026-03-02T00:00:00Z'))).toBe(true);
+    });
 });
 
 describe('hasRaceStarted', () => {
