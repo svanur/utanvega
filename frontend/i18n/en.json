@@ -170,6 +170,7 @@
         "getDirections": "Get directions to trailhead",
         "downloadGpx": "Download GPX file",
         "gpxLabel": "GPX",
+        "gpxDownloadFailed": "Could not download the GPX file. Please try again later.",
         "relatedTrails": "Related Trails",
         "outAndBack": "Out and Back",
         "loop": "Loop",
