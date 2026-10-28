@@ -105,16 +105,34 @@ export function isRegistrationRequiredForRace(ticketStatus: string | null | unde
     return ticketStatus !== 'Free' && ticketStatus !== 'Invitational';
 }
 
-// RegistrationCloses is a date-only value under the hood (the admin's DatePicker only captures a
-// calendar day, stored as midnight UTC) — treat the closes-date itself as still open through its
-// full 24 hours, i.e. compare against the start of the *next* day, not the raw instant. Mirrors
-// the backend's EditionStatusHelpers.ComputeEffectiveRegistrationStatus so UI gated on this value
-// (e.g. the resale link) flips at the same moment RegistrationStatus itself would read Closed.
+// RegistrationCloses now carries real time-of-day precision (the admin's DateTimePicker captures
+// the full instant, not just a calendar day) — compare directly against the stored instant.
+// Mirrors the backend's EditionStatusHelpers.ComputeEffectiveRegistrationStatus so UI gated on
+// this value (e.g. the resale link) flips at the same moment RegistrationStatus itself would read
+// Closed (#1071).
 export function hasRegistrationClosed(registrationCloses: string | null | undefined, now: Date = new Date()): boolean {
     if (!registrationCloses) return false;
-    const closes = new Date(registrationCloses);
-    const cutoff = Date.UTC(closes.getUTCFullYear(), closes.getUTCMonth(), closes.getUTCDate() + 1);
-    return now.getTime() >= cutoff;
+    return now.getTime() >= new Date(registrationCloses).getTime();
+}
+
+// Per-race equivalent of the registration-window precision above, but for when the race *starts*
+// rather than when registration closes. When startTime is set, compare `now` against the combined
+// date+time instant so the Register button hides the moment the race actually starts, not at the
+// end of its calendar day. When startTime is absent (today's common case — most races have no
+// recorded start time), fall back to the pre-existing day-granularity rule: not started until the
+// day after dateOfRace (mirrors getRowDaysUntil/daysBetween in eventUtils.ts, i.e. `raceDaysUntil
+// >= 0` reading as "not yet started").
+export function hasRaceStarted(dateOfRace: string | null | undefined, startTime: string | null | undefined, now: Date = new Date()): boolean {
+    if (!dateOfRace) return false;
+    if (startTime) {
+        const start = new Date(`${dateOfRace}T${startTime}`);
+        return now.getTime() >= start.getTime();
+    }
+    // Day-granularity fallback — local midnight so a same-day race never reads as started no
+    // matter how late in the day `now` is, matching daysBetween's local-midnight normalization.
+    const raceDay = new Date(`${dateOfRace}T00:00:00`);
+    raceDay.setDate(raceDay.getDate() + 1);
+    return now.getTime() >= raceDay.getTime();
 }
 
 export function getTicketStatusColor(status: string | null): 'success' | 'error' | 'warning' | 'info' | 'default' {

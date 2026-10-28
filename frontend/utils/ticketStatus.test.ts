@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getRecentRaceDistanceDisplay, groupDistances, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, getTicketStatusColor, type DistanceEntry } from './ticketStatus';
+import { getRecentRaceDistanceDisplay, groupDistances, hasRaceStarted, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, getTicketStatusColor, type DistanceEntry } from './ticketStatus';
 
 describe('groupDistances', () => {
     it('keeps elevationGain/terrainType when two entries sharing a label agree', () => {
@@ -112,27 +112,71 @@ describe('hasRegistrationClosed', () => {
         expect(hasRegistrationClosed(undefined, new Date('2026-01-01T00:00:00Z'))).toBe(false);
     });
 
-    it('returns false when now is still on the same UTC calendar day as registrationCloses', () => {
-        // The closes-date stays open through its full 24 hours — checking late in the day must not
-        // read as closed yet.
-        const now = new Date('2026-03-10T23:59:59.999Z');
-        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(false);
+    it('returns false one millisecond before the stored instant, even mid-calendar-day (#1071)', () => {
+        // RegistrationCloses now carries real time-of-day precision — no more rolling forward to
+        // the end of the calendar day. A 09:00 cutoff must close right at 09:00, not at midnight.
+        const now = new Date('2026-03-10T08:59:59.999Z');
+        expect(hasRegistrationClosed('2026-03-10T09:00:00Z', now)).toBe(false);
     });
 
-    it('returns true when now is exactly at UTC midnight of the day after registrationCloses', () => {
-        // The cutoff is the start of the *next* day, not the raw registrationCloses instant.
-        const now = new Date('2026-03-11T00:00:00.000Z');
-        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(true);
+    it('returns true exactly at the stored instant', () => {
+        const now = new Date('2026-03-10T09:00:00.000Z');
+        expect(hasRegistrationClosed('2026-03-10T09:00:00Z', now)).toBe(true);
     });
 
-    it('returns false one millisecond before the cutoff', () => {
-        const now = new Date('2026-03-10T23:59:59.999Z');
-        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(false);
-    });
-
-    it('returns true when now is well after the cutoff', () => {
+    it('returns true when now is well after the stored instant', () => {
         const now = new Date('2026-03-15T12:00:00Z');
-        expect(hasRegistrationClosed('2026-03-10T00:00:00Z', now)).toBe(true);
+        expect(hasRegistrationClosed('2026-03-10T09:00:00Z', now)).toBe(true);
+    });
+
+    // Cross-check against the backend's EditionStatusHelpers.ComputeEffectiveRegistrationStatus
+    // (same instant, same closes value) — the two must agree now that both compare the raw
+    // instant directly (#1071's acceptance criteria).
+    it('agrees with the backend-mirrored instant comparison just before and at the closes instant', () => {
+        const closes = '2026-03-01T09:00:00Z';
+        expect(hasRegistrationClosed(closes, new Date('2026-03-01T08:59:00Z'))).toBe(false);
+        expect(hasRegistrationClosed(closes, new Date('2026-03-01T09:00:00Z'))).toBe(true);
+    });
+});
+
+describe('hasRaceStarted', () => {
+    it('returns false when dateOfRace is null/undefined, regardless of startTime', () => {
+        expect(hasRaceStarted(null, '09:00:00', new Date('2026-01-01T00:00:00Z'))).toBe(false);
+        expect(hasRaceStarted(undefined, '09:00:00', new Date('2026-01-01T00:00:00Z'))).toBe(false);
+    });
+
+    it('with startTime set, returns false just before the combined date+time instant', () => {
+        const now = new Date('2026-03-10T08:59:59');
+        expect(hasRaceStarted('2026-03-10', '09:00:00', now)).toBe(false);
+    });
+
+    it('with startTime set, returns true exactly at and after the combined date+time instant', () => {
+        expect(hasRaceStarted('2026-03-10', '09:00:00', new Date('2026-03-10T09:00:00'))).toBe(true);
+        expect(hasRaceStarted('2026-03-10', '09:00:00', new Date('2026-03-10T09:00:01'))).toBe(true);
+    });
+
+    it('with startTime set, hides mid-calendar-day even though dateOfRace is still "today"', () => {
+        // The whole point of #1071 Part B: don't wait for end-of-day once the race has actually
+        // started.
+        const now = new Date('2026-03-10T12:00:00');
+        expect(hasRaceStarted('2026-03-10', '09:00:00', now)).toBe(true);
+    });
+
+    it('without startTime, falls back to day-granularity: not started while still the race day itself', () => {
+        // Regression guard — today's common case (no recorded start time) must behave exactly as
+        // before: a same-day race never reads as started no matter how late in the day it is.
+        const now = new Date('2026-03-10T23:59:59');
+        expect(hasRaceStarted('2026-03-10', null, now)).toBe(false);
+    });
+
+    it('without startTime, falls back to day-granularity: started the day after dateOfRace', () => {
+        const now = new Date('2026-03-11T00:00:00');
+        expect(hasRaceStarted('2026-03-10', null, now)).toBe(true);
+    });
+
+    it('without startTime, has not started before the race day at all', () => {
+        const now = new Date('2026-03-01T00:00:00');
+        expect(hasRaceStarted('2026-03-10', undefined, now)).toBe(false);
     });
 });
 

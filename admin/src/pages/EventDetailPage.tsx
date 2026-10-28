@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useId, useRef, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
@@ -622,14 +623,16 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
             Registration
           </Typography>
           <Stack direction="row" spacing={1.5}>
-            <DatePicker label="Registration opens"
+            <DateTimePicker label="Registration opens"
               value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
-              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+              // Full instant now (#1071), not just a calendar day — stored without a timezone
+              // offset, matching EditionStatusHelpers.AsUtc's "relabel rather than convert" contract.
+              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DDTHH:mm:ss') : '')}
               referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
-            <DatePicker label="Registration closes"
+            <DateTimePicker label="Registration closes"
               value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
-              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DDTHH:mm:ss') : '')}
               referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>
