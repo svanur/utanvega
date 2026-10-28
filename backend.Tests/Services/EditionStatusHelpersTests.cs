@@ -292,11 +292,18 @@ public class EditionStatusHelpersTests
         Assert.Equal(RegistrationStatus.Closed, result);
     }
 
+    // No-offset calls below pass dateOfRace/startTime/registrationOpensMinutesBeforeRace as null
+    // (the "no per-race window" default) with an arbitrary `now` — the #1553 branch never engages
+    // without both dateOfRace and the offset set, so these exercise today's pre-#1553 behaviour
+    // unchanged (regression guard).
+    private static readonly DateTime ArbitraryNow = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     [Fact]
     public void ComputeEffectiveTicketStatus_EditionNotStarted_RaceAvailable_ReturnsNotStarted()
     {
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.NotStarted);
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.NotStarted,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(TicketStatus.NotStarted, result);
     }
@@ -307,7 +314,8 @@ public class EditionStatusHelpersTests
         // Same edition as the NotStarted case above but registration has since opened — the
         // race's effective ticket status must flip on the next read with no write/sweep needed.
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Open);
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Open,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(TicketStatus.Available, result);
     }
@@ -316,7 +324,8 @@ public class EditionStatusHelpersTests
     public void ComputeEffectiveTicketStatus_EditionClosed_ReturnsClosed()
     {
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Closed);
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Closed,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(TicketStatus.Closed, result);
     }
@@ -325,7 +334,8 @@ public class EditionStatusHelpersTests
     public void ComputeEffectiveTicketStatus_EditionNotRequired_ReturnsFree()
     {
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.NotRequired);
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.NotRequired,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(TicketStatus.Free, result);
     }
@@ -334,7 +344,8 @@ public class EditionStatusHelpersTests
     public void ComputeEffectiveTicketStatus_EditionInvitational_ReturnsInvitational()
     {
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Invitational);
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Invitational,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(TicketStatus.Invitational, result);
     }
@@ -347,7 +358,8 @@ public class EditionStatusHelpersTests
         // A manual sold-out override has nothing to do with the registration window timing and
         // must not be clobbered by a live computation, even if the edition reads as freshly Open.
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            RaceStatus.Active, stored, RegistrationStatus.Open);
+            RaceStatus.Active, stored, RegistrationStatus.Open,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(stored, result);
     }
@@ -360,7 +372,8 @@ public class EditionStatusHelpersTests
         // CancelWithRaces()/CompleteWithRaces() already forced TicketStatus to Closed as part of
         // the cascade — that stored value must win over the edition's registration window.
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            raceStatus, TicketStatus.Closed, RegistrationStatus.Open);
+            raceStatus, TicketStatus.Closed, RegistrationStatus.Open,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(TicketStatus.Closed, result);
     }
@@ -375,9 +388,150 @@ public class EditionStatusHelpersTests
             EditionStatus.Active, RegistrationStatus.NotRequired, null, null, DateTime.UtcNow);
 
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-            RaceStatus.Active, TicketStatus.Available, effectiveRegStatus);
+            RaceStatus.Active, TicketStatus.Available, effectiveRegStatus,
+            null, null, null, ArbitraryNow);
 
         Assert.Equal(TicketStatus.Free, result);
+    }
+
+    // ─── Per-race registration-opens window (#1553) ───
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_StartTimeSet_BeforeOpensInstant_ReturnsNotStarted()
+    {
+        // Race on D, 19:30, opens 2880 minutes (2 days) before — before 19:30 on D-2, must read
+        // NotStarted regardless of the edition's own window (here: Open, which would otherwise
+        // map to Available).
+        var dateOfRace = new DateOnly(2026, 6, 10);
+        var startTime = new TimeOnly(19, 30);
+        var now = new DateTime(2026, 6, 8, 19, 29, 0, DateTimeKind.Utc); // 1 minute before D-2 19:30
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Open,
+            dateOfRace, startTime, 2880, now);
+
+        Assert.Equal(TicketStatus.NotStarted, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_StartTimeSet_AtOpensInstant_ReturnsAvailable()
+    {
+        // At/after 19:30 on D-2 days: Available, independent of the edition's own window and of
+        // any sibling race's own offset — RegistrationStatus.Closed here stands in for "the
+        // edition's window says something else entirely" and must still be overridden.
+        var dateOfRace = new DateOnly(2026, 6, 10);
+        var startTime = new TimeOnly(19, 30);
+        var now = new DateTime(2026, 6, 8, 19, 30, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Closed,
+            dateOfRace, startTime, 2880, now);
+
+        Assert.Equal(TicketStatus.Available, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_NullStartTime_FallsBackToLocalMidnightOfDateOfRace()
+    {
+        // Mirrors hasRaceStarted's fallback (frontend/utils/ticketStatus.ts) — no StartTime means
+        // the race instant is local midnight of DateOfRace, so the opens instant is that midnight
+        // minus the offset.
+        var dateOfRace = new DateOnly(2026, 6, 10);
+        var oneMinuteBeforeOpens = new DateTime(2026, 6, 8, 23, 59, 0, DateTimeKind.Utc); // 1 minute before midnight(D-1)
+        var atOpens = new DateTime(2026, 6, 9, 0, 0, 0, DateTimeKind.Utc); // midnight(D-1) == midnight(D) minus the 1440-minute offset
+
+        var before = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Open,
+            dateOfRace, null, 1440, oneMinuteBeforeOpens);
+        var atOrAfter = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Open,
+            dateOfRace, null, 1440, atOpens);
+
+        Assert.Equal(TicketStatus.NotStarted, before);
+        Assert.Equal(TicketStatus.Available, atOrAfter);
+    }
+
+    [Theory]
+    [InlineData(TicketStatus.SoldOut)]
+    [InlineData(TicketStatus.AlmostSoldOut)]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_StoredSoldOutOrAlmostSoldOut_StillWins(TicketStatus stored)
+    {
+        // A manual sold-out override wins over the per-race opens window exactly as it already
+        // does over the edition-derived mapping.
+        var dateOfRace = new DateOnly(2026, 6, 10);
+        var now = new DateTime(2026, 6, 10, 0, 0, 0, DateTimeKind.Utc); // well within the open window
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, stored, RegistrationStatus.Open,
+            dateOfRace, null, 2880, now);
+
+        Assert.Equal(stored, result);
+    }
+
+    [Theory]
+    [InlineData(RegistrationStatus.NotRequired, TicketStatus.Free)]
+    [InlineData(RegistrationStatus.Invitational, TicketStatus.Invitational)]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_EditionNotRequiredOrInvitational_StillWins(
+        RegistrationStatus editionStatus, TicketStatus expected)
+    {
+        // NotRequired/Invitational are deliberate overrides on the edition's own registration
+        // status and have nothing to do with timing — the per-race opens window must not engage
+        // at all, even though dateOfRace/offset are both set and `now` is well before the would-be
+        // opens instant.
+        var dateOfRace = new DateOnly(2026, 6, 10);
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc); // long before opens
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, editionStatus,
+            dateOfRace, null, 2880, now);
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_NullOffset_FallsBackToEditionDerivedStatus()
+    {
+        // RegistrationOpensMinutesBeforeRace null (default) — regression guard: with dateOfRace
+        // set but no offset, the branch never engages and the edition-derived switch decides.
+        var dateOfRace = new DateOnly(2026, 6, 10);
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Open,
+            dateOfRace, null, null, now);
+
+        Assert.Equal(TicketStatus.Available, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_NullDateOfRace_OffsetHasNoEffect()
+    {
+        // RegistrationOpensMinutesBeforeRace set but DateOfRace null — the branch never engages
+        // (nothing to compute a race instant from), so the edition-derived switch decides.
+        var now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Active, TicketStatus.Available, RegistrationStatus.Closed,
+            null, null, 2880, now);
+
+        Assert.Equal(TicketStatus.Closed, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveTicketStatus_PerRaceWindow_RaceCompletedAfterSweep_ReturnsClosedRegardlessOfOffset()
+    {
+        // RaceCompletionSweep has already run (RaceStatus.Completed, TicketStatus.Closed) once
+        // DateOfRace passes — that terminal state must win over the per-race opens window exactly
+        // as it already wins over the edition-derived mapping, even though `now` here is well
+        // within what would otherwise read as the open window.
+        var dateOfRace = new DateOnly(2026, 6, 10);
+        var now = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
+            RaceStatus.Completed, TicketStatus.Closed, RegistrationStatus.Open,
+            dateOfRace, null, 2880, now);
+
+        Assert.Equal(TicketStatus.Closed, result);
     }
 
     // ─── SeriesRaceDates (#1292) ───

@@ -194,7 +194,8 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                             ? $"{trail.Length / 1000.0:0.#} km"
                             : null;
                     var ticketStatus = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-                        r.Status, r.TicketStatus, relevantEditionEffectiveRegStatus!.Value);
+                        r.Status, r.TicketStatus, relevantEditionEffectiveRegStatus!.Value,
+                        r.DateOfRace, r.StartTime, r.RegistrationOpensMinutesBeforeRace, now);
                     return label != null
                         ? new RaceDistanceSummaryDto(label, ticketStatus.ToString())
                         : null;
@@ -254,7 +255,9 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                                     : null,
                                 r.DistanceLabelEn,
                                 GetTrail(r.TrailId)?.ElevationGain,
-                                EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
+                                EditionStatusHelpers.ComputeEffectiveTicketStatus(
+                                    r.Status, r.TicketStatus, edEffectiveRegStatus,
+                                    r.DateOfRace, r.StartTime, r.RegistrationOpensMinutesBeforeRace, now).ToString(),
                                 ed.RegistrationUrl
                             ));
                     })
@@ -299,7 +302,9 @@ public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, List<EventS
                             : null,
                         recentRace.DistanceLabelEn,
                         GetTrail(recentRace.TrailId)?.ElevationGain,
-                        EditionStatusHelpers.ComputeEffectiveTicketStatus(recentRace.Status, recentRace.TicketStatus, recentEdEffectiveRegStatus).ToString(),
+                        EditionStatusHelpers.ComputeEffectiveTicketStatus(
+                            recentRace.Status, recentRace.TicketStatus, recentEdEffectiveRegStatus,
+                            recentRace.DateOfRace, recentRace.StartTime, recentRace.RegistrationOpensMinutesBeforeRace, now).ToString(),
                         recentRaceEdition.RegistrationUrl
                     );
                 }

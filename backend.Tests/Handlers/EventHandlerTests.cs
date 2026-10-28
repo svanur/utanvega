@@ -1045,6 +1045,49 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_Race_WithRegistrationOpensMinutesBeforeRace_PersistsIt()
+    {
+        // #1553: the per-race registration-opens window threads through CreateRaceCommand into
+        // the entity, same as every other race field.
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var raceCtx = _factory.CreateContext();
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateRaceCommand(
+            EventEditionId: edition.Id,
+            TrailId: null,
+            Name: "Leg 1",
+            DistanceLabel: "10 km",
+            CutoffMinutes: null,
+            Description: null,
+            Status: "Active",
+            SortOrder: 0,
+            TicketStatus: "Available",
+            ResultType: "Time",
+            MaxParticipants: null,
+            ItraPoints: null,
+            CertifiedBy: null,
+            PrizeMoney: 0,
+            ChampionshipCategory: null,
+            DateOfRace: new DateOnly(2026, 6, 10),
+            StartTime: new TimeOnly(19, 30),
+            RegistrationOpensMinutesBeforeRace: 2880
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var race = verifyCtx.Races.Find(id);
+        Assert.NotNull(race);
+        Assert.Equal(2880, race!.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
     public async Task Create_Race_UnderCompletedEdition_ForcesCompletedAndClosed()
     {
         var ev = CreateTestEvent();
@@ -1228,6 +1271,92 @@ public class EventHandlerTests : IDisposable
             Assert.Equal("10K Competitive", updated!.Name);
             Assert.Equal(120, updated.CutoffMinutes);
             Assert.Equal(TicketStatus.SoldOut, updated.TicketStatus);
+        }
+    }
+
+    [Fact]
+    public async Task Update_Race_RegistrationOpensMinutesBeforeRace_RoundTripsSetAndCleared()
+    {
+        // #1553: set-then-clear round trip — UpdateRaceCommand always writes whatever the client
+        // sent (unlike CutoffMinutes, which has no "patch-if-provided" special case either), so a
+        // null in the request must clear a previously-set value, not leave it untouched.
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Leg 2",
+            SortOrder = 1,
+            DateOfRace = new DateOnly(2026, 7, 10),
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id,
+                TrailId: null,
+                Name: race.Name,
+                DistanceLabel: null,
+                CutoffMinutes: null,
+                Description: null,
+                Status: "Active",
+                SortOrder: race.SortOrder,
+                TicketStatus: "Available",
+                ResultType: "Time",
+                MaxParticipants: null,
+                ItraPoints: null,
+                CertifiedBy: null,
+                PrizeMoney: 0,
+                ChampionshipCategory: null,
+                DateOfRace: race.DateOfRace,
+                StartTime: null,
+                RegistrationOpensMinutesBeforeRace: 1440
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            Assert.Equal(1440, ctx.Races.Find(race.Id)!.RegistrationOpensMinutesBeforeRace);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id,
+                TrailId: null,
+                Name: race.Name,
+                DistanceLabel: null,
+                CutoffMinutes: null,
+                Description: null,
+                Status: "Active",
+                SortOrder: race.SortOrder,
+                TicketStatus: "Available",
+                ResultType: "Time",
+                MaxParticipants: null,
+                ItraPoints: null,
+                CertifiedBy: null,
+                PrizeMoney: 0,
+                ChampionshipCategory: null,
+                DateOfRace: race.DateOfRace,
+                StartTime: null,
+                RegistrationOpensMinutesBeforeRace: null
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            Assert.Null(ctx.Races.Find(race.Id)!.RegistrationOpensMinutesBeforeRace);
         }
     }
 

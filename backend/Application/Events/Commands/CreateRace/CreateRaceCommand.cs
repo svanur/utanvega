@@ -29,7 +29,8 @@ public record CreateRaceCommand(
     string? CertifiedByEn = null,
     string? ChampionshipCategoryEn = null,
     string? ActivityType = null,
-    string? DistanceLabelEn = null
+    string? DistanceLabelEn = null,
+    int? RegistrationOpensMinutesBeforeRace = null
 ) : IRequest<Guid>;
 
 public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
@@ -92,6 +93,7 @@ public class CreateRaceCommandHandler : IRequestHandler<CreateRaceCommand, Guid>
             DateOfRace = request.DateOfRace,
             StartTime = request.StartTime,
             ActivityType = activityType,
+            RegistrationOpensMinutesBeforeRace = request.RegistrationOpensMinutesBeforeRace,
         };
 
         _context.Races.Add(race);
