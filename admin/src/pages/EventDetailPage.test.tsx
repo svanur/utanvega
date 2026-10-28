@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -268,6 +268,45 @@ describe('EditionDialogInner — Start date required once End date is set (#1365
 
     expect(getSaveButton().disabled).toBe(false);
     expect(screen.queryByText('Start date is required when an End date is set.')).toBe(null);
+  });
+});
+
+// #1071 review fix: RegistrationOpens/Closes come back from the GET DTO as Kind=Utc (Z-suffixed)
+// via EditionStatusHelpers.AsUtc's relabel-not-convert contract. Parsing that with plain dayjs(...)
+// would read the literal digits back through the browser's own local timezone, shifting the
+// displayed time for any admin not sitting at UTC+0. Force a non-UTC TZ here so the regression
+// actually exercises that class of bug rather than passing by accident in a UTC CI runner.
+function getRegistrationOpensInput() {
+  return screen.getByLabelText('Registration opens') as HTMLInputElement;
+}
+function getRegistrationClosesInput() {
+  return screen.getByLabelText('Registration closes') as HTMLInputElement;
+}
+
+describe('EditionDialogInner — Registration opens/closes round-trip a stored instant without timezone drift (#1071)', () => {
+  const originalTz = process.env.TZ;
+
+  beforeEach(() => {
+    // America/New_York (UTC-5 in March, no DST yet) — any accidental local-timezone conversion
+    // of the Z-suffixed stored value would shift the displayed hour by 5, not just the minutes.
+    process.env.TZ = 'America/New_York';
+  });
+  afterEach(() => {
+    process.env.TZ = originalTz;
+    cleanup();
+  });
+
+  it('shows the exact stored time, not midnight and not shifted by the admin browser\'s timezone', () => {
+    const edition = buildEditionFixture({
+      registrationOpens: '2026-03-01T09:00:00Z',
+      registrationCloses: '2026-03-15T17:30:00Z',
+    });
+    renderEditionDialog({ edition });
+
+    // The literal UTC digits stored (09:00 / 17:30), not midnight (the old date-only bug) and not
+    // shifted to 04:00/12:30 (what plain local-timezone dayjs(...) parsing would have shown).
+    expect(getRegistrationOpensInput().value).toBe('03/01/2026 09:00 AM');
+    expect(getRegistrationClosesInput().value).toBe('03/15/2026 05:30 PM');
   });
 });
 

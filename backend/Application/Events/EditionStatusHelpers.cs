@@ -196,8 +196,11 @@ public static class EditionStatusHelpers
 
     // Npgsql requires Kind=Utc for a "timestamp with time zone" column. Admin-submitted
     // RegistrationOpens/Closes values arrive via System.Text.Json with Kind=Unspecified (no
-    // offset in the payload) — relabel rather than convert, since the admin's date picker has
-    // no timezone concept of its own to convert from.
+    // offset in the payload) — relabel rather than convert, since the admin's date*time* picker
+    // (#1071) has no timezone concept of its own to convert from. The same relabel-not-convert
+    // contract applies symmetrically on read: EventDetailPage.tsx parses the resulting Kind=Utc
+    // (Z-suffixed) value with dayjs.utc(...), not plain dayjs(...), so the displayed time is the
+    // literal stored digits rather than a real UTC instant converted to the admin's own timezone.
     public static DateTime? AsUtc(DateTime? value) =>
         value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
 }
