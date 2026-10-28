@@ -147,7 +147,9 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             r.DescriptionEn,
                             r.Status.ToString(),
                             r.SortOrder,
-                            EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
+                            EditionStatusHelpers.ComputeEffectiveTicketStatus(
+                                r.Status, r.TicketStatus, edEffectiveRegStatus,
+                                r.DateOfRace, r.StartTime, r.RegistrationOpensMinutesBeforeRace, now).ToString(),
                             r.MaxParticipants,
                             r.ItraPoints,
                             r.CertifiedBy,
@@ -164,7 +166,8 @@ public class GetAllEventDetailsQueryHandler : IRequestHandler<GetAllEventDetails
                             GetTrail(r.TrailId)?.ActivityTypeId.ToString(),
                             DeserHashes(r.TranslationHashes),
                             r.ActivityType?.ToString(),
-                            r.ResultType.ToString()
+                            r.ResultType.ToString(),
+                            r.RegistrationOpensMinutesBeforeRace
                         ))
                         .ToList(),
                     ed.PhotoGalleries.ToPublicDtos(),

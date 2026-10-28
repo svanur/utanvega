@@ -18,7 +18,7 @@ namespace Utanvega.Backend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.20")
+                .HasAnnotation("ProductVersion", "9.0.22")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
@@ -673,6 +673,9 @@ namespace Utanvega.Backend.Migrations
                     b.Property<decimal>("PrizeMoney")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
+
+                    b.Property<int?>("RegistrationOpensMinutesBeforeRace")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ResultType")
                         .IsRequired()

@@ -29,6 +29,12 @@ export interface RaceFormState {
   championshipCategoryEn: string;
   dateOfRace: string;
   startTime: string;
+  // #1553: split for the two-field "days before / hours before" admin widget — combined into a
+  // single RegistrationOpensMinutesBeforeRace minutes value on save (buildRaceSavePayload) and
+  // split back apart on read (buildRaceForm). Kept as strings, same as every other numeric field
+  // in this form, so an in-progress edit (e.g. a trailing "-") doesn't get coerced mid-keystroke.
+  registrationOpensDaysBefore: string;
+  registrationOpensHoursBefore: string;
   translationHashes?: Record<string, string>;
   _initialNameEn?: string;
   _initialDescriptionEn?: string;
@@ -87,10 +93,42 @@ export function createEmptyRaceForm(eventEditionId = '', sortOrder = 0, editionS
     championshipCategoryEn: '',
     dateOfRace: '',
     startTime: '',
+    registrationOpensDaysBefore: '',
+    registrationOpensHoursBefore: '',
   };
 }
 
+// #1553: splits a stored RegistrationOpensMinutesBeforeRace value back into the two admin
+// inputs. Any leftover minutes that don't divide evenly into a whole hour (never produced by
+// this form itself, since it only ever writes whole days+hours, but possible from a value set
+// some other way, e.g. directly in the DB) are folded into the hours field rather than silently
+// dropped, so round-tripping a save never loses precision even in that edge case.
+export function splitRegistrationOpensMinutes(minutes: number | null): { days: string; hours: string } {
+  if (minutes == null) return { days: '', hours: '' };
+  const days = Math.floor(minutes / 1440);
+  const hours = (minutes - days * 1440) / 60;
+  return { days: String(days), hours: String(hours) };
+}
+
+// #1553: inverse of splitRegistrationOpensMinutes — combines the two admin inputs into the
+// single stored minutes value. Returns null when both inputs are blank (no per-race window set).
+// Returns NaN if either input doesn't parse as a non-negative integer, so the caller
+// (RaceFormCard's handleSave) can reject the save inline — mirrors parseHHmmToMinutes's
+// null-on-blank/NaN-on-invalid contract for cutoffTime.
+export function combineRegistrationOpensMinutes(days: string, hours: string): number | null {
+  const d = days.trim();
+  const h = hours.trim();
+  if (!d && !h) return null;
+  const dNum = d ? Number(d) : 0;
+  const hNum = h ? Number(h) : 0;
+  const isNonNegativeInteger = (n: number) => Number.isInteger(n) && n >= 0;
+  if (!isNonNegativeInteger(dNum) || !isNonNegativeInteger(hNum)) return NaN;
+  return dNum * 1440 + hNum * 60;
+}
+
 export function buildRaceForm(race: RaceDto): RaceFormState {
+  const { days: registrationOpensDaysBefore, hours: registrationOpensHoursBefore } =
+    splitRegistrationOpensMinutes(race.registrationOpensMinutesBeforeRace);
   return {
     eventEditionId: race.eventEditionId,
     trailId: race.trailId ?? '',
@@ -115,6 +153,8 @@ export function buildRaceForm(race: RaceDto): RaceFormState {
     championshipCategoryEn: race.championshipCategoryEn ?? '',
     dateOfRace: race.dateOfRace ?? '',
     startTime: race.startTime ? race.startTime.slice(0, 5) : '',
+    registrationOpensDaysBefore,
+    registrationOpensHoursBefore,
     translationHashes: race.translationHashes,
     _initialNameEn: race.nameEn ?? '',
     _initialDescriptionEn: race.descriptionEn ?? '',
@@ -317,6 +357,7 @@ export interface RaceSavePayload {
   startTime: string | null;
   activityType: ActivityType | null;
   translationHashes?: Record<string, string>;
+  registrationOpensMinutesBeforeRace: number | null;
   _normalizedCutoff: string;
 }
 
@@ -359,6 +400,12 @@ export function buildRaceSavePayload(form: RaceFormState): RaceSavePayload {
     startTime: form.startTime || null,
     activityType: (form.activityType as ActivityType) || null,
     translationHashes: Object.keys(hashes).length > 0 ? hashes : undefined,
+    // Caller (RaceFormCard's handleSave) validates this ahead of calling here, same as it does
+    // for cutoffMinutes above — by this point combineRegistrationOpensMinutes is never NaN. Not
+    // `|| null`-coalesced: a genuine 0 (opens exactly at race instant) must survive, not collapse
+    // to null ("no window at all") the way it would if falsy-0 were treated the same as blank.
+    registrationOpensMinutesBeforeRace: combineRegistrationOpensMinutes(
+      form.registrationOpensDaysBefore, form.registrationOpensHoursBefore),
     _normalizedCutoff: normalizedCutoff,
   };
 }

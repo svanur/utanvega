@@ -222,7 +222,8 @@ function TrailFormCardInner({ trail: initialTrail, onClose, onSaved, onNotify }:
         maxParticipants: null, itraPoints: 0, certifiedBy: null, certifiedByEn: null, prizeMoney: 0,
         championshipCategory: null, championshipCategoryEn: null, dateOfRace: selectedEditionToLink.date,
         startTime: null, trailDistanceMeters: trail.length, trailElevationGain: trail.elevationGain,
-        activityType: null, eventId: selectedEventToLink.id, eventName: selectedEventToLink.name,
+        activityType: null, registrationOpensMinutesBeforeRace: null,
+        eventId: selectedEventToLink.id, eventName: selectedEventToLink.name,
         eventSlug: selectedEventToLink.slug, editionId: selectedEditionToLink.id,
         editionLabel: selectedEditionToLink.label,
       };

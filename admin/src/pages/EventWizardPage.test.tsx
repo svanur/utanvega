@@ -68,6 +68,7 @@ function makeRace(id: string, name: string, sortOrder: number): RaceDto {
     trailDistanceMeters: null,
     trailElevationGain: null,
     activityType: null,
+    registrationOpensMinutesBeforeRace: null,
   };
 }
 

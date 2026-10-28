@@ -30,6 +30,7 @@ import {
   TICKET_STATUSES,
   buildRaceForm,
   buildRaceSavePayload,
+  combineRegistrationOpensMinutes,
   createEmptyRaceForm,
   raceHasStaleTx,
   type RaceFormState,
@@ -126,6 +127,15 @@ function RaceFormCardInner({
     const cutoffMinutes = parseHHmmToMinutes(normalizedCutoff);
     if (normalizedCutoff.trim() && cutoffMinutes == null) { onNotify('Time limit must be in HH:mm format', 'error'); return; }
     if (cutoffMinutes === 0) { onNotify('Time limit cannot be 00:00. Clear the field to remove it.', 'error'); return; }
+
+    // #1553: mirrors the cutoffMinutes validation immediately above — reject a non-integer or
+    // negative days/hours value inline before save, rather than letting buildRaceSavePayload
+    // silently write NaN (which JSON.stringify would round-trip as null, storing nothing the
+    // admin actually typed).
+    if (Number.isNaN(combineRegistrationOpensMinutes(form.registrationOpensDaysBefore, form.registrationOpensHoursBefore))) {
+      onNotify('Registration opens days/hours before must be whole, non-negative numbers', 'error');
+      return;
+    }
 
     const payload = buildRaceSavePayload({ ...form, cutoffTime: normalizedCutoff });
     setSaving(true);
@@ -251,6 +261,24 @@ function RaceFormCardInner({
               onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
               onKeyDown={e => timeLimitArrowKey(e as React.KeyboardEvent<HTMLInputElement>, form.cutoffTime, v => set('cutoffTime', v))}
               placeholder="e.g. 12:00" />
+          </Stack>
+          {/* #1553: this race's own registration-opens window, independent of the edition's
+              shared RegistrationOpens/Closes — for Series editions whose races each open on
+              their own schedule (e.g. one short window per race-day). Blank in both fields means
+              no window of its own: this race falls back to the edition-level window unchanged. */}
+          <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+            <TextField
+              size="small" fullWidth label="Registration opens: days before" type="number"
+              value={form.registrationOpensDaysBefore}
+              onChange={e => set('registrationOpensDaysBefore', e.target.value)}
+              inputProps={{ min: 0, step: 1 }}
+            />
+            <TextField
+              size="small" fullWidth label="Registration opens: hours before" type="number"
+              value={form.registrationOpensHoursBefore}
+              onChange={e => set('registrationOpensHoursBefore', e.target.value)}
+              inputProps={{ min: 0, step: 1 }}
+            />
           </Stack>
         </Box>
 

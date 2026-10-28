@@ -167,6 +167,7 @@ describe('getSeriesDatedRaceDates', () => {
     trailDistanceMeters: null,
     trailElevationGain: null,
     activityType: null,
+    registrationOpensMinutesBeforeRace: null,
     ...overrides,
   });
 

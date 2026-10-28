@@ -83,7 +83,11 @@ public static class EditionStatusHelpers
     public static TicketStatus ComputeEffectiveTicketStatus(
         RaceStatus raceStatus,
         TicketStatus storedTicketStatus,
-        RegistrationStatus effectiveEditionRegistrationStatus)
+        RegistrationStatus effectiveEditionRegistrationStatus,
+        DateOnly? dateOfRace,
+        TimeOnly? startTime,
+        int? registrationOpensMinutesBeforeRace,
+        DateTime now)
     {
         // Cancelled/Completed are terminal for the race itself — CancelWithRaces()/
         // CompleteWithRaces() already forced TicketStatus to Closed as part of that cascade, and
@@ -95,6 +99,31 @@ public static class EditionStatusHelpers
         // registration window timing and must not be clobbered by a live computation.
         if (storedTicketStatus == TicketStatus.SoldOut || storedTicketStatus == TicketStatus.AlmostSoldOut)
             return storedTicketStatus;
+
+        // #1553: a Series edition's RegistrationOpens/Closes window is shared across every race
+        // under it, which is wrong when each race actually opens its own short window ending on
+        // its own race day (e.g. Powerade's 6 race-days over 6 months). When this race carries
+        // its own DateOfRace and RegistrationOpensMinutesBeforeRace, that per-race window takes
+        // over entirely and decides NotStarted-vs-Available on its own — independent of whatever
+        // the edition-level window or a sibling race's own offset would otherwise compute.
+        // NotRequired/Invitational remain deliberate overrides on the *edition's* registration
+        // status (same reasoning as the stored SoldOut/AlmostSoldOut check above) and must still
+        // win over this per-race window, so they're excluded from engaging it.
+        if (dateOfRace.HasValue
+            && registrationOpensMinutesBeforeRace.HasValue
+            && effectiveEditionRegistrationStatus != RegistrationStatus.NotRequired
+            && effectiveEditionRegistrationStatus != RegistrationStatus.Invitational)
+        {
+            // Race instant mirrors hasRaceStarted's fallback (frontend/utils/ticketStatus.ts,
+            // #1071/#1553): DateOfRace + StartTime when StartTime is set, else local midnight of
+            // DateOfRace.
+            var raceInstant = startTime.HasValue
+                ? dateOfRace.Value.ToDateTime(startTime.Value)
+                : dateOfRace.Value.ToDateTime(TimeOnly.MinValue);
+            var opensInstant = raceInstant.AddMinutes(-registrationOpensMinutesBeforeRace.Value);
+
+            return now < opensInstant ? TicketStatus.NotStarted : TicketStatus.Available;
+        }
 
         return effectiveEditionRegistrationStatus switch
         {

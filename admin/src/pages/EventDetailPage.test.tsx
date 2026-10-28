@@ -177,6 +177,7 @@ function buildRaceFixture(overrides: Partial<RaceDto> = {}): RaceDto {
     trailDistanceMeters: null,
     trailElevationGain: null,
     activityType: null,
+    registrationOpensMinutesBeforeRace: null,
     ...overrides,
   };
 }

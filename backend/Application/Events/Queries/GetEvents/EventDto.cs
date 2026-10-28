@@ -125,7 +125,12 @@ public record RaceDto(
     string? TrailActivityType = null,
     Dictionary<string, string>? TranslationHashes = null,
     string? ActivityType = null,
-    string ResultType = "Time"
+    string ResultType = "Time",
+    // #1553: per-race registration-opens window, independent of the edition's own
+    // RegistrationOpens/Closes — admin-only (surfaced for Create/Edit Race), never consumed by
+    // the public frontend directly since ComputeEffectiveTicketStatus already folds it into
+    // TicketStatus above.
+    int? RegistrationOpensMinutesBeforeRace = null
 );
 
 public record EventEditionDto(

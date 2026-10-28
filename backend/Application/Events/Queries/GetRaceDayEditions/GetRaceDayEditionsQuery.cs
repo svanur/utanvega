@@ -115,7 +115,9 @@ public class GetRaceDayEditionsQueryHandler : IRequestHandler<GetRaceDayEditions
                     r.DistanceLabel,
                     r.DistanceLabelEn,
                     r.Status.ToString(),
-                    EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
+                    EditionStatusHelpers.ComputeEffectiveTicketStatus(
+                        r.Status, r.TicketStatus, edEffectiveRegStatus,
+                        r.DateOfRace, r.StartTime, r.RegistrationOpensMinutesBeforeRace, now).ToString(),
                     r.SortOrder,
                     r.ActivityType?.ToString(),
                     r.CutoffMinutes,

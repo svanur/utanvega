@@ -255,7 +255,9 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         r.DescriptionEn,
                         r.Status.ToString(),
                         r.SortOrder,
-                        EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
+                        EditionStatusHelpers.ComputeEffectiveTicketStatus(
+                            r.Status, r.TicketStatus, edEffectiveRegStatus,
+                            r.DateOfRace, r.StartTime, r.RegistrationOpensMinutesBeforeRace, now).ToString(),
                         r.MaxParticipants,
                         r.ItraPoints,
                         r.CertifiedBy,
@@ -272,7 +274,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
                         GetTrail(r.TrailId)?.ActivityTypeId.ToString(),
                         TranslationHashes: null,
                         ActivityType: r.ActivityType?.ToString(),
-                        ResultType: r.ResultType.ToString()
+                        ResultType: r.ResultType.ToString(),
+                        RegistrationOpensMinutesBeforeRace: r.RegistrationOpensMinutesBeforeRace
                     ))
                     .ToList(),
                 ed.PhotoGalleries.ToPublicDtos(),
