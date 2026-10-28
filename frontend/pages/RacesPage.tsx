@@ -74,7 +74,7 @@ import { API_URL } from '../hooks/useTrails';
 import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
-import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
+import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllSoldOut, hasRaceStarted, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
 import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
 import { toCopyableEventRows, formatEventListForClipboard, formatListHeading, formatActiveFiltersSummary } from '../utils/copyListToClipboard';
 import type { ActiveFilterLine } from '../utils/copyListToClipboard';
@@ -1396,7 +1396,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             }
                                             leftActions={
                                                 <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                                    {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && isRegistrationRequiredForRace(race.ticketStatus) && (
+                                                    {race.registrationUrl && !hasRaceStarted(race.dateOfRace, race.startTime, new Date(nowMs)) && isRegistrationRequiredForRace(race.ticketStatus) && (
                                                         <Box
                                                             component="a"
                                                             href={race.registrationUrl}
@@ -1466,7 +1466,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                             </Stack>
                                                             {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
                                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
-                                                                    {race.registrationUrl && raceDaysUntil != null && raceDaysUntil >= 0 && isRegistrationRequiredForRace(race.ticketStatus) && (
+                                                                    {race.registrationUrl && !hasRaceStarted(race.dateOfRace, race.startTime, new Date(nowMs)) && isRegistrationRequiredForRace(race.ticketStatus) && (
                                                                         <Button size="small" variant="contained" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                             {t('races.register', 'Register')}
                                                                         </Button>

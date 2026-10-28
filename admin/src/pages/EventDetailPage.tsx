@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useId, useRef, type ReactNode } from 'react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import dayjs, { type Dayjs } from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -116,6 +118,14 @@ import {
   editionsAffectedByEventCancel,
   getSeriesDatedRaceDates,
 } from '../utils/eventHelpers';
+
+// RegistrationOpens/Closes arrive from the GET DTO as Kind=Utc DateTime (EditionStatusHelpers.AsUtc
+// relabels, doesn't convert), so System.Text.Json serializes them with a trailing Z. Parsing that
+// with plain dayjs(...) would read the literal digits back through local-timezone getters, shifting
+// the displayed time in any non-UTC browser — the save path already avoids the equivalent mistake by
+// formatting without an offset before sending. dayjs.utc(...) keeps both directions consistent: the
+// literal stored digits are the display value, never converted (#1071).
+dayjs.extend(utc);
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 
@@ -622,14 +632,20 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
             Registration
           </Typography>
           <Stack direction="row" spacing={1.5}>
-            <DatePicker label="Registration opens"
-              value={form.registrationOpens ? dayjs(form.registrationOpens) : null}
-              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DD') : '')}
+            <DateTimePicker label="Registration opens"
+              // dayjs.utc(...), not dayjs(...) — the stored value has no real timezone, only a Z
+              // suffix from AsUtc's relabel (see the dayjs.extend(utc) comment above). Parsing in
+              // UTC mode keeps the displayed time the literal stored digits, regardless of the
+              // admin browser's own timezone.
+              value={form.registrationOpens ? dayjs.utc(form.registrationOpens) : null}
+              // Full instant now (#1071), not just a calendar day — stored without a timezone
+              // offset, matching EditionStatusHelpers.AsUtc's "relabel rather than convert" contract.
+              onChange={v => set('registrationOpens', v ? v.format('YYYY-MM-DDTHH:mm:ss') : '')}
               referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
-            <DatePicker label="Registration closes"
-              value={form.registrationCloses ? dayjs(form.registrationCloses) : null}
-              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DD') : '')}
+            <DateTimePicker label="Registration closes"
+              value={form.registrationCloses ? dayjs.utc(form.registrationCloses) : null}
+              onChange={v => set('registrationCloses', v ? v.format('YYYY-MM-DDTHH:mm:ss') : '')}
               referenceDate={referenceDate}
               slotProps={{ textField: { size: 'small', fullWidth: true } }} />
           </Stack>

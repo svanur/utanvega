@@ -173,13 +173,14 @@ public class EditionStatusHelpersTests
     }
 
     [Fact]
-    public void ComputeEffectiveRegistrationStatus_LateOnTheClosesDateItself_StillReturnsOpen()
+    public void ComputeEffectiveRegistrationStatus_JustBeforeClosesInstant_ReturnsOpen()
     {
-        // RegistrationCloses is a date-only pick under the hood (midnight UTC via AsUtc) — the
-        // whole calendar day it names must still read as Open, not just the instant of midnight.
+        // RegistrationCloses now carries real time-of-day precision — a moment just before the
+        // stored instant on the closes day itself must still read as Open (#1071), not rolled
+        // forward to the end of the calendar day like the old date-only fudge did.
         var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
-        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
-        var now = new DateTime(2026, 3, 1, 23, 59, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 9, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 3, 1, 8, 59, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
             EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
@@ -188,8 +189,42 @@ public class EditionStatusHelpersTests
     }
 
     [Fact]
-    public void ComputeEffectiveRegistrationStatus_MidnightStartingTheDayAfterCloses_ReturnsClosed()
+    public void ComputeEffectiveRegistrationStatus_AtOrAfterClosesInstant_ReturnsClosed()
     {
+        // Same closes day, but at/after the exact stored instant — must read Closed immediately,
+        // not stay Open through the rest of the calendar day (#1071).
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 9, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 3, 1, 9, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Closed, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_MidnightUtcCloses_StaysOpenThroughClosesDay()
+    {
+        // Legacy rows (and every edition still created via EventWizardPage's date-only
+        // DatePicker) store RegistrationCloses as exact midnight UTC. "Now" later the same day
+        // must still read Open — the date-only fudge treats midnight as "end of that day", not
+        // "start of it" (#1071 regression caught in PR #1551 review).
+        var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
+        var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var now = new DateTime(2026, 3, 1, 23, 0, 0, DateTimeKind.Utc);
+
+        var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
+            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+
+        Assert.Equal(RegistrationStatus.Open, result);
+    }
+
+    [Fact]
+    public void ComputeEffectiveRegistrationStatus_MidnightUtcCloses_ClosedTheDayAfter()
+    {
+        // Mirror of the test above: once the calendar day after the stored midnight-UTC date
+        // has begun, the window is genuinely over.
         var opens = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc);
         var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
         var now = new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc);
