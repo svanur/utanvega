@@ -127,11 +127,46 @@ public record RaceDto(
     string? ActivityType = null,
     string ResultType = "Time",
     // #1553: per-race registration-opens window, independent of the edition's own
-    // RegistrationOpens/Closes. RaceDto is the shared DTO for both unauthenticated public
-    // endpoints (GET /api/v1/events and GET /api/v1/events/{slug}) and the admin UI, so this
-    // field IS present in the public response shape, not admin-only — the value is a plain
-    // int offset with no sensitivity, so this is intentional, not a leak to fix.
+    // RegistrationOpens/Closes. As of #1562, RaceDto itself is admin-only (see RacePublicDto
+    // below) — the int offset carries no sensitivity, so keeping it off the public shape is
+    // about trimming admin-only surface area, not closing a leak.
     int? RegistrationOpensMinutesBeforeRace = null
+);
+
+// Narrowed public-facing projection of RaceDto — withholds DistanceLabelEn, ResultType,
+// TranslationHashes and RegistrationOpensMinutesBeforeRace, none of which any frontend
+// consumer reads (confirmed by grep; admin's useEvents.ts is the only reader of all four).
+// Same pattern as OrganizerPublicDto/PhotographerPublicDto (#1562).
+public record RacePublicDto(
+    Guid Id,
+    Guid EventEditionId,
+    Guid? TrailId,
+    string? TrailName,
+    string? TrailSlug,
+    string Name,
+    string? NameEn,
+    string? DistanceLabel,
+    int? CutoffMinutes,
+    string? Description,
+    string? DescriptionEn,
+    string Status,
+    int SortOrder,
+    string TicketStatus,
+    int? MaxParticipants,
+    int? ItraPoints,
+    string? CertifiedBy,
+    string? CertifiedByEn,
+    decimal PrizeMoney,
+    string? ChampionshipCategory,
+    string? ChampionshipCategoryEn,
+    DateOnly? DateOfRace,
+    TimeOnly? StartTime,
+    double? TrailDistanceMeters,
+    double? TrailElevationGain,
+    string? TrailTerrainType = null,
+    string? TrailDifficulty = null,
+    string? TrailActivityType = null,
+    string? ActivityType = null
 );
 
 public record EventEditionDto(

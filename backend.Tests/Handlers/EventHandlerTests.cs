@@ -2191,6 +2191,95 @@ public class EventHandlerTests : IDisposable
         Assert.True(editionDto.NeedsReview);
     }
 
+    // ─── #1562: RaceDto admin/public split ───
+    // GetPublicEventQuery/GetPublicEventQueryHandler back only the public
+    // GET /api/v1/events/{slug} endpoint; GetEventQuery (IncludeHidden: true) remains the
+    // admin path. Both share EventDetailComputer — these tests assert the one thing that
+    // must differ between them: which four RaceDto fields make it into the response.
+
+    [Fact]
+    public async Task GetPublicEventQuery_BySlug_RaceShapeOmitsAdminOnlyFields()
+    {
+        var ev = CreateTestEvent("Public Split Event");
+        ev.Slug = "public-split-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "10K",
+            DistanceLabel = "10 km",
+            DistanceLabelEn = "10 km (en)",
+            RegistrationOpensMinutesBeforeRace = 30,
+            SortOrder = 0,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetPublicEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetPublicEventQuery("public-split-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var raceDto = Assert.Single(Assert.Single(result!.Editions).Races);
+        // Fields that must survive the split, unchanged.
+        Assert.Equal("10K", raceDto.Name);
+        Assert.Equal("10 km", raceDto.DistanceLabel);
+
+        // RacePublicDto must never gain these back — reflection guards against the shape
+        // silently regaining a field if someone copies it from RaceDto later.
+        var raceDtoType = raceDto.GetType();
+        Assert.Equal(nameof(RacePublicDto), raceDtoType.Name);
+        Assert.Null(raceDtoType.GetProperty("DistanceLabelEn"));
+        Assert.Null(raceDtoType.GetProperty("ResultType"));
+        Assert.Null(raceDtoType.GetProperty("TranslationHashes"));
+        Assert.Null(raceDtoType.GetProperty("RegistrationOpensMinutesBeforeRace"));
+    }
+
+    [Fact]
+    public async Task GetEventQuery_AdminPath_RaceShapeStillIncludesAllFields()
+    {
+        var ev = CreateTestEvent("Admin Split Event");
+        ev.Slug = "admin-split-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "10K",
+            DistanceLabel = "10 km",
+            DistanceLabelEn = "10 km (en)",
+            RegistrationOpensMinutesBeforeRace = 30,
+            SortOrder = 0,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("admin-split-event", IncludeHidden: true), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var raceDto = Assert.Single(Assert.Single(result!.Editions).Races);
+        Assert.Equal("10 km (en)", raceDto.DistanceLabelEn);
+        Assert.Equal(30, raceDto.RegistrationOpensMinutesBeforeRace);
+        Assert.Equal(ResultType.Time.ToString(), raceDto.ResultType);
+    }
+
     // ─── GetEventQuery — live-derived edition dates / next date (#1320) ───
     // GetEventsQuery already derives a Series edition's Date/EndDate live from its races
     // (ComputeEffectiveEditionDates, #1070); GetEventQuery (this single-event handler) never got

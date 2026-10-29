@@ -1761,7 +1761,7 @@ app.MapGet("/api/v1/events/suggestions", async (string slug, IMediator mediator)
 
 app.MapGet("/api/v1/events/{slug}", async (string slug, IMediator mediator) =>
 {
-    var ev = await mediator.Send(new GetEventQuery(slug));
+    var ev = await mediator.Send(new GetPublicEventQuery(slug));
     return ev != null ? Results.Ok(ev) : Results.NotFound();
 })
 .WithName("GetEventBySlug");

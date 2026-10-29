@@ -63,6 +63,9 @@ public class CacheInvalidator : ICacheInvalidator
         {
             _cache.Remove(CacheKeys.Event(slug, false));
             _cache.Remove(CacheKeys.Event(slug, true));
+            // #1562: GetPublicEventQuery's own key — separate from Event(slug, false) above,
+            // which no longer has a live caller but stays removed here for safety.
+            _cache.Remove(CacheKeys.EventPublic(slug));
         }
     }
 
