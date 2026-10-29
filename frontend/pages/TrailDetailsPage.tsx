@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick, trackTrailDirectionsClick } from '../utils/analytics';
 import { downloadTrailGpx } from '../utils/trailGpxDownload';
+import { toggleCheckIn } from '../utils/trailCheckInToggle';
 import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -324,27 +325,23 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         });
     };
 
+    // Branching logic (not-logged-in redirect, check-in vs. check-out, toast vs.
+    // thrown-error handling) lives in trailCheckInToggle.ts, unit-tested there (#1568).
     const handleToggleCheckIn = async () => {
-        if (!user) {
-            setLoginModalOpen(true);
-            return;
-        }
-
-        setCheckInError(null);
-        try {
-            suppressRealtimeToastUntilRef.current = Date.now() + 2000;
-            if (isCheckedIn) {
-                await checkOut();
-                setToastSeverity('info');
-                setToastMessage(t('trail.checkInToastCheckedOut'));
-            } else {
-                await checkIn();
-                setToastSeverity('info');
-                setToastMessage(t('trail.checkInToastCheckedIn'));
-            }
-        } catch (error) {
-            setCheckInError(error instanceof Error ? error.message : t('trail.checkInActionFailed'));
-        }
+        await toggleCheckIn({
+            user,
+            isCheckedIn,
+            checkIn,
+            checkOut,
+            t,
+            setLoginModalOpen,
+            setCheckInError,
+            setToastSeverity,
+            setToastMessage,
+            markSuppressRealtimeToast: () => {
+                suppressRealtimeToastUntilRef.current = Date.now() + 2000;
+            },
+        });
     };
 
     const handleStillHere = async () => {
