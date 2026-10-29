@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick, trackTrailDirectionsClick } from '../utils/analytics';
+import { downloadTrailGpx } from '../utils/trailGpxDownload';
 import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -307,29 +308,20 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
     // fetch() instead of a plain <a href download> anchor so a 404 (stale slug,
     // GPX regeneration race, etc.) shows an in-app toast rather than replacing
-    // the whole SPA with the browser's native error page (#1552).
+    // the whole SPA with the browser's native error page (#1552). Fetch/error-
+    // branching logic itself lives in trailGpxDownload.ts, unit-tested there (#1559).
     const handleGpxDownload = async () => {
         if (!trail) return;
-        const url = `${API_URL}/api/v1/trails/${trail.slug}/gpx${i18n.language === 'en' ? '?lang=en' : ''}`;
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                setToastSeverity('error');
-                setToastMessage(t('trail.gpxDownloadFailed'));
-                return;
-            }
-            const blob = await response.blob();
-            const objectUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = objectUrl;
-            a.download = `${trail.slug}.gpx`;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-            trackTrailGpxDownload(trail.slug);
-        } catch {
-            setToastSeverity('error');
-            setToastMessage(t('trail.gpxDownloadFailed'));
-        }
+        await downloadTrailGpx({
+            fetchImpl: fetch,
+            apiUrl: API_URL,
+            slug: trail.slug,
+            language: i18n.language,
+            t,
+            setToastSeverity,
+            setToastMessage,
+            trackTrailGpxDownload,
+        });
     };
 
     const handleToggleCheckIn = async () => {
