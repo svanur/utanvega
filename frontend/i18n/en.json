@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_4": {
+                "title": "Independent per-race registration windows, and a GPX download fix",
+                "description": "Races in a series can now open registration on their own schedule instead of inheriting the edition's, with full time-of-day precision and the Register button hiding once a race starts. Admin's edition dialog previews the resolved registration-opens date and time for each race and shows how many races use their own offset, with a hint that per-race fields fall back to the edition's. Downloading a trail's GPX file now uses a proper fetch instead of a raw link, so a missing file shows an error instead of navigating away from the site."
+            },
             "v1_17_3": {
                 "title": "Admin: event, trail and race names no longer get machine-translated",
                 "description": "The \"Translate to EN\" button in admin was running proper-noun names (event, trail and race names) through the translation service, producing garbled English names. Names are now copied over as-is, while descriptions and other fields continue to be translated as before."
