@@ -631,6 +631,15 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
           >
             Registration
           </Typography>
+          {/* #1569: a Series edition's window below is a fallback only — any race with its own
+              "Registration opens: days/hours before" offset (RaceFormCard, #1553) ignores it
+              entirely and computes its own opening instant from its own race day instead
+              (EditionStatusHelpers.ComputeEffectiveTicketStatus). */}
+          {eventType === 'Series' && (
+            <FormHelperText sx={{ mt: -0.5, mb: 1 }}>
+              Fallback only: races with their own "Registration opens" offset ignore this window entirely.
+            </FormHelperText>
+          )}
           <Stack direction="row" spacing={1.5}>
             <DateTimePicker label="Registration opens"
               // dayjs.utc(...), not dayjs(...) — the stored value has no real timezone, only a Z
