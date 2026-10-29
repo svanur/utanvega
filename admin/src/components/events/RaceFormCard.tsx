@@ -264,7 +264,7 @@ function RaceFormCardInner({
               onChange={(_, v) => set('trailId', v?.id ?? '')}
               renderInput={params => <TextField {...params} label="Trail" />}
             />
-            <TextField size="small" fullWidth label="Time limit (HH:mm)" value={form.cutoffTime}
+            <TextField size="small" fullWidth label="Time limit" value={form.cutoffTime}
               onChange={e => set('cutoffTime', normalizeCutoffTimeInput(e.target.value))}
               onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
               onKeyDown={e => timeLimitArrowKey(e as React.KeyboardEvent<HTMLInputElement>, form.cutoffTime, v => set('cutoffTime', v))}
@@ -276,13 +276,13 @@ function RaceFormCardInner({
               no window of its own: this race falls back to the edition-level window unchanged. */}
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
             <TextField
-              size="small" fullWidth label="Opens: days before" type="number"
+              size="small" fullWidth label="Days before" type="number"
               value={form.registrationOpensDaysBefore}
               onChange={e => set('registrationOpensDaysBefore', e.target.value)}
               inputProps={{ min: 0, step: 1 }}
             />
             <TextField
-              size="small" fullWidth label="Opens: hours before" type="number"
+              size="small" fullWidth label="Hours before" type="number"
               value={form.registrationOpensHoursBefore}
               onChange={e => set('registrationOpensHoursBefore', e.target.value)}
               inputProps={{ min: 0, step: 1 }}
@@ -346,13 +346,13 @@ function RaceFormCardInner({
           <SectionLabel>Details</SectionLabel>
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
             <FormControl size="small" fullWidth>
-              <InputLabel>Activity type</InputLabel>
-              <Select value={form.activityType} label="Activity type" onChange={e => set('activityType', e.target.value as typeof form.activityType)}>
+              <InputLabel>Activity</InputLabel>
+              <Select value={form.activityType} label="Activity" onChange={e => set('activityType', e.target.value as typeof form.activityType)}>
                 <MenuItem value=""><em>Inherit from event</em></MenuItem>
                 {ACTIVITY_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
               </Select>
             </FormControl>
-            <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
+            <TextField size="small" fullWidth label="ITRA pts" type="number" value={form.itraPoints}
               inputProps={{ min: 0, max: 6, step: 1 }}
               onKeyDown={e => {
                 // The ArrowUp key is unambiguous (unlike a digit key, it can never be a
@@ -402,7 +402,7 @@ function RaceFormCardInner({
             <TextField size="small" fullWidth label="Prize money" type="number" value={form.prizeMoney}
               onChange={e => set('prizeMoney', e.target.value)} />
             <BilingualTextField
-              size="small" fullWidth label="Championship category"
+              size="small" fullWidth label="Category"
               valueIs={form.championshipCategory} valueEn={form.championshipCategoryEn}
               onChangeIs={v => set('championshipCategory', v)} onChangeEn={v => set('championshipCategoryEn', v)}
             />
