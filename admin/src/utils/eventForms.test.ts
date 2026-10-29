@@ -9,6 +9,7 @@ import {
   recomputeYearlyWeekdayDate,
   splitRegistrationOpensMinutes,
   combineRegistrationOpensMinutes,
+  computeRegistrationOpensPreview,
 } from './eventForms';
 import type { ScheduleRule } from '../hooks/useEvents';
 
@@ -308,5 +309,42 @@ describe('combineRegistrationOpensMinutes', () => {
   it('round-trips through splitRegistrationOpensMinutes for a representative value', () => {
     const { days, hours } = splitRegistrationOpensMinutes(3060);
     expect(combineRegistrationOpensMinutes(days, hours)).toBe(3060);
+  });
+});
+
+// #1563: the live preview shown below the days/hours-before fields in RaceFormCard — covers the
+// four states it can land in, plus the raceInstant formula it mirrors from
+// EditionStatusHelpers.ComputeEffectiveTicketStatus (backend).
+describe('computeRegistrationOpensPreview', () => {
+  it('returns none when both days and hours are blank', () => {
+    expect(computeRegistrationOpensPreview('2026-03-03', '19:30', '', '')).toEqual({ kind: 'none' });
+  });
+
+  it('returns needsDate when a days/hours value is set but dateOfRace is empty', () => {
+    expect(computeRegistrationOpensPreview('', '19:30', '2', '0')).toEqual({ kind: 'needsDate' });
+  });
+
+  it('returns invalid when combineRegistrationOpensMinutes would be NaN, even with no date set', () => {
+    expect(computeRegistrationOpensPreview('', '', '-1', '0')).toEqual({ kind: 'invalid' });
+  });
+
+  it('returns invalid for a non-integer hours value', () => {
+    expect(computeRegistrationOpensPreview('2026-03-03', '19:30', '0', '2.5')).toEqual({ kind: 'invalid' });
+  });
+
+  it('computes the resolved instant from dateOfRace + startTime minus the combined minutes', () => {
+    const result = computeRegistrationOpensPreview('2026-03-03', '19:30', '2', '0');
+    expect(result.kind).toBe('computed');
+    if (result.kind === 'computed') {
+      expect(result.opensAt.format('YYYY-MM-DD HH:mm')).toBe('2026-03-01 19:30');
+    }
+  });
+
+  it('falls back to local midnight of dateOfRace when startTime is blank', () => {
+    const result = computeRegistrationOpensPreview('2026-03-03', '', '2', '0');
+    expect(result.kind).toBe('computed');
+    if (result.kind === 'computed') {
+      expect(result.opensAt.format('YYYY-MM-DD HH:mm')).toBe('2026-03-01 00:00');
+    }
   });
 });
