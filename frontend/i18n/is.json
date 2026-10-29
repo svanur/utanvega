@@ -170,6 +170,7 @@
         "getDirections": "Leiðsögn að upphafsstað",
         "downloadGpx": "Hlaða niður GPX skrá",
         "gpxLabel": "GPX",
+        "gpxDownloadFailed": "Ekki tókst að hlaða niður GPX skránni. Vinsamlegast reyndu aftur síðar.",
         "relatedTrails": "Tengdar leiðir",
         "outAndBack": "Fram og til baka",
         "loop": "Hringur",
@@ -832,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_4": {
+                "title": "'Skráning opnar' fyrir seríu-hlaup og lagfæring á GPX-niðurhali",
+                "description": "Hlaup í seríu geta nú opnað skráningu á eigin tímasetningu í stað þess að erfa tímasetningu útgáfunnar. Takkinn \"Skráning\" birtist þegar skráning er í gangi og hverfur sjálfkrafa þegar hlaup er hafið. Niðurhal á GPX-skrá leiðar notar nú fetch í stað beinnar tengils-tilvísunar, svo vöntun á skrá birtir villu í stað þess að vafra burt úr vefnum."
+            },
             "v1_17_3": {
                 "title": "Stjórnborð: nöfn viðburða, leiða og keppnishlaupa ekki þýdd sjálfkrafa.",
                 "description": "Takkinn \"Translate to EN\" í stjórnborði keyrði séreiginnöfn (nöfn viðburða, leiða og keppnishlaupa) í gegnum þýðingarþjónustu, sem skilaði brengluðum enskum nöfnum. Nöfn eru nú afrituð óbreytt, en lýsingar og önnur svæði eru þýdd eins og áður."

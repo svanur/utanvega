@@ -61,6 +61,9 @@ export interface RaceDto {
     trailElevationGain: number | null;
     activityType: ActivityType | null;
     translationHashes?: Record<string, string>;
+    // #1553: independent per-race registration-opens window — null means "no window of its own,
+    // fall back to the edition's shared RegistrationOpens/Closes".
+    registrationOpensMinutesBeforeRace: number | null;
 }
 
 // Mirrors backend's PublicPhotoGalleryDto (and frontend's identically-shaped PublicPhotoGallery)
@@ -285,6 +288,7 @@ export interface CreateRaceInput {
     championshipCategoryEn?: string;
     dateOfRace?: string | null;
     startTime?: string | null;
+    registrationOpensMinutesBeforeRace?: number | null;
 }
 
 export interface UpdateRaceInput {
@@ -312,6 +316,7 @@ export interface UpdateRaceInput {
     startTime?: string | null;
     activityType?: ActivityType | null;
     translationHashes?: Record<string, string>;
+    registrationOpensMinutesBeforeRace?: number | null;
 }
 
 export interface GenerateEditionsForSeasonInput {

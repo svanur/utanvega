@@ -52,19 +52,28 @@ public static class EditionStatusHelpers
         if (registrationOpens.HasValue && registrationCloses.HasValue)
         {
             if (now < registrationOpens.Value) return RegistrationStatus.NotStarted;
-            // RegistrationCloses is a date-only value under the hood (the admin's DatePicker only
-            // captures a calendar day, stored as midnight UTC via AsUtc) — treat the closes-date
-            // itself as still open through its full 24 hours, i.e. compare against the start of
-            // the *next* day, not the instant stored. Otherwise the entire last intended day of
-            // registration would read as Closed from 00:00 UTC, same class of bug Date/EndDate's
-            // date-granularity IsPast already avoids for this same entity.
-            if (now >= registrationCloses.Value.Date.AddDays(1)) return RegistrationStatus.Closed;
+            if (now >= EffectiveRegistrationClosesInstant(registrationCloses.Value)) return RegistrationStatus.Closed;
             return RegistrationStatus.Open;
         }
 
         // No window to compute from — today's behaviour, unchanged.
         return storedStatus;
     }
+
+    // RegistrationCloses now carries real time-of-day precision for editions entered via
+    // EventDetailPage's DateTimePicker (#1071), but two sources still write exact
+    // midnight-UTC: every legacy row saved before #1071, and every new edition created via
+    // EventWizardPage's date-only DatePicker (still YYYY-MM-DD, deliberately out of scope for
+    // this fix — see PR). Comparing those directly against `now` would flip them to Closed at
+    // the start of the closes day instead of the end of it, a full day early. Midnight UTC is
+    // not a plausible *real* closing instant for a race (registration desks don't close at
+    // 00:00:00), so it's safe to read "exactly midnight" as the date-only fudge and roll it
+    // forward to the end of that day; any other time-of-day is a genuine DateTimePicker instant
+    // and is compared as-is. Mirrored in frontend/utils/ticketStatus.ts's hasRegistrationClosed.
+    private static DateTime EffectiveRegistrationClosesInstant(DateTime registrationCloses) =>
+        registrationCloses.TimeOfDay == TimeSpan.Zero
+            ? registrationCloses.AddDays(1)
+            : registrationCloses;
 
     // TicketStatus is stored per-race (set by hand via the admin dropdown, or forced by
     // CancelWithRaces()/CompleteWithRaces()/CreateRaceCommand) but the same "derive live, don't
@@ -74,7 +83,11 @@ public static class EditionStatusHelpers
     public static TicketStatus ComputeEffectiveTicketStatus(
         RaceStatus raceStatus,
         TicketStatus storedTicketStatus,
-        RegistrationStatus effectiveEditionRegistrationStatus)
+        RegistrationStatus effectiveEditionRegistrationStatus,
+        DateOnly? dateOfRace,
+        TimeOnly? startTime,
+        int? registrationOpensMinutesBeforeRace,
+        DateTime now)
     {
         // Cancelled/Completed are terminal for the race itself — CancelWithRaces()/
         // CompleteWithRaces() already forced TicketStatus to Closed as part of that cascade, and
@@ -86,6 +99,31 @@ public static class EditionStatusHelpers
         // registration window timing and must not be clobbered by a live computation.
         if (storedTicketStatus == TicketStatus.SoldOut || storedTicketStatus == TicketStatus.AlmostSoldOut)
             return storedTicketStatus;
+
+        // #1553: a Series edition's RegistrationOpens/Closes window is shared across every race
+        // under it, which is wrong when each race actually opens its own short window ending on
+        // its own race day (e.g. Powerade's 6 race-days over 6 months). When this race carries
+        // its own DateOfRace and RegistrationOpensMinutesBeforeRace, that per-race window takes
+        // over entirely and decides NotStarted-vs-Available on its own — independent of whatever
+        // the edition-level window or a sibling race's own offset would otherwise compute.
+        // NotRequired/Invitational remain deliberate overrides on the *edition's* registration
+        // status (same reasoning as the stored SoldOut/AlmostSoldOut check above) and must still
+        // win over this per-race window, so they're excluded from engaging it.
+        if (dateOfRace.HasValue
+            && registrationOpensMinutesBeforeRace.HasValue
+            && effectiveEditionRegistrationStatus != RegistrationStatus.NotRequired
+            && effectiveEditionRegistrationStatus != RegistrationStatus.Invitational)
+        {
+            // Race instant mirrors hasRaceStarted's fallback (frontend/utils/ticketStatus.ts,
+            // #1071/#1553): DateOfRace + StartTime when StartTime is set, else local midnight of
+            // DateOfRace.
+            var raceInstant = startTime.HasValue
+                ? dateOfRace.Value.ToDateTime(startTime.Value)
+                : dateOfRace.Value.ToDateTime(TimeOnly.MinValue);
+            var opensInstant = raceInstant.AddMinutes(-registrationOpensMinutesBeforeRace.Value);
+
+            return now < opensInstant ? TicketStatus.NotStarted : TicketStatus.Available;
+        }
 
         return effectiveEditionRegistrationStatus switch
         {
@@ -198,8 +236,11 @@ public static class EditionStatusHelpers
 
     // Npgsql requires Kind=Utc for a "timestamp with time zone" column. Admin-submitted
     // RegistrationOpens/Closes values arrive via System.Text.Json with Kind=Unspecified (no
-    // offset in the payload) — relabel rather than convert, since the admin's date picker has
-    // no timezone concept of its own to convert from.
+    // offset in the payload) — relabel rather than convert, since the admin's date*time* picker
+    // (#1071) has no timezone concept of its own to convert from. The same relabel-not-convert
+    // contract applies symmetrically on read: EventDetailPage.tsx parses the resulting Kind=Utc
+    // (Z-suffixed) value with dayjs.utc(...), not plain dayjs(...), so the displayed time is the
+    // literal stored digits rather than a real UTC instant converted to the admin's own timezone.
     public static DateTime? AsUtc(DateTime? value) =>
         value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
 }

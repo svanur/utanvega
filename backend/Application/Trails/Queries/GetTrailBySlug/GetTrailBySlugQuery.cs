@@ -74,7 +74,8 @@ public class GetTrailBySlugQueryHandler : IRequestHandler<GetTrailBySlugQuery, T
                     daysUntil = _scheduleEngine.GetDaysUntilNext(r.EventEdition.Event.ScheduleRule);
 
                 var effectiveTicketStatus = EditionStatusHelpers.ComputeEffectiveTicketStatus(
-                    r.Status, r.TicketStatus, effectiveRegStatusByEdition[r.EventEdition.Id]);
+                    r.Status, r.TicketStatus, effectiveRegStatusByEdition[r.EventEdition.Id],
+                    r.DateOfRace, r.StartTime, r.RegistrationOpensMinutesBeforeRace, now);
 
                 return new LinkedRaceDto(
                     r.EventEdition.Event.Name,

@@ -1045,6 +1045,49 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_Race_WithRegistrationOpensMinutesBeforeRace_PersistsIt()
+    {
+        // #1553: the per-race registration-opens window threads through CreateRaceCommand into
+        // the entity, same as every other race field.
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var raceCtx = _factory.CreateContext();
+        var handler = new CreateRaceCommandHandler(raceCtx, _cacheInvalidator);
+        var id = await handler.Handle(new CreateRaceCommand(
+            EventEditionId: edition.Id,
+            TrailId: null,
+            Name: "Leg 1",
+            DistanceLabel: "10 km",
+            CutoffMinutes: null,
+            Description: null,
+            Status: "Active",
+            SortOrder: 0,
+            TicketStatus: "Available",
+            ResultType: "Time",
+            MaxParticipants: null,
+            ItraPoints: null,
+            CertifiedBy: null,
+            PrizeMoney: 0,
+            ChampionshipCategory: null,
+            DateOfRace: new DateOnly(2026, 6, 10),
+            StartTime: new TimeOnly(19, 30),
+            RegistrationOpensMinutesBeforeRace: 2880
+        ), CancellationToken.None);
+
+        using var verifyCtx = _factory.CreateContext();
+        var race = verifyCtx.Races.Find(id);
+        Assert.NotNull(race);
+        Assert.Equal(2880, race!.RegistrationOpensMinutesBeforeRace);
+    }
+
+    [Fact]
     public async Task Create_Race_UnderCompletedEdition_ForcesCompletedAndClosed()
     {
         var ev = CreateTestEvent();
@@ -1228,6 +1271,92 @@ public class EventHandlerTests : IDisposable
             Assert.Equal("10K Competitive", updated!.Name);
             Assert.Equal(120, updated.CutoffMinutes);
             Assert.Equal(TicketStatus.SoldOut, updated.TicketStatus);
+        }
+    }
+
+    [Fact]
+    public async Task Update_Race_RegistrationOpensMinutesBeforeRace_RoundTripsSetAndCleared()
+    {
+        // #1553: set-then-clear round trip — UpdateRaceCommand always writes whatever the client
+        // sent (unlike CutoffMinutes, which has no "patch-if-provided" special case either), so a
+        // null in the request must clear a previously-set value, not leave it untouched.
+        var ev = CreateTestEvent();
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "Leg 2",
+            SortOrder = 1,
+            DateOfRace = new DateOnly(2026, 7, 10),
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id,
+                TrailId: null,
+                Name: race.Name,
+                DistanceLabel: null,
+                CutoffMinutes: null,
+                Description: null,
+                Status: "Active",
+                SortOrder: race.SortOrder,
+                TicketStatus: "Available",
+                ResultType: "Time",
+                MaxParticipants: null,
+                ItraPoints: null,
+                CertifiedBy: null,
+                PrizeMoney: 0,
+                ChampionshipCategory: null,
+                DateOfRace: race.DateOfRace,
+                StartTime: null,
+                RegistrationOpensMinutesBeforeRace: 1440
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            Assert.Equal(1440, ctx.Races.Find(race.Id)!.RegistrationOpensMinutesBeforeRace);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new UpdateRaceCommandHandler(ctx, _cacheInvalidator);
+            await handler.Handle(new UpdateRaceCommand(
+                Id: race.Id,
+                TrailId: null,
+                Name: race.Name,
+                DistanceLabel: null,
+                CutoffMinutes: null,
+                Description: null,
+                Status: "Active",
+                SortOrder: race.SortOrder,
+                TicketStatus: "Available",
+                ResultType: "Time",
+                MaxParticipants: null,
+                ItraPoints: null,
+                CertifiedBy: null,
+                PrizeMoney: 0,
+                ChampionshipCategory: null,
+                DateOfRace: race.DateOfRace,
+                StartTime: null,
+                RegistrationOpensMinutesBeforeRace: null
+            ), CancellationToken.None);
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            Assert.Null(ctx.Races.Find(race.Id)!.RegistrationOpensMinutesBeforeRace);
         }
     }
 
@@ -2060,6 +2189,95 @@ public class EventHandlerTests : IDisposable
         Assert.NotNull(result);
         var editionDto = Assert.Single(result!.Editions);
         Assert.True(editionDto.NeedsReview);
+    }
+
+    // ─── #1562: RaceDto admin/public split ───
+    // GetPublicEventQuery/GetPublicEventQueryHandler back only the public
+    // GET /api/v1/events/{slug} endpoint; GetEventQuery (IncludeHidden: true) remains the
+    // admin path. Both share EventDetailComputer — these tests assert the one thing that
+    // must differ between them: which four RaceDto fields make it into the response.
+
+    [Fact]
+    public async Task GetPublicEventQuery_BySlug_RaceShapeOmitsAdminOnlyFields()
+    {
+        var ev = CreateTestEvent("Public Split Event");
+        ev.Slug = "public-split-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "10K",
+            DistanceLabel = "10 km",
+            DistanceLabelEn = "10 km (en)",
+            RegistrationOpensMinutesBeforeRace = 30,
+            SortOrder = 0,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetPublicEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetPublicEventQuery("public-split-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var raceDto = Assert.Single(Assert.Single(result!.Editions).Races);
+        // Fields that must survive the split, unchanged.
+        Assert.Equal("10K", raceDto.Name);
+        Assert.Equal("10 km", raceDto.DistanceLabel);
+
+        // RacePublicDto must never gain these back — reflection guards against the shape
+        // silently regaining a field if someone copies it from RaceDto later.
+        var raceDtoType = raceDto.GetType();
+        Assert.Equal(nameof(RacePublicDto), raceDtoType.Name);
+        Assert.Null(raceDtoType.GetProperty("DistanceLabelEn"));
+        Assert.Null(raceDtoType.GetProperty("ResultType"));
+        Assert.Null(raceDtoType.GetProperty("TranslationHashes"));
+        Assert.Null(raceDtoType.GetProperty("RegistrationOpensMinutesBeforeRace"));
+    }
+
+    [Fact]
+    public async Task GetEventQuery_AdminPath_RaceShapeStillIncludesAllFields()
+    {
+        var ev = CreateTestEvent("Admin Split Event");
+        ev.Slug = "admin-split-event";
+        var edition = CreateTestEdition(ev.Id);
+        var race = new Race
+        {
+            Id = Guid.NewGuid(),
+            EventEditionId = edition.Id,
+            Name = "10K",
+            DistanceLabel = "10 km",
+            DistanceLabelEn = "10 km (en)",
+            RegistrationOpensMinutesBeforeRace = 30,
+            SortOrder = 0,
+        };
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            ctx.Races.Add(race);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("admin-split-event", IncludeHidden: true), CancellationToken.None);
+
+        Assert.NotNull(result);
+        var raceDto = Assert.Single(Assert.Single(result!.Editions).Races);
+        Assert.Equal("10 km (en)", raceDto.DistanceLabelEn);
+        Assert.Equal(30, raceDto.RegistrationOpensMinutesBeforeRace);
+        Assert.Equal(ResultType.Time.ToString(), raceDto.ResultType);
     }
 
     // ─── GetEventQuery — live-derived edition dates / next date (#1320) ───

@@ -60,6 +60,15 @@ public class Race
     public DateOnly? DateOfRace { get; set; }
     public TimeOnly? StartTime { get; set; }
 
+    // #1553: Series editions (e.g. Powerade's 6 race-days over 6 months) share one
+    // EventEdition.RegistrationOpens/Closes window across every race in them, which is wrong
+    // when each race actually opens its own short registration window ending on its own race
+    // day. Null means "no independent window — fall back to the edition-level window",
+    // unchanged from today. Closing is already covered independently by
+    // RaceCompletionSweep once DateOfRace passes, so there's no matching "...BeforeRace" closes
+    // field — only opening needed this.
+    public int? RegistrationOpensMinutesBeforeRace { get; set; }
+
     public ActivityType? ActivityType { get; set; }
 
     public string? TranslationHashes { get; set; }

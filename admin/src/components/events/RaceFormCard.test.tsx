@@ -73,7 +73,7 @@ describe('RaceFormCard — ITRA points paste wiring', () => {
 
   it('keeps a pasted "1" in an empty field instead of correcting it to "0" like a spinner click', () => {
     renderRaceFormCard();
-    const input = screen.getByLabelText('ITRA points') as HTMLInputElement;
+    const input = screen.getByLabelText('ITRA pts') as HTMLInputElement;
     expect(input.value).toBe('');
 
     // A real paste always fires a native 'paste' event on the input before the browser applies
@@ -96,7 +96,7 @@ describe('RaceFormCard — ITRA points drag-and-drop wiring', () => {
 
   it('keeps a dropped "1" in an empty field instead of correcting it to "0" like a spinner click', () => {
     renderRaceFormCard();
-    const input = screen.getByLabelText('ITRA points') as HTMLInputElement;
+    const input = screen.getByLabelText('ITRA pts') as HTMLInputElement;
     expect(input.value).toBe('');
 
     fireEvent.drop(input, { dataTransfer: { getData: () => '1' } });

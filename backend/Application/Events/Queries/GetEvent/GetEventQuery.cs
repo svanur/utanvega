@@ -68,8 +68,6 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
     private readonly UtanvegaDbContext _context;
     private readonly IScheduleRuleEngine _scheduleEngine;
 
-    private record TrailDetail(string? Name, string? Slug, double Length, double ElevationGain, Core.Entities.TerrainType? TerrainType, Core.Entities.Difficulty Difficulty, Core.Entities.ActivityType ActivityTypeId, string? YoutubeUrl);
-
     public GetEventQueryHandler(UtanvegaDbContext context, IScheduleRuleEngine scheduleEngine)
     {
         _context = context;
@@ -78,288 +76,78 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
 
     public async Task<EventDetailDto?> Handle(GetEventQuery request, CancellationToken cancellationToken)
     {
-        var ev = await _context.Events
-            .AsNoTracking()
-            .AsSplitQuery()
-            .Include(e => e.Location)
-            .Include(e => e.Organizer)
-            .Include(e => e.Editions)
-                .ThenInclude(ed => ed.Races)
-            .Include(e => e.Editions)
-                .ThenInclude(ed => ed.PhotoGalleries)
-                    .ThenInclude(g => g.Photographer)
-            .FirstOrDefaultAsync(e => e.Slug == request.Slug, cancellationToken);
+        var computed = await EventDetailComputer.ComputeAsync(
+            _context, _scheduleEngine, request.Slug, request.IncludeHidden, cancellationToken);
 
-        if (ev == null) return null;
+        if (computed == null) return null;
 
-        // Hidden events are admin-only. Without this, a hidden event's slug was fully
-        // readable by anyone via the public GET /api/v1/events/{slug} endpoint.
-        // Unlisted stays reachable by direct link — it's only excluded from listings.
-        if (!request.IncludeHidden && ev.Status == EventStatus.Hidden) return null;
+        var ev = computed.Event;
 
-        // Collect all trail IDs from editions (ed.TrailId) and races (r.TrailId)
-        var trailIds = ev.Editions
-            .SelectMany(ed => ed.Races.Select(r => r.TrailId).Append(ed.TrailId))
-            .Where(id => id.HasValue).Select(id => id!.Value)
-            .Distinct().ToHashSet();
-
-        var trailDetails = trailIds.Count > 0
-            ? (await _context.Trails.AsNoTracking()
-                .Where(t => trailIds.Contains(t.Id))
-                .Select(t => new { t.Id, t.Name, t.Slug, t.Status, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl })
-                .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.Id, t =>
-                {
-                    // A race can stay linked to a trail that has since been archived or hidden
-                    // (archiving does not unlink races). The public trail page only serves
-                    // Published/EventOnly, so handing out the slug would render a link that 404s.
-                    // Drop just the slug — name, distance and elevation are still accurate.
-                    var linkable = request.IncludeHidden
-                        || t.Status == TrailStatus.Published
-                        || t.Status == TrailStatus.EventOnly;
-                    return new TrailDetail(t.Name, linkable ? t.Slug : null, t.Length, t.ElevationGain, t.TerrainType, t.Difficulty, t.ActivityTypeId, t.YoutubeUrl);
-                })
-            : new Dictionary<Guid, TrailDetail>();
-
-        TrailDetail? GetTrail(Guid? id) => id.HasValue && trailDetails.TryGetValue(id.Value, out var td) ? td : null;
-
-        var now = DateTime.UtcNow;
-        var today = DateOnly.FromDateTime(now);
-
-        // Hidden editions are admin-only and must never surface in public-facing computations below.
-        // The admin path (IncludeHidden=true) keeps the full picture, same as GetEventsQuery.
-        var publicEditions = request.IncludeHidden
-            ? ev.Editions.ToList()
-            : ev.Editions.Where(ed => ed.Status != EditionStatus.Hidden).ToList();
-
-        // Series editions derive Date/EndDate live from their races' DateOfRace rather than
-        // trusting the stored columns, which nothing keeps in sync — same "derive live, don't
-        // store" precedent as ComputeEffectiveRegistrationStatus, and the same pattern
-        // GetEventsQuery already applies for the events-list endpoint (#1070/#1320). Computed once
-        // per edition here and reused via EffDate/EffEndDate everywhere below that would otherwise
-        // read ed.Date/ed.EndDate raw. A Cancelled race's date must not skew the derived min/max
-        // (#1261) — excluded here same as GetEventsQuery.
-        var effectiveEditionDates = ev.Editions
-            .ToDictionary(
-                ed => ed.Id,
-                ed => EditionStatusHelpers.ComputeEffectiveEditionDates(
-                    ev.Type, ed.Date, ed.EndDate,
-                    EditionStatusHelpers.SeriesRaceDates(ed.Races)));
-
-        DateOnly? EffDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].Date : null;
-        DateOnly? EffEndDate(EventEdition? ed) => ed != null ? effectiveEditionDates[ed.Id].EndDate : null;
-
-        var nextDate = EditionStatusHelpers.ResolveNextEditionDate(
-            publicEditions, today, EffDate, EffEndDate, ev.ScheduleRule, _scheduleEngine);
-
-        // An edition is "ongoing" when it has started (Date <= today) but not yet ended (EndDate ?? Date >= today)
-        var ongoingEdition = publicEditions.FirstOrDefault(ed =>
-            EffDate(ed).HasValue && EffDate(ed)!.Value <= today &&
-            (EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value >= today);
-
-        // Check for recently-past editions (up to 3 days ago)
-        // so events with schedule rules still show as "recently completed"
-        var mostRecentPast = publicEditions
-            .Where(ed => (EffEndDate(ed) ?? EffDate(ed)).HasValue && (EffEndDate(ed) ?? EffDate(ed))!.Value < today)
-            .OrderByDescending(ed => EffEndDate(ed) ?? EffDate(ed))
-            .Select(ed => EffEndDate(ed) ?? EffDate(ed))
-            .FirstOrDefault();
-
-        var recentlyCompleted = ev.Status != EventStatus.Cancelled
-            && ongoingEdition == null
-            && mostRecentPast.HasValue
-            && (today.DayNumber - mostRecentPast.Value.DayNumber) <= 3;
-
-        int? daysUntil;
-        DateOnly? displayDate;
-        if (ongoingEdition != null)
-        {
-            daysUntil = 0;
-            displayDate = EffDate(ongoingEdition);
-        }
-        else if (recentlyCompleted)
-        {
-            daysUntil = mostRecentPast!.Value.DayNumber - today.DayNumber;
-            var recentEdition = ev.Editions.FirstOrDefault(ed => (EffEndDate(ed) ?? EffDate(ed)) == mostRecentPast);
-            displayDate = EffDate(recentEdition) ?? mostRecentPast.Value;
-        }
-        else if (nextDate.HasValue)
-        {
-            daysUntil = nextDate.Value.DayNumber - today.DayNumber;
-            displayDate = nextDate.Value;
-        }
-        else
-        {
-            daysUntil = null;
-            displayDate = null;
-        }
-
-        var upcomingDates = ev.ScheduleRule != null
-            ? _scheduleEngine.GetOccurrencesInRange(ev.ScheduleRule, today, today.AddMonths(12))
-            : new List<DateOnly>();
-
-        // #927: primary race per edition, mirroring GetEditionsHistoryQueryHandler.BuildRow (#806/#815) —
-        // among the edition's *visible* races with a linked trail present in trailDetails, the one
-        // with the greatest trail Length, ties broken by Race.Id. Hidden races are excluded here for
-        // the same reason GetEditionsHistoryQueryHandler, GetEventCalendarQuery and
-        // GetTrailBySlugQuery all exclude them before deriving public-facing terrain/elevation data —
-        // a Hidden race isn't shown anywhere else on this page, so it must not leak its trail's
-        // terrain color into the public header either. PrimaryElevationProfile is filled in below,
-        // after a batched fetch scoped to only the primary trail ids actually selected here.
-        var editionResults = publicEditions
-            .OrderByDescending(ed => EffDate(ed) ?? DateOnly.MinValue)
-            .Select(ed => {
-                // Computed once per edition and reused for every race drawn from it below —
-                // do not re-derive from raw dates a second time.
-                var edEffectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-                    ed.Status, ed.RegistrationStatus, ed.RegistrationOpens, ed.RegistrationCloses, now);
-
-                var primaryTrailId = ed.Races
-                    .Where(r => r.Status != RaceStatus.Hidden && r.TrailId.HasValue && trailDetails.ContainsKey(r.TrailId.Value))
-                    .OrderByDescending(r => trailDetails[r.TrailId!.Value].Length)
-                    .ThenBy(r => r.Id)
-                    .Select(r => r.TrailId)
-                    .FirstOrDefault();
-                var primaryTerrainType = GetTrail(primaryTrailId)?.TerrainType?.ToString();
-
-                var dto = new EventEditionDto(
-                ed.Id,
-                ed.EventId,
-                ed.Year ?? EffDate(ed)?.Year,
-                EffDate(ed),
-                EffEndDate(ed),
-                ed.Title,
-                ed.TitleEn,
-                ed.RegistrationUrl,
-                ed.ResultsUrl,
-                ed.Notes,
-                ed.NotesEn,
-                edEffectiveRegStatus.ToString(),
-                ed.TrailId,
-                GetTrail(ed.TrailId)?.Name,
-                GetTrail(ed.TrailId)?.Slug,
-                ed.Races
-                    .OrderBy(r => r.SortOrder)
-                    .Select(r => new RaceDto(
-                        r.Id,
-                        r.EventEditionId,
-                        r.TrailId,
-                        GetTrail(r.TrailId)?.Name,
-                        GetTrail(r.TrailId)?.Slug,
-                        r.Name,
-                        r.NameEn,
-                        r.DistanceLabel,
-                        r.DistanceLabelEn,
-                        r.CutoffMinutes,
-                        r.Description,
-                        r.DescriptionEn,
-                        r.Status.ToString(),
-                        r.SortOrder,
-                        EditionStatusHelpers.ComputeEffectiveTicketStatus(r.Status, r.TicketStatus, edEffectiveRegStatus).ToString(),
-                        r.MaxParticipants,
-                        r.ItraPoints,
-                        r.CertifiedBy,
-                        r.CertifiedByEn,
-                        r.PrizeMoney,
-                        r.ChampionshipCategory,
-                        r.ChampionshipCategoryEn,
-                        r.DateOfRace,
-                        r.StartTime,
-                        GetTrail(r.TrailId)?.Length,
-                        GetTrail(r.TrailId)?.ElevationGain,
-                        GetTrail(r.TrailId)?.TerrainType?.ToString(),
-                        GetTrail(r.TrailId)?.Difficulty.ToString(),
-                        GetTrail(r.TrailId)?.ActivityTypeId.ToString(),
-                        TranslationHashes: null,
-                        ActivityType: r.ActivityType?.ToString(),
-                        ResultType: r.ResultType.ToString()
-                    ))
-                    .ToList(),
-                ed.PhotoGalleries.ToPublicDtos(),
-                ed.CreatedAt,
-                ed.UpdatedAt,
-                Status: ed.Status.ToString(),
-                EffectiveCancelled: EditionStatusHelpers.ComputeEffectiveCancelled(ed.Status, ed.Races.Select(r => r.Status).ToList()),
-                RegistrationOpens: ed.RegistrationOpens,
-                RegistrationCloses: ed.RegistrationCloses,
-                // NeedsReview is an internal admin bookmark flag. The public path (IncludeHidden=false)
-                // must never leak it; only the admin event-detail path (IncludeHidden=true) sees the real value.
-                NeedsReview: request.IncludeHidden && ed.NeedsReview,
-                // Filled in after the post-loop elevation-profile fetch, keyed by PrimaryTrailId below.
-                PrimaryElevationProfile: null,
-                PrimaryTerrainType: primaryTerrainType
-                );
-
-                return (Dto: dto, PrimaryTrailId: primaryTrailId);
-            })
-            .ToList();
-
-        // #927: elevation profile is fetched only for the distinct primary trail ids actually
-        // selected across this event's editions — mirrors GetEditionsHistoryQueryHandler's post-loop
-        // batched fetch, not a per-edition query.
-        var primaryTrailIds = editionResults
-            .Select(r => r.PrimaryTrailId)
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
-            .Distinct()
-            .ToHashSet();
-
-        var elevationProfiles = primaryTrailIds.Count > 0
-            ? (await _context.Trails
-                .AsNoTracking()
-                .Where(t => primaryTrailIds.Contains(t.Id))
-                .Select(t => new { t.Id, t.ElevationProfile })
-                .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.Id, t => t.ElevationProfile)
-            : new Dictionary<Guid, double[]?>();
-
-        var editions = editionResults
-            .Select(r => r.PrimaryTrailId.HasValue && elevationProfiles.TryGetValue(r.PrimaryTrailId.Value, out var profile)
-                ? r.Dto with { PrimaryElevationProfile = profile }
-                : r.Dto)
-            .ToList();
-
-        var relevantEdition = ongoingEdition
-            ?? (recentlyCompleted
-                ? publicEditions.FirstOrDefault(ed => (EffEndDate(ed) ?? EffDate(ed)) == mostRecentPast)
-                : publicEditions
-                    .Where(ed => EffDate(ed).HasValue && EffDate(ed)!.Value >= today)
-                    .OrderBy(ed => EffDate(ed))
-                    .FirstOrDefault());
-
-        var relevantRaces = relevantEdition?.Races
-            .Where(r => r.Status != RaceStatus.Cancelled)
-            .OrderBy(r => r.SortOrder)
-            .ToList();
-
-        var certifications = relevantRaces?
-            .Select(r => r.CertifiedBy)
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Distinct().Cast<string>().ToList();
-
-        var championshipCategories = relevantRaces?
-            .Select(r => r.ChampionshipCategory)
-            .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Distinct().Cast<string>().ToList();
-
-        var itraPoints = relevantRaces?
-            .Where(r => r.ItraPoints.HasValue)
-            .Select(r => r.ItraPoints!.Value)
-            .Distinct().OrderBy(p => p).ToList();
-
-        var youtubeUrl = relevantRaces?
-            .Select(r => GetTrail(r.TrailId)?.YoutubeUrl)
-            .FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
-
-        var activityTypes = publicEditions
-            .SelectMany(ed => ed.Races)
-            .Where(r => r.Status != RaceStatus.Cancelled)
-            .Select(r => (r.ActivityType?.ToString() ?? GetTrail(r.TrailId)?.ActivityTypeId.ToString()))
-            .Where(a => a != null)
-            .Distinct()
-            .OrderBy(a => a)
-            .Cast<string>()
-            .ToList();
+        var editions = computed.Editions.Select(ec => new EventEditionDto(
+            ec.Edition.Id,
+            ec.Edition.EventId,
+            ec.Edition.Year ?? ec.EffDate?.Year,
+            ec.EffDate,
+            ec.EffEndDate,
+            ec.Edition.Title,
+            ec.Edition.TitleEn,
+            ec.Edition.RegistrationUrl,
+            ec.Edition.ResultsUrl,
+            ec.Edition.Notes,
+            ec.Edition.NotesEn,
+            ec.EffectiveRegistrationStatus,
+            ec.Edition.TrailId,
+            ec.TrailName,
+            ec.TrailSlug,
+            ec.Races
+                .OrderBy(rc => rc.Race.SortOrder)
+                .Select(rc => new RaceDto(
+                    rc.Race.Id,
+                    rc.Race.EventEditionId,
+                    rc.Race.TrailId,
+                    rc.TrailName,
+                    rc.TrailSlug,
+                    rc.Race.Name,
+                    rc.Race.NameEn,
+                    rc.Race.DistanceLabel,
+                    rc.Race.DistanceLabelEn,
+                    rc.Race.CutoffMinutes,
+                    rc.Race.Description,
+                    rc.Race.DescriptionEn,
+                    rc.Race.Status.ToString(),
+                    rc.Race.SortOrder,
+                    rc.TicketStatus,
+                    rc.Race.MaxParticipants,
+                    rc.Race.ItraPoints,
+                    rc.Race.CertifiedBy,
+                    rc.Race.CertifiedByEn,
+                    rc.Race.PrizeMoney,
+                    rc.Race.ChampionshipCategory,
+                    rc.Race.ChampionshipCategoryEn,
+                    rc.Race.DateOfRace,
+                    rc.Race.StartTime,
+                    rc.TrailDistanceMeters,
+                    rc.TrailElevationGain,
+                    rc.TrailTerrainType,
+                    rc.TrailDifficulty,
+                    rc.TrailActivityType,
+                    TranslationHashes: null,
+                    ActivityType: rc.Race.ActivityType?.ToString(),
+                    ResultType: rc.Race.ResultType.ToString(),
+                    RegistrationOpensMinutesBeforeRace: rc.Race.RegistrationOpensMinutesBeforeRace
+                ))
+                .ToList(),
+            ec.Edition.PhotoGalleries.ToPublicDtos(),
+            ec.Edition.CreatedAt,
+            ec.Edition.UpdatedAt,
+            Status: ec.Edition.Status.ToString(),
+            EffectiveCancelled: ec.EffectiveCancelled,
+            RegistrationOpens: ec.Edition.RegistrationOpens,
+            RegistrationCloses: ec.Edition.RegistrationCloses,
+            NeedsReview: ec.NeedsReview,
+            PrimaryElevationProfile: ec.PrimaryElevationProfile,
+            PrimaryTerrainType: ec.PrimaryTerrainType
+        )).ToList();
 
         return new EventDetailDto(
             ev.Id,
@@ -383,24 +171,23 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ev.Location?.Type.ToString(),
             ev.ScheduleRule,
             ev.SocialLinks,
-            nextDate,
-            daysUntil,
-            upcomingDates,
+            computed.NextDate,
+            computed.DaysUntil,
+            computed.UpcomingDates,
             editions,
             ev.CreatedAt,
             ev.UpdatedAt,
-            displayDate,
-            certifications?.Count > 0 ? certifications : null,
-            youtubeUrl,
-            championshipCategories?.Count > 0 ? championshipCategories : null,
-            itraPoints?.Count > 0 ? itraPoints : null,
+            computed.DisplayDate,
+            computed.Certifications,
+            computed.YoutubeUrl,
+            computed.ChampionshipCategories,
+            computed.ItraPoints,
             ev.GpxPointLat,
             ev.GpxPointLng,
             TranslationHashes: null,
-            ActivityTypes: activityTypes.Count > 0 ? activityTypes : null,
-            EditionStatus: relevantEdition?.Status.ToString(),
-            EditionEffectiveCancelled: relevantEdition != null
-                && EditionStatusHelpers.ComputeEffectiveCancelled(relevantEdition.Status, relevantEdition.Races.Select(r => r.Status).ToList()),
+            ActivityTypes: computed.ActivityTypes,
+            EditionStatus: computed.EditionStatus,
+            EditionEffectiveCancelled: computed.EditionEffectiveCancelled,
             OrganizerSlug: ev.Organizer != null ? ev.Organizer.Slug : null
         );
     }

@@ -1,5 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick, trackTrailDirectionsClick } from '../utils/analytics';
+import { downloadTrailGpx } from '../utils/trailGpxDownload';
+import { toggleCheckIn } from '../utils/trailCheckInToggle';
 import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -196,6 +198,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [videoExpanded, setVideoExpanded] = useState(true);
     const [checkInSearch, setCheckInSearch] = useState('');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [toastSeverity, setToastSeverity] = useState<'info' | 'error'>('info');
     const [nearbyPromptVisible, setNearbyPromptVisible] = useState(false);
     const previousCheckInCountRef = useRef<number | null>(null);
     const suppressRealtimeToastUntilRef = useRef<number>(0);
@@ -304,25 +307,41 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
 
     const shouldShowCheckInSearch = totalCheckIns > CHECK_IN_SEARCH_THRESHOLD;
 
-    const handleToggleCheckIn = async () => {
-        if (!user) {
-            setLoginModalOpen(true);
-            return;
-        }
+    // fetch() instead of a plain <a href download> anchor so a 404 (stale slug,
+    // GPX regeneration race, etc.) shows an in-app toast rather than replacing
+    // the whole SPA with the browser's native error page (#1552). Fetch/error-
+    // branching logic itself lives in trailGpxDownload.ts, unit-tested there (#1559).
+    const handleGpxDownload = async () => {
+        if (!trail) return;
+        await downloadTrailGpx({
+            fetchImpl: fetch,
+            apiUrl: API_URL,
+            slug: trail.slug,
+            language: i18n.language,
+            t,
+            setToastSeverity,
+            setToastMessage,
+            trackTrailGpxDownload,
+        });
+    };
 
-        setCheckInError(null);
-        try {
-            suppressRealtimeToastUntilRef.current = Date.now() + 2000;
-            if (isCheckedIn) {
-                await checkOut();
-                setToastMessage(t('trail.checkInToastCheckedOut'));
-            } else {
-                await checkIn();
-                setToastMessage(t('trail.checkInToastCheckedIn'));
-            }
-        } catch (error) {
-            setCheckInError(error instanceof Error ? error.message : t('trail.checkInActionFailed'));
-        }
+    // Branching logic (not-logged-in redirect, check-in vs. check-out, toast vs.
+    // thrown-error handling) lives in trailCheckInToggle.ts, unit-tested there (#1568).
+    const handleToggleCheckIn = async () => {
+        await toggleCheckIn({
+            user,
+            isCheckedIn,
+            checkIn,
+            checkOut,
+            t,
+            setLoginModalOpen,
+            setCheckInError,
+            setToastSeverity,
+            setToastMessage,
+            markSuppressRealtimeToast: () => {
+                suppressRealtimeToastUntilRef.current = Date.now() + 2000;
+            },
+        });
     };
 
     const handleStillHere = async () => {
@@ -331,6 +350,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         try {
             suppressRealtimeToastUntilRef.current = Date.now() + 2000;
             await checkIn();
+            setToastSeverity('info');
             setToastMessage(t('trail.checkInToastRefreshed'));
         } catch (error) {
             setCheckInError(error instanceof Error ? error.message : t('trail.checkInActionFailed'));
@@ -349,8 +369,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             return;
         }
         if (totalCheckIns > previousCount) {
+            setToastSeverity('info');
             setToastMessage(t('trail.checkInToastJoined', { count: totalCheckIns - previousCount }));
         } else if (totalCheckIns < previousCount) {
+            setToastSeverity('info');
             setToastMessage(t('trail.checkInToastLeft', { count: previousCount - totalCheckIns }));
         }
         previousCheckInCountRef.current = totalCheckIns;
@@ -609,10 +631,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 size="small"
                                 variant="outlined"
                                 startIcon={<FileDownloadIcon fontSize="small" />}
-                                component="a"
-                                href={`${API_URL}/api/v1/trails/${trail.slug}/gpx${i18n.language === 'en' ? '?lang=en' : ''}`}
-                                download
-                                onClick={() => trackTrailGpxDownload(trail.slug)}
+                                onClick={handleGpxDownload}
                                 sx={{ minWidth: 44, minHeight: 44 }}
                             >
                                 {t('trail.gpxLabel')}
@@ -956,7 +975,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                 onClose={() => setToastMessage(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
-                <Alert severity="info" variant="filled" onClose={() => setToastMessage(null)}>
+                <Alert severity={toastSeverity} variant="filled" onClose={() => setToastMessage(null)}>
                     {toastMessage}
                 </Alert>
             </Snackbar>

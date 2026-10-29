@@ -7,6 +7,9 @@ import {
   nthWeekdayOfMonth,
   suggestSeriesLegDates,
   recomputeYearlyWeekdayDate,
+  splitRegistrationOpensMinutes,
+  combineRegistrationOpensMinutes,
+  computeRegistrationOpensPreview,
 } from './eventForms';
 import type { ScheduleRule } from '../hooks/useEvents';
 
@@ -221,5 +224,127 @@ describe('recomputeYearlyWeekdayDate', () => {
   it('returns null for an Approximate rule', () => {
     const rule: ScheduleRule = { type: 'Approximate', month: 6 };
     expect(recomputeYearlyWeekdayDate(rule, 2026)).toBeNull();
+  });
+});
+
+// #1553: RaceFormCard's "days before"/"hours before" pair round-trips through a single stored
+// RegistrationOpensMinutesBeforeRace minutes value — split on read (buildRaceForm), combined on
+// save (buildRaceSavePayload).
+describe('splitRegistrationOpensMinutes', () => {
+  it('returns empty strings for both fields when the stored value is null', () => {
+    expect(splitRegistrationOpensMinutes(null)).toEqual({ days: '', hours: '' });
+  });
+
+  it('splits a whole-days value into days with zero hours', () => {
+    expect(splitRegistrationOpensMinutes(2880)).toEqual({ days: '2', hours: '0' });
+  });
+
+  it('splits a value with both days and hours', () => {
+    // 2 days + 3 hours = 2*1440 + 3*60 = 2880 + 180 = 3060
+    expect(splitRegistrationOpensMinutes(3060)).toEqual({ days: '2', hours: '3' });
+  });
+
+  it('splits a sub-day value into zero days with the remaining hours', () => {
+    expect(splitRegistrationOpensMinutes(180)).toEqual({ days: '0', hours: '3' });
+  });
+
+  it('folds a stored value with leftover minutes (not a whole hour) into the hours field rather than dropping it', () => {
+    // 90 minutes = 1.5 hours — never produced by this form itself (it only ever writes whole
+    // hours), but must still round-trip losslessly if set some other way.
+    expect(splitRegistrationOpensMinutes(90)).toEqual({ days: '0', hours: '1.5' });
+  });
+
+  it('returns zero for both fields when the stored value is exactly zero', () => {
+    expect(splitRegistrationOpensMinutes(0)).toEqual({ days: '0', hours: '0' });
+  });
+});
+
+describe('combineRegistrationOpensMinutes', () => {
+  it('returns null when both inputs are blank — no per-race window set', () => {
+    expect(combineRegistrationOpensMinutes('', '')).toBeNull();
+  });
+
+  it('treats whitespace-only input the same as blank', () => {
+    expect(combineRegistrationOpensMinutes('  ', ' ')).toBeNull();
+  });
+
+  it('combines days and hours into the single stored minutes value', () => {
+    expect(combineRegistrationOpensMinutes('2', '3')).toBe(3060);
+  });
+
+  it('treats a blank days field as zero when hours is set', () => {
+    expect(combineRegistrationOpensMinutes('', '3')).toBe(180);
+  });
+
+  it('treats a blank hours field as zero when days is set', () => {
+    expect(combineRegistrationOpensMinutes('2', '')).toBe(2880);
+  });
+
+  it('accepts zero for both fields, returning zero rather than null', () => {
+    // Blank ("no window") and zero ("opens exactly at race instant") are different values and
+    // must not collapse to the same result.
+    expect(combineRegistrationOpensMinutes('0', '0')).toBe(0);
+  });
+
+  it('rejects a negative days value', () => {
+    expect(combineRegistrationOpensMinutes('-1', '0')).toBeNaN();
+  });
+
+  it('rejects a negative hours value', () => {
+    expect(combineRegistrationOpensMinutes('0', '-1')).toBeNaN();
+  });
+
+  it('rejects a non-integer days value', () => {
+    expect(combineRegistrationOpensMinutes('1.5', '0')).toBeNaN();
+  });
+
+  it('rejects a non-integer hours value', () => {
+    expect(combineRegistrationOpensMinutes('0', '1.5')).toBeNaN();
+  });
+
+  it('rejects a non-numeric value', () => {
+    expect(combineRegistrationOpensMinutes('abc', '0')).toBeNaN();
+  });
+
+  it('round-trips through splitRegistrationOpensMinutes for a representative value', () => {
+    const { days, hours } = splitRegistrationOpensMinutes(3060);
+    expect(combineRegistrationOpensMinutes(days, hours)).toBe(3060);
+  });
+});
+
+// #1563: the live preview shown below the days/hours-before fields in RaceFormCard — covers the
+// four states it can land in, plus the raceInstant formula it mirrors from
+// EditionStatusHelpers.ComputeEffectiveTicketStatus (backend).
+describe('computeRegistrationOpensPreview', () => {
+  it('returns none when both days and hours are blank', () => {
+    expect(computeRegistrationOpensPreview('2026-03-03', '19:30', '', '')).toEqual({ kind: 'none' });
+  });
+
+  it('returns needsDate when a days/hours value is set but dateOfRace is empty', () => {
+    expect(computeRegistrationOpensPreview('', '19:30', '2', '0')).toEqual({ kind: 'needsDate' });
+  });
+
+  it('returns invalid when combineRegistrationOpensMinutes would be NaN, even with no date set', () => {
+    expect(computeRegistrationOpensPreview('', '', '-1', '0')).toEqual({ kind: 'invalid' });
+  });
+
+  it('returns invalid for a non-integer hours value', () => {
+    expect(computeRegistrationOpensPreview('2026-03-03', '19:30', '0', '2.5')).toEqual({ kind: 'invalid' });
+  });
+
+  it('computes the resolved instant from dateOfRace + startTime minus the combined minutes', () => {
+    const result = computeRegistrationOpensPreview('2026-03-03', '19:30', '2', '0');
+    expect(result.kind).toBe('computed');
+    if (result.kind === 'computed') {
+      expect(result.opensAt.format('YYYY-MM-DD HH:mm')).toBe('2026-03-01 19:30');
+    }
+  });
+
+  it('falls back to local midnight of dateOfRace when startTime is blank', () => {
+    const result = computeRegistrationOpensPreview('2026-03-03', '', '2', '0');
+    expect(result.kind).toBe('computed');
+    if (result.kind === 'computed') {
+      expect(result.opensAt.format('YYYY-MM-DD HH:mm')).toBe('2026-03-01 00:00');
+    }
   });
 });

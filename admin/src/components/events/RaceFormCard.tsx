@@ -30,8 +30,11 @@ import {
   TICKET_STATUSES,
   buildRaceForm,
   buildRaceSavePayload,
+  combineRegistrationOpensMinutes,
+  computeRegistrationOpensPreview,
   createEmptyRaceForm,
   raceHasStaleTx,
+  REGISTRATION_OPENS_INVALID_MESSAGE,
   type RaceFormState,
 } from '../../utils/eventForms';
 import BilingualTextField from '../BilingualTextField';
@@ -99,6 +102,12 @@ function RaceFormCardInner({
 
   const staleTx = race ? raceHasStaleTx(race) : false;
 
+  // #1563: recomputed on every render from the four fields it depends on, so it stays live as
+  // the admin types — no save/reopen needed to see what the days/hours-before window resolves to.
+  const registrationOpensPreview = computeRegistrationOpensPreview(
+    form.dateOfRace, form.startTime, form.registrationOpensDaysBefore, form.registrationOpensHoursBefore,
+  );
+
   const handleTranslate = async () => {
     // #1548: name/nameEn is a proper noun, not prose — DeepL mistranslates race names.
     // Pass it through verbatim instead of routing it through the translate API.
@@ -126,6 +135,15 @@ function RaceFormCardInner({
     const cutoffMinutes = parseHHmmToMinutes(normalizedCutoff);
     if (normalizedCutoff.trim() && cutoffMinutes == null) { onNotify('Time limit must be in HH:mm format', 'error'); return; }
     if (cutoffMinutes === 0) { onNotify('Time limit cannot be 00:00. Clear the field to remove it.', 'error'); return; }
+
+    // #1553: mirrors the cutoffMinutes validation immediately above — reject a non-integer or
+    // negative days/hours value inline before save, rather than letting buildRaceSavePayload
+    // silently write NaN (which JSON.stringify would round-trip as null, storing nothing the
+    // admin actually typed).
+    if (Number.isNaN(combineRegistrationOpensMinutes(form.registrationOpensDaysBefore, form.registrationOpensHoursBefore))) {
+      onNotify(REGISTRATION_OPENS_INVALID_MESSAGE, 'error');
+      return;
+    }
 
     const payload = buildRaceSavePayload({ ...form, cutoffTime: normalizedCutoff });
     setSaving(true);
@@ -246,12 +264,46 @@ function RaceFormCardInner({
               onChange={(_, v) => set('trailId', v?.id ?? '')}
               renderInput={params => <TextField {...params} label="Trail" />}
             />
-            <TextField size="small" fullWidth label="Time limit (HH:mm)" value={form.cutoffTime}
+            <TextField size="small" fullWidth label="Time limit" value={form.cutoffTime}
               onChange={e => set('cutoffTime', normalizeCutoffTimeInput(e.target.value))}
               onBlur={e => set('cutoffTime', normalizeCutoffTimeOnBlur(e.target.value))}
               onKeyDown={e => timeLimitArrowKey(e as React.KeyboardEvent<HTMLInputElement>, form.cutoffTime, v => set('cutoffTime', v))}
               placeholder="e.g. 12:00" />
           </Stack>
+          {/* #1553: this race's own registration-opens window, independent of the edition's
+              shared RegistrationOpens/Closes — for Series editions whose races each open on
+              their own schedule (e.g. one short window per race-day). Blank in both fields means
+              no window of its own: this race falls back to the edition-level window unchanged. */}
+          <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+            <TextField
+              size="small" fullWidth label="Days before" type="number"
+              value={form.registrationOpensDaysBefore}
+              onChange={e => set('registrationOpensDaysBefore', e.target.value)}
+              inputProps={{ min: 0, step: 1 }}
+            />
+            <TextField
+              size="small" fullWidth label="Hours before" type="number"
+              value={form.registrationOpensHoursBefore}
+              onChange={e => set('registrationOpensHoursBefore', e.target.value)}
+              inputProps={{ min: 0, step: 1 }}
+            />
+          </Stack>
+          {/* #1563: live, read-only preview of what the days/hours-before window above resolves
+              to — mirrors EditionStatusHelpers.ComputeEffectiveTicketStatus's raceInstant formula
+              client-side, no new API call. */}
+          {registrationOpensPreview.kind !== 'none' && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              {registrationOpensPreview.kind === 'invalid' && REGISTRATION_OPENS_INVALID_MESSAGE}
+              {registrationOpensPreview.kind === 'needsDate' && 'Set a race date to preview when registration opens'}
+              {registrationOpensPreview.kind === 'computed' && (
+                <>
+                  {`Registration opens ${registrationOpensPreview.opensAt.format('D MMM YYYY HH:mm')}`}
+                  {(edition.registrationStatus === 'NotRequired' || edition.registrationStatus === 'Invitational') &&
+                    ` — won't take effect while the edition's registration status stays ${edition.registrationStatus}`}
+                </>
+              )}
+            </Typography>
+          )}
         </Box>
 
         {/* ── Right column ── */}
@@ -294,13 +346,13 @@ function RaceFormCardInner({
           <SectionLabel>Details</SectionLabel>
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
             <FormControl size="small" fullWidth>
-              <InputLabel>Activity type</InputLabel>
-              <Select value={form.activityType} label="Activity type" onChange={e => set('activityType', e.target.value as typeof form.activityType)}>
+              <InputLabel>Activity</InputLabel>
+              <Select value={form.activityType} label="Activity" onChange={e => set('activityType', e.target.value as typeof form.activityType)}>
                 <MenuItem value=""><em>Inherit from event</em></MenuItem>
                 {ACTIVITY_TYPES.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
               </Select>
             </FormControl>
-            <TextField size="small" fullWidth label="ITRA points" type="number" value={form.itraPoints}
+            <TextField size="small" fullWidth label="ITRA pts" type="number" value={form.itraPoints}
               inputProps={{ min: 0, max: 6, step: 1 }}
               onKeyDown={e => {
                 // The ArrowUp key is unambiguous (unlike a digit key, it can never be a
@@ -350,7 +402,7 @@ function RaceFormCardInner({
             <TextField size="small" fullWidth label="Prize money" type="number" value={form.prizeMoney}
               onChange={e => set('prizeMoney', e.target.value)} />
             <BilingualTextField
-              size="small" fullWidth label="Championship category"
+              size="small" fullWidth label="Category"
               valueIs={form.championshipCategory} valueEn={form.championshipCategoryEn}
               onChangeIs={v => set('championshipCategory', v)} onChangeEn={v => set('championshipCategoryEn', v)}
             />

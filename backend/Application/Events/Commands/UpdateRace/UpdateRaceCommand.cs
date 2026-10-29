@@ -31,7 +31,8 @@ public record UpdateRaceCommand(
     string? ChampionshipCategoryEn = null,
     Dictionary<string, string>? TranslationHashes = null,
     string? ActivityType = null,
-    string? DistanceLabelEn = null
+    string? DistanceLabelEn = null,
+    int? RegistrationOpensMinutesBeforeRace = null
 ) : IRequest<bool>;
 
 public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
@@ -84,6 +85,7 @@ public class UpdateRaceCommandHandler : IRequestHandler<UpdateRaceCommand, bool>
         race.ChampionshipCategoryEn = request.ChampionshipCategoryEn;
         race.DateOfRace = request.DateOfRace;
         race.StartTime = request.StartTime;
+        race.RegistrationOpensMinutesBeforeRace = request.RegistrationOpensMinutesBeforeRace;
         if (request.TranslationHashes != null)
             race.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
 
