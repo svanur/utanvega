@@ -875,7 +875,7 @@ function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx
         {isItraEligible ? (
           <Tooltip title={itraLocked
             ? 'Locked — the race is cancelled'
-            : cycleTooltip('ITRA points', itraDisplayValues, itraCurrentDisplay)}>
+            : cycleTooltip('ITRA pts', itraDisplayValues, itraCurrentDisplay)}>
             <Chip label={itraLabel} size="small" variant="outlined" color="default"
               onClick={itraLocked ? undefined : e => { e.stopPropagation(); onCycleItra(); }}
               sx={{ cursor: itraLocked ? 'default' : 'pointer' }} />
