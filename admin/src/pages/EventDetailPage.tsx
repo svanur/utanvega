@@ -638,12 +638,13 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
               edition's races actually have that offset set, so the fallback note isn't abstract —
               edition.races already carries registrationOpensMinutesBeforeRace per race, no extra
               fetch needed. A brand-new edition (isNew, edition === null) has no races yet, so that
-              counts as zero rather than throwing. */}
+              counts as zero rather than throwing. #1579: state the denominator too (total race
+              count), using the same edition?.races ?? [] null-safety as the numerator. */}
           {eventType === 'Series' && (
             <FormHelperText sx={{ mt: -0.5, mb: 1 }}>
               Fallback only: races with their own "Registration opens" offset ignore this window
-              entirely. {(edition?.races ?? []).filter(r => r.registrationOpensMinutesBeforeRace !== null).length} of this
-              edition's races have their own offset set.
+              entirely. In this edition, {(edition?.races ?? []).filter(r => r.registrationOpensMinutesBeforeRace !== null).length} of {(edition?.races ?? []).length}
+              races have their own offset set.
             </FormHelperText>
           )}
           <Stack direction="row" spacing={1.5}>
