@@ -634,10 +634,16 @@ export function EditionDialogInner({ open, edition, eventId, onClose, onSaved, o
           {/* #1569: a Series edition's window below is a fallback only — any race with its own
               "Registration opens: days/hours before" offset (RaceFormCard, #1553) ignores it
               entirely and computes its own opening instant from its own race day instead
-              (EditionStatusHelpers.ComputeEffectiveTicketStatus). */}
+              (EditionStatusHelpers.ComputeEffectiveTicketStatus). #1571: name how many of this
+              edition's races actually have that offset set, so the fallback note isn't abstract —
+              edition.races already carries registrationOpensMinutesBeforeRace per race, no extra
+              fetch needed. A brand-new edition (isNew, edition === null) has no races yet, so that
+              counts as zero rather than throwing. */}
           {eventType === 'Series' && (
             <FormHelperText sx={{ mt: -0.5, mb: 1 }}>
-              Fallback only: races with their own "Registration opens" offset ignore this window entirely.
+              Fallback only: races with their own "Registration opens" offset ignore this window
+              entirely. {(edition?.races ?? []).filter(r => r.registrationOpensMinutesBeforeRace !== null).length} of this
+              edition's races have their own offset set.
             </FormHelperText>
           )}
           <Stack direction="row" spacing={1.5}>
