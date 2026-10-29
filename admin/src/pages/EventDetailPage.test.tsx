@@ -238,6 +238,52 @@ describe('EditionDialogInner — Start/End date disabled and derived for a Serie
   });
 });
 
+// #1571: the #1569 Registration-section fallback note (Series editions only) states how many of
+// the edition's races have their own "Registration opens" offset set
+// (registrationOpensMinutesBeforeRace !== null on RaceDto), rather than only describing the
+// fallback relationship in the abstract. The count is derived straight from edition.races, which
+// is already loaded for this dialog — no extra fetch.
+function getRegistrationFallbackNote() {
+  // Not an exact-string match: the count sits between two literal text fragments inside the same
+  // FormHelperText, so RTL's getByText normalizer concatenates them into one text node, but a
+  // regex still reads more intention-revealing here than the full literal string would.
+  return screen.getByText(/of this edition's races have their own offset set\./);
+}
+
+describe('EditionDialogInner — Registration fallback note counts races with their own offset (#1571)', () => {
+  afterEach(cleanup);
+
+  it('states a non-zero count when at least one race has its own offset set', () => {
+    const edition = buildEditionFixture({
+      races: [
+        buildRaceFixture({ id: 'race-1', registrationOpensMinutesBeforeRace: 1440 }),
+        buildRaceFixture({ id: 'race-2', registrationOpensMinutesBeforeRace: null }),
+      ],
+    });
+    renderEditionDialog({ edition, eventType: 'Series' });
+
+    expect(getRegistrationFallbackNote().textContent).toContain('1 of this');
+  });
+
+  it('states "0" rather than a blank or stale note when no race has its own offset set', () => {
+    const edition = buildEditionFixture({
+      races: [
+        buildRaceFixture({ id: 'race-1', registrationOpensMinutesBeforeRace: null }),
+        buildRaceFixture({ id: 'race-2', registrationOpensMinutesBeforeRace: null }),
+      ],
+    });
+    renderEditionDialog({ edition, eventType: 'Series' });
+
+    expect(getRegistrationFallbackNote().textContent).toContain('0 of this');
+  });
+
+  it('renders the zero-race state without throwing for a brand-new (isNew, edition === null) Series edition', () => {
+    renderEditionDialog({ eventType: 'Series' });
+
+    expect(getRegistrationFallbackNote().textContent).toContain('0 of this');
+  });
+});
+
 // #1365: the issue owner's decision — events are scheduled start-first, so End date with no
 // Start date isn't a real scheduling pattern. Blocks Save client-side rather than letting a
 // 400 from CreateEditionCommandValidator/UpdateEditionCommandValidator surface after submit.
