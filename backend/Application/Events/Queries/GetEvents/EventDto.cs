@@ -127,9 +127,10 @@ public record RaceDto(
     string? ActivityType = null,
     string ResultType = "Time",
     // #1553: per-race registration-opens window, independent of the edition's own
-    // RegistrationOpens/Closes — admin-only (surfaced for Create/Edit Race), never consumed by
-    // the public frontend directly since ComputeEffectiveTicketStatus already folds it into
-    // TicketStatus above.
+    // RegistrationOpens/Closes. RaceDto is the shared DTO for both unauthenticated public
+    // endpoints (GET /api/v1/events and GET /api/v1/events/{slug}) and the admin UI, so this
+    // field IS present in the public response shape, not admin-only — the value is a plain
+    // int offset with no sensitivity, so this is intentional, not a leak to fix.
     int? RegistrationOpensMinutesBeforeRace = null
 );
 
