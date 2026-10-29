@@ -268,13 +268,13 @@ function RaceFormCardInner({
               no window of its own: this race falls back to the edition-level window unchanged. */}
           <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
             <TextField
-              size="small" fullWidth label="Registration opens: days before" type="number"
+              size="small" fullWidth label="Opens: days before" type="number"
               value={form.registrationOpensDaysBefore}
               onChange={e => set('registrationOpensDaysBefore', e.target.value)}
               inputProps={{ min: 0, step: 1 }}
             />
             <TextField
-              size="small" fullWidth label="Registration opens: hours before" type="number"
+              size="small" fullWidth label="Opens: hours before" type="number"
               value={form.registrationOpensHoursBefore}
               onChange={e => set('registrationOpensHoursBefore', e.target.value)}
               inputProps={{ min: 0, step: 1 }}
