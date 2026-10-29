@@ -31,8 +31,10 @@ import {
   buildRaceForm,
   buildRaceSavePayload,
   combineRegistrationOpensMinutes,
+  computeRegistrationOpensPreview,
   createEmptyRaceForm,
   raceHasStaleTx,
+  REGISTRATION_OPENS_INVALID_MESSAGE,
   type RaceFormState,
 } from '../../utils/eventForms';
 import BilingualTextField from '../BilingualTextField';
@@ -100,6 +102,12 @@ function RaceFormCardInner({
 
   const staleTx = race ? raceHasStaleTx(race) : false;
 
+  // #1563: recomputed on every render from the four fields it depends on, so it stays live as
+  // the admin types — no save/reopen needed to see what the days/hours-before window resolves to.
+  const registrationOpensPreview = computeRegistrationOpensPreview(
+    form.dateOfRace, form.startTime, form.registrationOpensDaysBefore, form.registrationOpensHoursBefore,
+  );
+
   const handleTranslate = async () => {
     // #1548: name/nameEn is a proper noun, not prose — DeepL mistranslates race names.
     // Pass it through verbatim instead of routing it through the translate API.
@@ -133,7 +141,7 @@ function RaceFormCardInner({
     // silently write NaN (which JSON.stringify would round-trip as null, storing nothing the
     // admin actually typed).
     if (Number.isNaN(combineRegistrationOpensMinutes(form.registrationOpensDaysBefore, form.registrationOpensHoursBefore))) {
-      onNotify('Registration opens days/hours before must be whole, non-negative numbers', 'error');
+      onNotify(REGISTRATION_OPENS_INVALID_MESSAGE, 'error');
       return;
     }
 
@@ -280,6 +288,22 @@ function RaceFormCardInner({
               inputProps={{ min: 0, step: 1 }}
             />
           </Stack>
+          {/* #1563: live, read-only preview of what the days/hours-before window above resolves
+              to — mirrors EditionStatusHelpers.ComputeEffectiveTicketStatus's raceInstant formula
+              client-side, no new API call. */}
+          {registrationOpensPreview.kind !== 'none' && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              {registrationOpensPreview.kind === 'invalid' && REGISTRATION_OPENS_INVALID_MESSAGE}
+              {registrationOpensPreview.kind === 'needsDate' && 'Set a race date to preview when registration opens'}
+              {registrationOpensPreview.kind === 'computed' && (
+                <>
+                  {`Registration opens ${registrationOpensPreview.opensAt.format('D MMM YYYY HH:mm')}`}
+                  {(edition.registrationStatus === 'NotRequired' || edition.registrationStatus === 'Invitational') &&
+                    ` — won't take effect while the edition's registration status stays ${edition.registrationStatus}`}
+                </>
+              )}
+            </Typography>
+          )}
         </Box>
 
         {/* ── Right column ── */}

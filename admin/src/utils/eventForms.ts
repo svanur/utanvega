@@ -126,6 +126,38 @@ export function combineRegistrationOpensMinutes(days: string, hours: string): nu
   return dNum * 1440 + hNum * 60;
 }
 
+// #1563: the same inline message handleSave uses for a NaN combineRegistrationOpensMinutes
+// result (RaceFormCard's handleSave) and the live preview below both show this exact text — a
+// shared constant keeps the save-time check and the as-you-type preview from drifting apart.
+export const REGISTRATION_OPENS_INVALID_MESSAGE = 'Registration opens days/hours before must be whole, non-negative numbers';
+
+export type RegistrationOpensPreview =
+  | { kind: 'none' }
+  | { kind: 'invalid' }
+  | { kind: 'needsDate' }
+  | { kind: 'computed'; opensAt: Dayjs };
+
+// #1563: derives what instant the admin's typed days/hours-before combination resolves to,
+// purely client-side (no new API call) — mirrors EditionStatusHelpers.ComputeEffectiveTicketStatus's
+// raceInstant formula (backend/Application/Events/EditionStatusHelpers.cs): race instant is
+// dateOfRace + startTime, or local midnight of dateOfRace when startTime is blank, minus the
+// combined minutes. Returns a discriminated result rather than a formatted string so the caller
+// (RaceFormCard) owns copy/formatting. 'invalid' is checked ahead of 'needsDate' — a malformed
+// number is a data problem independent of whether a date happens to be set yet.
+export function computeRegistrationOpensPreview(
+  dateOfRace: string,
+  startTime: string,
+  daysBefore: string,
+  hoursBefore: string,
+): RegistrationOpensPreview {
+  const minutes = combineRegistrationOpensMinutes(daysBefore, hoursBefore);
+  if (minutes === null) return { kind: 'none' };
+  if (Number.isNaN(minutes)) return { kind: 'invalid' };
+  if (!dateOfRace) return { kind: 'needsDate' };
+  const raceInstant = startTime ? dayjs(`${dateOfRace}T${startTime}`) : dayjs(dateOfRace).startOf('day');
+  return { kind: 'computed', opensAt: raceInstant.subtract(minutes, 'minute') };
+}
+
 export function buildRaceForm(race: RaceDto): RaceFormState {
   const { days: registrationOpensDaysBefore, hours: registrationOpensHoursBefore } =
     splitRegistrationOpensMinutes(race.registrationOpensMinutesBeforeRace);
