@@ -42,6 +42,10 @@ public static class CacheKeys
     public static string Events(bool includeHidden) => $"events:{includeHidden}";
     public static string Event(string slug, bool includeHidden) => $"event:{slug}:{includeHidden}";
 
+    /// <summary>#1562: GetPublicEventQuery's own key, separate from Event(slug, includeHidden) —
+    /// that key still backs the admin-only GetEventQuery, which has no live includeHidden=false caller.</summary>
+    public static string EventPublic(string slug) => $"event-public:{slug}";
+
     /// <summary>
     /// Calendar entries include the event version so bumping the version
     /// effectively orphans all cached calendar responses without needing key enumeration.
