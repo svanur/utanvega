@@ -1380,12 +1380,20 @@ app.MapPost("/api/v1/admin/translate", [Authorize(Policy = "AdminOnly")] async (
 
     try
     {
-        var results = await translator.TranslateTextAsync(
-            req.Texts,
-            DeepL.LanguageCode.Icelandic,
-            DeepL.LanguageCode.EnglishAmerican
-        );
-        return Results.Ok(new { translations = results.Select(r => r.Text).ToList() });
+        // Bare numeric strings (e.g. "2026") have no surrounding text to anchor them as a
+        // numeral, so DeepL spells them out as words. Skip DeepL for those and pass them
+        // through verbatim, then reassemble in original order. See issue #1581.
+        var split = NumericPassthroughSplitter.Split(req.Texts);
+        var translated = split.ToTranslate.Count == 0
+            ? new List<string>()
+            : (await translator.TranslateTextAsync(
+                split.ToTranslate,
+                DeepL.LanguageCode.Icelandic,
+                DeepL.LanguageCode.EnglishAmerican
+            )).Select(r => r.Text).ToList();
+
+        var translations = NumericPassthroughSplitter.Reassemble(req.Texts, split, translated);
+        return Results.Ok(new { translations });
     }
     catch (DeepL.AuthorizationException)
     {
