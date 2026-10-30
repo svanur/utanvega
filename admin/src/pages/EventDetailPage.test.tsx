@@ -242,18 +242,19 @@ describe('EditionDialogInner — Start/End date disabled and derived for a Serie
 // the edition's races have their own "Registration opens" offset set
 // (registrationOpensMinutesBeforeRace !== null on RaceDto), rather than only describing the
 // fallback relationship in the abstract. The count is derived straight from edition.races, which
-// is already loaded for this dialog — no extra fetch.
+// is already loaded for this dialog — no extra fetch. #1579: the note also states the total race
+// count (the denominator), not just the numerator, so "N of M" is fully explicit.
 function getRegistrationFallbackNote() {
-  // Not an exact-string match: the count sits between two literal text fragments inside the same
+  // Not an exact-string match: the counts sit between literal text fragments inside the same
   // FormHelperText, so RTL's getByText normalizer concatenates them into one text node, but a
   // regex still reads more intention-revealing here than the full literal string would.
-  return screen.getByText(/of this edition's races have their own offset set\./);
+  return screen.getByText(/races have their own offset set\./);
 }
 
-describe('EditionDialogInner — Registration fallback note counts races with their own offset (#1571)', () => {
+describe('EditionDialogInner — Registration fallback note counts races with their own offset (#1571, #1579)', () => {
   afterEach(cleanup);
 
-  it('states a non-zero count when at least one race has its own offset set', () => {
+  it('states a non-zero count out of the total when at least one race has its own offset set', () => {
     const edition = buildEditionFixture({
       races: [
         buildRaceFixture({ id: 'race-1', registrationOpensMinutesBeforeRace: 1440 }),
@@ -262,10 +263,10 @@ describe('EditionDialogInner — Registration fallback note counts races with th
     });
     renderEditionDialog({ edition, eventType: 'Series' });
 
-    expect(getRegistrationFallbackNote().textContent).toContain('1 of this');
+    expect(getRegistrationFallbackNote().textContent).toContain('1 of 2');
   });
 
-  it('states "0" rather than a blank or stale note when no race has its own offset set', () => {
+  it('states "0 of" the total rather than a blank or stale note when no race has its own offset set', () => {
     const edition = buildEditionFixture({
       races: [
         buildRaceFixture({ id: 'race-1', registrationOpensMinutesBeforeRace: null }),
@@ -274,13 +275,13 @@ describe('EditionDialogInner — Registration fallback note counts races with th
     });
     renderEditionDialog({ edition, eventType: 'Series' });
 
-    expect(getRegistrationFallbackNote().textContent).toContain('0 of this');
+    expect(getRegistrationFallbackNote().textContent).toContain('0 of 2');
   });
 
-  it('renders the zero-race state without throwing for a brand-new (isNew, edition === null) Series edition', () => {
+  it('renders "0 of 0" without throwing for a brand-new (isNew, edition === null) Series edition', () => {
     renderEditionDialog({ eventType: 'Series' });
 
-    expect(getRegistrationFallbackNote().textContent).toContain('0 of this');
+    expect(getRegistrationFallbackNote().textContent).toContain('0 of 0');
   });
 });
 
