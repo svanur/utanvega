@@ -54,10 +54,15 @@ vi.mock('../hooks/useEvents', () => ({
 const { mockClimateResult } = vi.hoisted(() => ({
     mockClimateResult: { current: { climate: null as EventClimate | null, loading: false, error: null as string | null } },
 }));
+// #1585: mockTrails defaults to [] (same as the old hardcoded return) so every pre-existing test
+// above is unaffected; only the #1585 legend-entries suite below overrides it per-case.
+const { mockTrails } = vi.hoisted(() => ({
+    mockTrails: { current: [] as import('../hooks/useTrails').Trail[] },
+}));
 vi.mock('../hooks/useTrails', () => ({
     useTrailWeather: () => ({ weather: null, loading: false, error: null }),
     useEventClimate: () => mockClimateResult.current,
-    useTrailsBySlugs: () => ({ trails: [], loading: false, error: null }),
+    useTrailsBySlugs: () => ({ trails: mockTrails.current, loading: false, error: null }),
     // SendTipButton (rendered unconditionally at CompetitionDetailPage.tsx:1276) imports API_URL
     // from this same module — never read during its own render, only inside its submit handler,
     // but exported here anyway so the mock module shape doesn't silently diverge from the real one.
@@ -80,15 +85,22 @@ vi.mock('../hooks/useFeatureFlags', () => ({
     useFeatureFlags: () => ({ flags: {}, loaded: true, isEnabled: (name: string) => name === 'climate_normals' }),
 }));
 
-const { trailMapViewMock, climateCardMock } = vi.hoisted(() => ({
+const { trailMapViewMock, climateCardMock, eventTrailLegendMock } = vi.hoisted(() => ({
     trailMapViewMock: vi.fn(),
     climateCardMock: vi.fn(),
+    eventTrailLegendMock: vi.fn(),
 }));
 vi.mock('../components/TrailMapView', () => ({
     TrailMapView: (props: unknown) => { trailMapViewMock(props); return null; },
 }));
 vi.mock('../components/ClimateCard', () => ({
     default: (props: unknown) => { climateCardMock(props); return null; },
+}));
+// #1585: captures the `entries` prop CompetitionDetailPage builds, rather than asserting on
+// EventTrailLegend's own rendering (unchanged, already covered by its own render — it just
+// displays whatever `name` it's given) — same prop-capture pattern as trailMapViewMock above.
+vi.mock('../components/EventTrailLegend', () => ({
+    EventTrailLegend: (props: unknown) => { eventTrailLegendMock(props); return null; },
 }));
 
 import CompetitionDetailPage from './CompetitionDetailPage';
@@ -209,6 +221,28 @@ function makeRace(overrides: Partial<RaceDto> = {}): RaceDto {
     };
 }
 
+// #1585: minimal Trail fixture for the legend-entries suite below — name deliberately follows
+// the admin "{EventName} - {RaceName}" convention by default so the fallback-vs-race-name
+// distinction has something to tell apart.
+function makeTrail(overrides: Partial<import('../hooks/useTrails').Trail> = {}): import('../hooks/useTrails').Trail {
+    return {
+        id: 'trail-1',
+        name: 'Midnight Sun Trail - 10K',
+        slug: 'midnight-sun-trail-10k',
+        length: 10000,
+        elevationGain: 200,
+        elevationLoss: 200,
+        status: 'Active',
+        activityType: 'TrailRunning',
+        trailType: 'Loop',
+        difficulty: 'Moderate',
+        startLatitude: null,
+        startLongitude: null,
+        locations: [],
+        ...overrides,
+    };
+}
+
 function makeEdition(overrides: Partial<EventEditionDto> = {}): EventEditionDto {
     return {
         id: 'edition-1',
@@ -261,7 +295,9 @@ function renderCompetitionDetailPage(event: EventDetail) {
 beforeEach(() => {
     trailMapViewMock.mockClear();
     climateCardMock.mockClear();
+    eventTrailLegendMock.mockClear();
     mockClimateResult.current = { climate: null, loading: false, error: null };
+    mockTrails.current = [];
 });
 
 // #1299: PR #1298 removed CompetitionDetailPage's own `userLocation` state and the
@@ -434,5 +470,79 @@ describe('CompetitionDetailPage race Chip guards (#1532)', () => {
 
             expect(screen.queryByText(/km$/)).toBeNull();
         });
+    });
+});
+
+// #1585: Trail.name follows the admin "{EventName} - {RaceName}" convention (needed for Trail's
+// own global listing/search), which is redundant and crowds this event-scoped legend — prefer the
+// mapped race's own localized name per trailSlug instead, falling back to trail.name when no race
+// maps to that slug.
+describe('CompetitionDetailPage event trail legend entries (#1585)', () => {
+    function lastLegendEntries() {
+        expect(eventTrailLegendMock).toHaveBeenCalled();
+        const props = eventTrailLegendMock.mock.calls.at(-1)![0] as { entries: { slug: string; name: string }[] };
+        return props.entries;
+    }
+
+    it('prefers the mapped race name over the full "{Event} - {Race}" trail name', () => {
+        const trailA = makeTrail({ slug: 'trail-10k', name: 'Midnight Sun Trail - 10K' });
+        const trailB = makeTrail({ slug: 'trail-21k', name: 'Midnight Sun Trail - 21K' });
+        mockTrails.current = [trailA, trailB];
+        const edition = makeEdition({
+            races: [
+                makeRace({ id: 'race-10k', name: '10K', trailSlug: 'trail-10k' }),
+                makeRace({ id: 'race-21k', name: '21K', trailSlug: 'trail-21k' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([
+            { slug: 'trail-10k', name: '10K' },
+            { slug: 'trail-21k', name: '21K' },
+        ]);
+    });
+
+    it('falls back to trail.name when no race in the lookup points at that trailSlug', () => {
+        const trail = makeTrail({ slug: 'edition-trail', name: 'Midnight Sun Trail - Edition Route' });
+        mockTrails.current = [trail];
+        // Edition links its own trailSlug directly, with no race pointing at it — mirrors
+        // deriveEventTrailSlugs' edition-level tier, which exists independently of any race.
+        const edition = makeEdition({ trailSlug: 'edition-trail', races: [] });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([{ slug: 'edition-trail', name: 'Midnight Sun Trail - Edition Route' }]);
+    });
+
+    it('prefers the mapped race name even when the trail name does not follow the "{Event} - {Race}" convention', () => {
+        const trail = makeTrail({ slug: 'standalone-trail', name: 'Laugavegur' });
+        mockTrails.current = [trail];
+        const edition = makeEdition({
+            races: [makeRace({ id: 'race-1', name: 'Laugavegur Ultra', trailSlug: 'standalone-trail' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([{ slug: 'standalone-trail', name: 'Laugavegur Ultra' }]);
+    });
+
+    it('uses the first matching race when two races share a trailSlug, never merging the names', () => {
+        const trail = makeTrail({ slug: 'shared-trail', name: 'Midnight Sun Trail - Shared' });
+        mockTrails.current = [trail];
+        const edition = makeEdition({
+            races: [
+                makeRace({ id: 'race-first', name: 'First Race', trailSlug: 'shared-trail', sortOrder: 0 }),
+                makeRace({ id: 'race-second', name: 'Second Race', trailSlug: 'shared-trail', sortOrder: 1 }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([{ slug: 'shared-trail', name: 'First Race' }]);
     });
 });

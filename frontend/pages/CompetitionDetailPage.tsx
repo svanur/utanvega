@@ -601,9 +601,27 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         () => computeSortedSlugs(eventTrails, eventTrailGeometries),
         [eventTrails, eventTrailGeometries],
     );
+    // #1585: Trail.name follows the admin "{EventName} - {RaceName}" convention (needed for
+    // Trail's own global listing/search), which is redundant and crowds this event-scoped legend.
+    // Prefer the race's own localized name per trailSlug when one maps to it — same race-list
+    // selection deriveEventTrailSlugs uses above (primaryEdition's own races if any have a
+    // trailSlug, else the broader visibleRaces), so this never disagrees with which slugs got
+    // fetched. First match wins if two races share a trailSlug (stable, no merge).
+    const eventTrailRacesBySlug = useMemo(() => {
+        const primaryRaces = primaryEdition?.visibleRaces ?? [];
+        const racesWithTrails = primaryRaces.some(race => race.trailSlug) ? primaryRaces : visibleRaces;
+        const bySlug = new Map<string, RaceDto>();
+        racesWithTrails.forEach(race => {
+            if (race.trailSlug && !bySlug.has(race.trailSlug)) bySlug.set(race.trailSlug, race);
+        });
+        return bySlug;
+    }, [primaryEdition, visibleRaces]);
     const eventTrailLegendEntries = useMemo(
-        () => eventTrails.map(trail => ({ slug: trail.slug, name: trail.name })),
-        [eventTrails],
+        () => eventTrails.map(trail => {
+            const race = eventTrailRacesBySlug.get(trail.slug);
+            return { slug: trail.slug, name: race ? loc(race.name, race.nameEn) ?? trail.name : trail.name };
+        }),
+        [eventTrails, eventTrailRacesBySlug, loc],
     );
 
     const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
