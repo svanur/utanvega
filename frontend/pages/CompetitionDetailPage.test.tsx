@@ -546,3 +546,98 @@ describe('CompetitionDetailPage event trail legend entries (#1585)', () => {
         expect(entries).toEqual([{ slug: 'shared-trail', name: 'First Race' }]);
     });
 });
+
+// #1587: isAllSoldOut (ticketStatus.ts) already suppressed the register button on
+// RacesPage/EventTableView once every race in scope is SoldOut/Closed — CompetitionDetailPage's
+// own two register-button conditions (EditionMeta's at the per-edition Paper, and the
+// primaryEdition-gated one above the race list) never got that guard, so a fully sold-out edition
+// still showed a clickable "Register" button here. Both below only add `!isAllSoldOut(...)`
+// alongside the existing registrationUrl/isRegistrationRequired gate.
+describe('CompetitionDetailPage register button vs sold-out races (#1587)', () => {
+    it('hides the EditionMeta register button for a sold-out edition, but keeps it for a sibling edition that is not (multi-edition path)', () => {
+        // Two editions with a null date both land in currentEditions (hasNoDate -> current, see
+        // #1532 fixture comment above), so showEditionSections (length > 1) is true and each
+        // edition's own register button renders via EditionMeta, not the primaryEdition-gated one.
+        const soldOutEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' })],
+        });
+        const openEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [soldOutEdition, openEdition] }));
+
+        // Exactly one Register button — the sold-out edition's is suppressed, the other edition's
+        // is not.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+    });
+
+    it('hides the primaryEdition-gated register button when every visible race is SoldOut or Closed (single-edition path)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' }), makeRace({ id: 'race-2', ticketStatus: 'Closed' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('still shows the primaryEdition-gated register button when at least one visible race is not SoldOut/Closed', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' }), makeRace({ id: 'race-2', ticketStatus: 'AlmostSoldOut' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    // Regression guard: isAllSoldOut([]) returns false (ticketStatus.ts:87), so an edition with no
+    // races must not have this change suppress a register button that would otherwise show.
+    it('still shows the register button for an edition with no races at all', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('leaves the registration status Chip rendering (EditionMeta line 260-264) even when the register button is hidden for being sold out', () => {
+        // EditionMeta's own register button (hideMeta=false) only renders in the showEditionSections
+        // (>1 current edition) path — see the primaryEdition-gated test above for the single-edition
+        // path, where EditionMeta is called with hideMeta and so renders neither button nor Chip.
+        const soldOutEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' })],
+        });
+        const otherEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [soldOutEdition, otherEdition] }));
+
+        // One Register button (the non-sold-out edition's), but the Chip renders for both editions
+        // regardless of sold-out status — isAllSoldOut only ever gates the button.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+        expect(screen.getAllByText('Registration is open')).toHaveLength(2);
+    });
+});
