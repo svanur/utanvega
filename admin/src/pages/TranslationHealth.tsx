@@ -132,7 +132,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/events/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        name: e.name, nameEn: e.nameEn, slug: e.slug,
+        id: e.id, name: e.name, nameEn: e.nameEn, slug: e.slug,
         description: e.description, descriptionEn: e.descriptionEn,
         type: e.type, activityType: e.activityType, status: e.status,
         organizerName: e.organizerName, organizerNameEn: e.organizerNameEn,
@@ -196,7 +196,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/locations/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        name: l.name, nameEn: l.nameEn, slug: l.slug,
+        id: l.id, name: l.name, nameEn: l.nameEn, slug: l.slug,
         description: l.description, descriptionEn: l.descriptionEn,
         type: l.type, parentId: l.parentId,
         latitude: l.latitude, longitude: l.longitude, radius: l.radius,
@@ -209,7 +209,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/organizers/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        name: o.name, kennitala: o.kennitala, phone: o.phone,
+        id: o.id, name: o.name, kennitala: o.kennitala, phone: o.phone,
         email: o.email, website: o.website,
         description: o.description, descriptionEn: o.descriptionEn,
         contactName: o.contactName,
