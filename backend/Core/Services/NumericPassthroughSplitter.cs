@@ -50,6 +50,10 @@ public static partial class NumericPassthroughSplitter
     /// </summary>
     public static List<string> Reassemble(IReadOnlyList<string> originalTexts, NumericPassthroughSplit split, IReadOnlyList<string> translated)
     {
+        if (translated.Count != split.ToTranslateIndices.Count)
+            throw new InvalidOperationException(
+                $"Translation count mismatch: expected {split.ToTranslateIndices.Count} translated strings but got {translated.Count}.");
+
         var result = new string[originalTexts.Count];
 
         foreach (var i in split.PassthroughIndices)
