@@ -619,7 +619,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const eventTrailLegendEntries = useMemo(
         () => eventTrails.map(trail => {
             const race = eventTrailRacesBySlug.get(trail.slug);
-            return { slug: trail.slug, name: race ? loc(race.name, race.nameEn) ?? trail.name : trail.name };
+            // race.name is non-nullable, so loc(race.name, ...) can never return null here.
+            return { slug: trail.slug, name: race ? loc(race.name, race.nameEn)! : trail.name };
         }),
         [eventTrails, eventTrailRacesBySlug, loc],
     );
