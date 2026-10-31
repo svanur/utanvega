@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_5": {
+                "title": "Sía fyrir staðfestar dagsetningar, lagfæringar á uppseldu og skýrari skráningartextar",
+                "description": "Nú er hægt að sía viðburðalistann eftir staðfestum dagsetningum. Skráningarhnappur birtist ekki lengur þegar öll keppnishlaup viðburðar eru uppseldar, og aflýstar greinar telja ekki lengur með í þeim útreikningi. Skýringartextar á viðburðakortinu sýna nú nafn hlaups í stað fulls nafns leiðarinnar. Texti um skráningarstöðu er skýrari (t.d. „Skráning er hafin\", „UPPSELT\"), og þýðingarvinnsla í stjórnborði er orðin öruggari: tölustafir eru ekki sendir í DeepL."
+            },
             "v1_17_4": {
                 "title": "'Skráning opnar' fyrir seríu-hlaup og lagfæring á GPX-niðurhali",
                 "description": "Hlaup í seríu geta nú opnað skráningu á eigin tímasetningu í stað þess að erfa tímasetningu útgáfunnar. Takkinn \"Skráning\" birtist þegar skráning er í gangi og hverfur sjálfkrafa þegar hlaup er hafið. Niðurhal á GPX-skrá leiðar notar nú fetch í stað beinnar tengils-tilvísunar, svo vöntun á skrá birtir villu í stað þess að vafra burt úr vefnum."
