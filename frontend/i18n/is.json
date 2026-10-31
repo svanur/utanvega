@@ -1541,9 +1541,9 @@
         "cutoffTime": "Tímamörk",
         "ticketStatusLabel": "Skráningarstaða",
         "maxParticipants": "Hámarksfjöldi þátttakenda",
-        "statusUpcoming": "Óstaðfest",
+        "statusUpcoming": "Dagsetning óstaðfest",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
-        "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
+        "checklistWeatherReady": "Núna: {{temperature}} °C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
         "checklistBib": "Keppnisnúmer tilbúið",
         "checklistShoes": "Skór og sokkar og keppnisfötin klár",
@@ -1701,16 +1701,16 @@
             "Closed": "Skráning er lokuð",
             "NotStarted": "Skráning er ekki hafin",
             "NotRequired": "Ekki þarf að skrá sig",
-            "Invitational": "Eingöngu eftir boði"
+            "Invitational": "Boðsgestir eingöngu"
         },
         "ticketStatus": {
-            "Free": "Skráning: Frítt",
-            "NotStarted": "Skráning: ekki hafin",
-            "Available": "Skráning: hafin",
-            "AlmostSoldOut": "Skráning: næstum uppselt",
-            "SoldOut": "Skráning: fullt",
-            "Closed": "Skráning: lokuð",
-            "Invitational": "Boðsgestir eingöngu - engin skráning"
+            "Free": "Engin skráning — Bara mæta",
+            "NotStarted": "Skráning ekki hafin",
+            "Available": "Skráning er hafin",
+            "AlmostSoldOut": "Næstum uppselt",
+            "SoldOut": "UPPSELT",
+            "Closed": "Skráningu lokið",
+            "Invitational": "Boðsgestir eingöngu"
         }
     },
     "calendar": {
@@ -1721,7 +1721,7 @@
         "eventCount_other": "{{count}} viðburðir í þessum mánuði",
         "eventCount": "{{count}} viðburðir í þessum mánuði",
         "subscribe": "Gerast áskrifandi",
-        "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
+        "subscribeTooltip": "Gerast áskrifandi að þessu dagatali",
         "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
         "subscribeDialog": {
             "title": "Gerast áskrifandi að hlaupadagatali",
@@ -1950,7 +1950,7 @@
                 "Á www.itra.run geturðu leitað að hlaupum eftir landi, vegalengd, hæðarmun og erfiðleikastigi.",
                 "Á Íslandi eru fleiri og fleiri hlaup vottuð á hverju ári — skoðaðu lista ITRA til að sjá hvaða íslenskar keppnir eru skráðar."
             ],
-            "link": "Leita að ITRA-vottaðar keppnir"
+            "link": "Leita að ITRA - vottaðar keppnir"
         },
         "duplicate": {
             "title": "Vandamál með tvo reikninga (Duplicate Profiles)",

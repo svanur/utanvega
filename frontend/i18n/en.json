@@ -1541,9 +1541,9 @@
         "cutoffTime": "Time limit",
         "ticketStatusLabel": "Registration status",
         "maxParticipants": "Max participants",
-        "statusUpcoming": "Unconfirmed",
+        "statusUpcoming": "Date is unconfirmed",
         "checklistTitle": "Race day checklist",
-        "checklistWeatherReady": "Current snapshot: {{temperature}}°C and {{wind}} m/s wind.",
+        "checklistWeatherReady": "Current snapshot: {{temperature}} °C and {{wind}} m/s wind.",
         "checklistWeatherFallback": "Quick prep before heading out:",
         "checklistBib": "Bib pinned and ready",
         "checklistShoes": "Shoes and socks set",
@@ -1704,13 +1704,13 @@
             "Invitational": "Invitation only"
         },
         "ticketStatus": {
-            "Free": "Registration: Free",
-            "NotStarted": "Registration: Not started",
-            "Available": "Registration: Open",
-            "AlmostSoldOut": "Registration: Almost Full",
-            "SoldOut": "Registration: Sold Out",
-            "Closed": "Registration: Closed",
-            "Invitational": "Registration: Invitation only"
+            "Free": "Registration not required",
+            "NotStarted": "Registration not started",
+            "Available": "Registration is open",
+            "AlmostSoldOut": "Almost sold out",
+            "SoldOut": "SOLD OUT",
+            "Closed": "Registration is closed",
+            "Invitational": "Invitation only"
         }
     },
     "calendar": {
