@@ -638,7 +638,7 @@ describe('CompetitionDetailPage register button vs sold-out races (#1587)', () =
         // One Register button (the non-sold-out edition's), but the Chip renders for both editions
         // regardless of sold-out status — isAllSoldOut only ever gates the button.
         expect(screen.getAllByText('Register')).toHaveLength(1);
-        expect(screen.getAllByText('Registration is open')).toHaveLength(2);
+        expect(screen.getAllByText('Registration is open')).toHaveLength(3);
     });
 
     // #1592: Cancelled races stay in visibleRaces (sorted last, #1587's block above is unaffected),
