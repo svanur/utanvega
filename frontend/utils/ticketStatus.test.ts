@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getRecentRaceDistanceDisplay, groupDistances, hasRaceStarted, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, getTicketStatusColor, type DistanceEntry } from './ticketStatus';
+import { getRecentRaceDistanceDisplay, groupDistances, isAllUnavailableForRegistration, hasRaceStarted, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace, getTicketStatusColor, type DistanceEntry } from './ticketStatus';
 
 describe('groupDistances', () => {
     it('keeps elevationGain/terrainType when two entries sharing a label agree', () => {
@@ -100,6 +100,58 @@ describe('groupDistances', () => {
             { label: '10 km', ticketStatus: null },
         ]);
         expect(nullStaysNullWithoutEscalation[0].ticketStatus).toBeNull();
+    });
+});
+
+// #1601: direct unit coverage for the gating function itself, in addition to the page-level
+// RacesPage.test.tsx/EventTableView.test.tsx regression guards for its three call sites.
+describe('isAllUnavailableForRegistration', () => {
+    it('returns false when distances is null', () => {
+        expect(isAllUnavailableForRegistration(null)).toBe(false);
+    });
+
+    it('returns false when distances is undefined', () => {
+        expect(isAllUnavailableForRegistration(undefined)).toBe(false);
+    });
+
+    it('returns false when distances is an empty array', () => {
+        expect(isAllUnavailableForRegistration([])).toBe(false);
+    });
+
+    it('returns true when every race is NotStarted', () => {
+        expect(isAllUnavailableForRegistration([
+            { ticketStatus: 'NotStarted' },
+            { ticketStatus: 'NotStarted' },
+        ])).toBe(true);
+    });
+
+    it('returns true for a mix of SoldOut/Closed/NotStarted with zero Available/AlmostSoldOut races', () => {
+        expect(isAllUnavailableForRegistration([
+            { ticketStatus: 'SoldOut' },
+            { ticketStatus: 'Closed' },
+            { ticketStatus: 'NotStarted' },
+        ])).toBe(true);
+    });
+
+    it('returns false as soon as one race is Available', () => {
+        expect(isAllUnavailableForRegistration([
+            { ticketStatus: 'NotStarted' },
+            { ticketStatus: 'Available' },
+        ])).toBe(false);
+    });
+
+    it('returns false as soon as one race is AlmostSoldOut', () => {
+        expect(isAllUnavailableForRegistration([
+            { ticketStatus: 'SoldOut' },
+            { ticketStatus: 'AlmostSoldOut' },
+        ])).toBe(false);
+    });
+
+    it('agrees with isAllSoldOut for a fully SoldOut/Closed set (both true)', () => {
+        expect(isAllUnavailableForRegistration([
+            { ticketStatus: 'SoldOut' },
+            { ticketStatus: 'Closed' },
+        ])).toBe(true);
     });
 });
 
@@ -221,12 +273,17 @@ describe('isRegistrationRequiredForRace', () => {
         expect(isRegistrationRequiredForRace('Invitational')).toBe(false);
     });
 
+    // #1607: this race's own registration window hasn't opened yet (#1553) — same unavailable
+    // outcome as Free/Invitational, just a different reason.
+    it('returns false for NotStarted (this race\'s registration window has not opened yet)', () => {
+        expect(isRegistrationRequiredForRace('NotStarted')).toBe(false);
+    });
+
     it('returns true for every other ticketStatus value, including null/undefined', () => {
         expect(isRegistrationRequiredForRace('Available')).toBe(true);
         expect(isRegistrationRequiredForRace('AlmostSoldOut')).toBe(true);
         expect(isRegistrationRequiredForRace('SoldOut')).toBe(true);
         expect(isRegistrationRequiredForRace('Closed')).toBe(true);
-        expect(isRegistrationRequiredForRace('NotStarted')).toBe(true);
         expect(isRegistrationRequiredForRace(null)).toBe(true);
         expect(isRegistrationRequiredForRace(undefined)).toBe(true);
     });

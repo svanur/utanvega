@@ -398,6 +398,9 @@ export function computeRaceDayFlags(
     event: RaceDayEventInput,
     now: Date = new Date(),
 ): { isRaceDay: boolean; isRaceWeek: boolean } {
+    if (event.type !== 'Race' && event.type !== 'Series') {
+        return { isRaceDay: false, isRaceWeek: false };
+    }
     if (event.type === 'Series') {
         const todayStr = toDateOnlyString(now);
         return {

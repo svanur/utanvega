@@ -88,6 +88,20 @@ export function isAllSoldOut(distances: { ticketStatus: string | null }[] | null
     return distances.every(d => d.ticketStatus === 'SoldOut' || d.ticketStatus === 'Closed');
 }
 
+// Broader than isAllSoldOut: also treats a per-race 'NotStarted' status (#1553 — registration not
+// yet open for that race, per RegistrationOpensMinutesBeforeRace) as unavailable. Used to gate the
+// Register button, which must hide whenever no race in the edition can actually be registered for —
+// whether every race is sold out, every race's registration window hasn't opened yet, or any mix of
+// SoldOut/Closed/NotStarted with zero Available/AlmostSoldOut races. Doesn't replace isAllSoldOut
+// (which still answers the narrower "show the Sold out chip" question) — this is a wider check for
+// a wider question.
+export function isAllUnavailableForRegistration(distances: { ticketStatus: string | null }[] | null | undefined): boolean {
+    if (!distances || distances.length === 0) return false;
+    return distances.every(d =>
+        d.ticketStatus === 'SoldOut' || d.ticketStatus === 'Closed' || d.ticketStatus === 'NotStarted'
+    );
+}
+
 // Returns false only when registration isn't needed at all (free entry, no sign-up) — used to
 // suppress registration UI (button, swipe action) alongside isAllSoldOut above.
 //
@@ -104,8 +118,13 @@ export function isRegistrationRequired(registrationStatus: string | null | undef
 // is derived per-race by the backend (EditionStatusHelpers.ComputeEffectiveTicketStatus), which maps
 // RegistrationStatus.NotRequired -> TicketStatus.Free and only NotRequired maps to Free — so 'Free'
 // here reliably means "this specific race's edition needs no registration."
+//
+// #1607: also excludes 'NotStarted' (#1553 — this race's own registration window hasn't opened yet,
+// per RegistrationOpensMinutesBeforeRace) — mirrors isAllUnavailableForRegistration's NotStarted
+// case above, but for the single-race Register button in a Series event's expanded race row rather
+// than the edition-aggregate gates.
 export function isRegistrationRequiredForRace(ticketStatus: string | null | undefined): boolean {
-    return ticketStatus !== 'Free' && ticketStatus !== 'Invitational';
+    return ticketStatus !== 'Free' && ticketStatus !== 'Invitational' && ticketStatus !== 'NotStarted';
 }
 
 // RegistrationCloses now carries real time-of-day precision for editions entered via

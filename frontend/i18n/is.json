@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_6": {
+                "title": "Lagfæringar á skráningarhnappi og keppnisdags-merki",
+                "description": "Skráningarhnappur birtist ekki lengur fyrir útgáfu þar sem öll keppnishlaup eru með skráningarglugga sem er ekki opinn, til samræmis við núverandi hegðun fyrir uppseld hlaup — einnig fyrir skráningarhnapp einstakrar greinar í útvíkkaðri greinarlínu seríu. Merkið „Það er keppnisdagur\" og deilikortið birtast ekki lengur á félagslegum viðburðum, auglýsingum, hátíðum eða öðrum viðburðum — aðeins fyrir keppnishlaup og seríur."
+            },
             "v1_17_5": {
                 "title": "Sía fyrir staðfestar dagsetningar, lagfæringar á uppseldu og skýrari skráningartextar",
                 "description": "Nú er hægt að sía viðburðalistann eftir staðfestum dagsetningum. Skráningarhnappur birtist ekki lengur þegar öll keppnishlaup viðburðar eru uppseldar, og aflýstar greinar telja ekki lengur með í þeim útreikningi. Skýringartextar á viðburðakortinu sýna nú nafn hlaups í stað fulls nafns leiðarinnar. Texti um skráningarstöðu er skýrari (t.d. „Skráning er hafin\", „UPPSELT\"), og þýðingarvinnsla í stjórnborði er orðin öruggari: tölustafir eru ekki sendir í DeepL."

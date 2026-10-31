@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_6": {
+                "title": "Register button and race-day pill fixes",
+                "description": "The Register button no longer appears for an edition whose races all have a registration window that hasn't opened yet, matching the existing sold-out behaviour — including for an individual race's own button in a series' expanded detail row. The 'It's Race Day' pill and share card no longer appear on Social, Advertisement, Festival, or Other events — only Race and Series events."
+            },
             "v1_17_5": {
                 "title": "Confirmed-only filtering, sold-out fixes, and clearer registration wording",
                 "description": "The events list now has a Confirmed date only filter alongside the existing options. The Register button is hidden once all of an event's races are sold out, and cancelled races no longer count toward that sold-out check. Event map legend pills now show the race name instead of the full trail name, and the Series registration fallback note states the total race count. Registration status wording is clearer throughout (e.g. 'Registration is open', 'SOLD OUT'), and admin's translation tooling is more reliable: numeric-only text is no longer sent to DeepL, Translation Health saves include the record id, and a mismatched translation count now fails with a clear error instead of crashing."
