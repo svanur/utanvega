@@ -146,6 +146,7 @@ const DEFAULT_FILTERS: EventFilters = {
     mountainRaceOnly: false,
     favoritesOnly: false,
     distanceBuckets: [],
+    confirmedDateOnly: false,
 };
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -337,6 +338,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
             nextWeekOnly: searchParams.get('nextWeek') === 'true',
             mountainRaceOnly: searchParams.get('mountain') === 'true',
             favoritesOnly: searchParams.get('favorites') === 'true',
+            confirmedDateOnly: searchParams.get('confirmed') === 'true',
         };
 
         setSearch(q ?? '');
@@ -377,6 +379,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         set('nextWeek', filters.nextWeekOnly ? 'true' : null);
         set('mountain', filters.mountainRaceOnly ? 'true' : null);
         set('favorites', filters.favoritesOnly ? 'true' : null);
+        set('confirmed', filters.confirmedDateOnly ? 'true' : null);
 
         // #1026: the hydration effect above now reacts to every `searchParams` change (not just
         // mount), so skip the actual navigation when nothing would change — otherwise writing an
@@ -403,6 +406,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
         (filters.nextWeekOnly ? 1 : 0) +
         (filters.mountainRaceOnly ? 1 : 0) +
         (filters.favoritesOnly ? 1 : 0) +
+        (filters.confirmedDateOnly ? 1 : 0) +
         filters.distanceBuckets.length,
     [filters]);
 
@@ -475,6 +479,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
 
         if (filters.favoritesOnly) {
             lines.push({ label: t('races.filters.favoritesOnly'), value: '✓' });
+        }
+
+        if (filters.confirmedDateOnly) {
+            lines.push({ label: t('races.filters.confirmedDateOnly'), value: '✓' });
         }
 
         if (filters.distanceBuckets.length > 0) {
@@ -1012,7 +1020,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                             </Box>
                         )}
 
-                        {/* Checkboxes: Favorites · Weekend · Mountain race */}
+                        {/* Checkboxes: Favorites · Weekend · Mountain race · Confirmed date only */}
                         <Box sx={{ mb: 1.5 }}>
                             <Stack direction="row" flexWrap="wrap" sx={{ gap: 0, mx: -1 }}>
                                 <FormControlLabel
@@ -1049,6 +1057,17 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         />
                                     }
                                     label={<Typography variant="body2">⛰ {t('races.mountainRace', 'Mountain race')}</Typography>}
+                                />
+                                <FormControlLabel
+                                    sx={{ mx: 1 }}
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            checked={filters.confirmedDateOnly}
+                                            onChange={e => setFilters(f => ({ ...f, confirmedDateOnly: e.target.checked }))}
+                                        />
+                                    }
+                                    label={<Typography variant="body2">{t('races.filters.confirmedDateOnly')}</Typography>}
                                 />
                             </Stack>
                         </Box>
