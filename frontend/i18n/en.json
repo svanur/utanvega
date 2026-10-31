@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_5": {
+                "title": "Confirmed-only filtering, sold-out fixes, and clearer registration wording",
+                "description": "The events list now has a Confirmed date only filter alongside the existing options. The Register button is hidden once all of an event's races are sold out, and cancelled races no longer count toward that sold-out check. Event map legend pills now show the race name instead of the full trail name, and the Series registration fallback note states the total race count. Registration status wording is clearer throughout (e.g. 'Registration is open', 'SOLD OUT'), and admin's translation tooling is more reliable: numeric-only text is no longer sent to DeepL, Translation Health saves include the record id, and a mismatched translation count now fails with a clear error instead of crashing."
+            },
             "v1_17_4": {
                 "title": "Independent per-race registration windows, and a GPX download fix",
                 "description": "Races in a series can now open registration on their own schedule instead of inheriting the edition's, with full time-of-day precision and the Register button hiding once a race starts. Admin's edition dialog previews the resolved registration-opens date and time for each race and shows how many races use their own offset, with a hint that per-race fields fall back to the edition's. Downloading a trail's GPX file now uses a proper fetch instead of a raw link, so a missing file shows an error instead of navigating away from the site."
@@ -1541,9 +1545,9 @@
         "cutoffTime": "Time limit",
         "ticketStatusLabel": "Registration status",
         "maxParticipants": "Max participants",
-        "statusUpcoming": "Unconfirmed",
+        "statusUpcoming": "Date is unconfirmed",
         "checklistTitle": "Race day checklist",
-        "checklistWeatherReady": "Current snapshot: {{temperature}}°C and {{wind}} m/s wind.",
+        "checklistWeatherReady": "Current snapshot: {{temperature}} °C and {{wind}} m/s wind.",
         "checklistWeatherFallback": "Quick prep before heading out:",
         "checklistBib": "Bib pinned and ready",
         "checklistShoes": "Shoes and socks set",
@@ -1611,6 +1615,7 @@
             "nextWeek": "Next week",
             "weekendOnly": "Weekend only",
             "favoritesOnly": "Show favorites only",
+            "confirmedDateOnly": "Confirmed date only",
             "reset": "Reset filters",
             "noResults": "No events match the selected filters",
             "activeCount_one": "{{count}} filter active",
@@ -1703,13 +1708,13 @@
             "Invitational": "Invitation only"
         },
         "ticketStatus": {
-            "Free": "Registration: Free",
-            "NotStarted": "Registration: Not started",
-            "Available": "Registration: Open",
-            "AlmostSoldOut": "Registration: Almost Full",
-            "SoldOut": "Registration: Sold Out",
-            "Closed": "Registration: Closed",
-            "Invitational": "Registration: Invitation only"
+            "Free": "Registration not required",
+            "NotStarted": "Registration not started",
+            "Available": "Registration is open",
+            "AlmostSoldOut": "Almost sold out",
+            "SoldOut": "SOLD OUT",
+            "Closed": "Registration is closed",
+            "Invitational": "Invitation only"
         }
     },
     "calendar": {

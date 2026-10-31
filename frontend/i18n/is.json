@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_5": {
+                "title": "Sía fyrir staðfestar dagsetningar, lagfæringar á uppseldu og skýrari skráningartextar",
+                "description": "Nú er hægt að sía viðburðalistann eftir staðfestum dagsetningum. Skráningarhnappur birtist ekki lengur þegar öll keppnishlaup viðburðar eru uppseldar, og aflýstar greinar telja ekki lengur með í þeim útreikningi. Skýringartextar á viðburðakortinu sýna nú nafn hlaups í stað fulls nafns leiðarinnar. Texti um skráningarstöðu er skýrari (t.d. „Skráning er hafin\", „UPPSELT\"), og þýðingarvinnsla í stjórnborði er orðin öruggari: tölustafir eru ekki sendir í DeepL."
+            },
             "v1_17_4": {
                 "title": "'Skráning opnar' fyrir seríu-hlaup og lagfæring á GPX-niðurhali",
                 "description": "Hlaup í seríu geta nú opnað skráningu á eigin tímasetningu í stað þess að erfa tímasetningu útgáfunnar. Takkinn \"Skráning\" birtist þegar skráning er í gangi og hverfur sjálfkrafa þegar hlaup er hafið. Niðurhal á GPX-skrá leiðar notar nú fetch í stað beinnar tengils-tilvísunar, svo vöntun á skrá birtir villu í stað þess að vafra burt úr vefnum."
@@ -1541,9 +1545,9 @@
         "cutoffTime": "Tímamörk",
         "ticketStatusLabel": "Skráningarstaða",
         "maxParticipants": "Hámarksfjöldi þátttakenda",
-        "statusUpcoming": "Óstaðfest",
+        "statusUpcoming": "Dagsetning óstaðfest",
         "checklistTitle": "Tékklisti fyrir keppnisdag",
-        "checklistWeatherReady": "Núna: {{temperature}}°C og {{wind}} m/s vindur.",
+        "checklistWeatherReady": "Núna: {{temperature}} °C og {{wind}} m/s vindur.",
         "checklistWeatherFallback": "Stutt yfirferð áður en lagt er af stað:",
         "checklistBib": "Keppnisnúmer tilbúið",
         "checklistShoes": "Skór og sokkar og keppnisfötin klár",
@@ -1611,6 +1615,7 @@
             "nextWeek": "Næsta vika",
             "weekendOnly": "Aðeins um helgar",
             "favoritesOnly": "Sýna eingöngu eftirlæti",
+            "confirmedDateOnly": "Aðeins staðfestar dagsetningar",
             "reset": "Hreinsa síur",
             "noResults": "Engir viðburðir passa við valdar síur",
             "activeCount_one": "{{count}} sía virk",
@@ -1700,16 +1705,16 @@
             "Closed": "Skráning er lokuð",
             "NotStarted": "Skráning er ekki hafin",
             "NotRequired": "Ekki þarf að skrá sig",
-            "Invitational": "Eingöngu eftir boði"
+            "Invitational": "Boðsgestir eingöngu"
         },
         "ticketStatus": {
-            "Free": "Skráning: Frítt",
-            "NotStarted": "Skráning: ekki hafin",
-            "Available": "Skráning: hafin",
-            "AlmostSoldOut": "Skráning: næstum uppselt",
-            "SoldOut": "Skráning: fullt",
-            "Closed": "Skráning: lokuð",
-            "Invitational": "Boðsgestir eingöngu - engin skráning"
+            "Free": "Engin skráning — Bara mæta",
+            "NotStarted": "Skráning ekki hafin",
+            "Available": "Skráning er hafin",
+            "AlmostSoldOut": "Næstum uppselt",
+            "SoldOut": "UPPSELT",
+            "Closed": "Skráningu lokið",
+            "Invitational": "Boðsgestir eingöngu"
         }
     },
     "calendar": {
@@ -1720,7 +1725,7 @@
         "eventCount_other": "{{count}} viðburðir í þessum mánuði",
         "eventCount": "{{count}} viðburðir í þessum mánuði",
         "subscribe": "Gerast áskrifandi",
-        "subscribeTooltip": "Gerast áskrifandi að dagatalsfæðu",
+        "subscribeTooltip": "Gerast áskrifandi að þessu dagatali",
         "subscribeSuccess": "Slóð afrituð! Límdu hana í dagatalið þitt.",
         "subscribeDialog": {
             "title": "Gerast áskrifandi að hlaupadagatali",
@@ -1949,7 +1954,7 @@
                 "Á www.itra.run geturðu leitað að hlaupum eftir landi, vegalengd, hæðarmun og erfiðleikastigi.",
                 "Á Íslandi eru fleiri og fleiri hlaup vottuð á hverju ári — skoðaðu lista ITRA til að sjá hvaða íslenskar keppnir eru skráðar."
             ],
-            "link": "Leita að ITRA-vottaðar keppnir"
+            "link": "Leita að ITRA - vottaðar keppnir"
         },
         "duplicate": {
             "title": "Vandamál með tvo reikninga (Duplicate Profiles)",

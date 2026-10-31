@@ -97,7 +97,7 @@ import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
 import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday } from '../utils/eventUtils';
-import { getTicketStatusColor, isRegistrationRequired } from '../utils/ticketStatus';
+import { getTicketStatusColor, isAllSoldOut, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -192,7 +192,7 @@ function EditionMeta({
     hideMeta,
     isSeries,
 }: {
-    edition: EventEditionDto;
+    edition: PreparedEdition;
     t: (key: string, opts?: Record<string, unknown>) => string;
     now: Date;
     showHeader?: boolean;
@@ -246,7 +246,10 @@ function EditionMeta({
             )}
             {!hideMeta && (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
-                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && (
+                    {/* #1592: exclude Cancelled races before the sold-out check — a Cancelled race's own
+                        ticketStatus isn't guaranteed SoldOut/Closed, so leaving it in would fail the
+                        "every race" check open on a mixed cancelled+sold-out edition. */}
+                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllSoldOut(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                         <Button
                             variant="contained"
                             color="primary"
@@ -601,9 +604,28 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         () => computeSortedSlugs(eventTrails, eventTrailGeometries),
         [eventTrails, eventTrailGeometries],
     );
+    // #1585: Trail.name follows the admin "{EventName} - {RaceName}" convention (needed for
+    // Trail's own global listing/search), which is redundant and crowds this event-scoped legend.
+    // Prefer the race's own localized name per trailSlug when one maps to it — same race-list
+    // selection deriveEventTrailSlugs uses above (primaryEdition's own races if any have a
+    // trailSlug, else the broader visibleRaces), so this never disagrees with which slugs got
+    // fetched. First match wins if two races share a trailSlug (stable, no merge).
+    const eventTrailRacesBySlug = useMemo(() => {
+        const primaryRaces = primaryEdition?.visibleRaces ?? [];
+        const racesWithTrails = primaryRaces.some(race => race.trailSlug) ? primaryRaces : visibleRaces;
+        const bySlug = new Map<string, RaceDto>();
+        racesWithTrails.forEach(race => {
+            if (race.trailSlug && !bySlug.has(race.trailSlug)) bySlug.set(race.trailSlug, race);
+        });
+        return bySlug;
+    }, [primaryEdition, visibleRaces]);
     const eventTrailLegendEntries = useMemo(
-        () => eventTrails.map(trail => ({ slug: trail.slug, name: trail.name })),
-        [eventTrails],
+        () => eventTrails.map(trail => {
+            const race = eventTrailRacesBySlug.get(trail.slug);
+            // race.name is non-nullable, so loc(race.name, ...) can never return null here.
+            return { slug: trail.slug, name: race ? loc(race.name, race.nameEn)! : trail.name };
+        }),
+        [eventTrails, eventTrailRacesBySlug, loc],
     );
 
     const [raceDayChecklist, setRaceDayChecklist] = useState<Record<RaceDayChecklistKey, boolean>>({
@@ -906,7 +928,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Box sx={{ mt: 2.5 }}>
                         {/* Row 1: action buttons */}
                         <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
-                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && (
+                            {/* #1592: see the matching comment above — exclude Cancelled races before checking sold-out. */}
+                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && !isAllSoldOut(primaryEdition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                                 <Button
                                     variant="contained"
                                     color="primary"

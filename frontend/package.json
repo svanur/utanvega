@@ -1,7 +1,7 @@
 {
   "name": "utanvega-frontend",
   "private": true,
-  "version": "1.17.4",
+  "version": "1.17.5",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"

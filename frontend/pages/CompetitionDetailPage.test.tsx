@@ -54,10 +54,15 @@ vi.mock('../hooks/useEvents', () => ({
 const { mockClimateResult } = vi.hoisted(() => ({
     mockClimateResult: { current: { climate: null as EventClimate | null, loading: false, error: null as string | null } },
 }));
+// #1585: mockTrails defaults to [] (same as the old hardcoded return) so every pre-existing test
+// above is unaffected; only the #1585 legend-entries suite below overrides it per-case.
+const { mockTrails } = vi.hoisted(() => ({
+    mockTrails: { current: [] as import('../hooks/useTrails').Trail[] },
+}));
 vi.mock('../hooks/useTrails', () => ({
     useTrailWeather: () => ({ weather: null, loading: false, error: null }),
     useEventClimate: () => mockClimateResult.current,
-    useTrailsBySlugs: () => ({ trails: [], loading: false, error: null }),
+    useTrailsBySlugs: () => ({ trails: mockTrails.current, loading: false, error: null }),
     // SendTipButton (rendered unconditionally at CompetitionDetailPage.tsx:1276) imports API_URL
     // from this same module — never read during its own render, only inside its submit handler,
     // but exported here anyway so the mock module shape doesn't silently diverge from the real one.
@@ -80,15 +85,22 @@ vi.mock('../hooks/useFeatureFlags', () => ({
     useFeatureFlags: () => ({ flags: {}, loaded: true, isEnabled: (name: string) => name === 'climate_normals' }),
 }));
 
-const { trailMapViewMock, climateCardMock } = vi.hoisted(() => ({
+const { trailMapViewMock, climateCardMock, eventTrailLegendMock } = vi.hoisted(() => ({
     trailMapViewMock: vi.fn(),
     climateCardMock: vi.fn(),
+    eventTrailLegendMock: vi.fn(),
 }));
 vi.mock('../components/TrailMapView', () => ({
     TrailMapView: (props: unknown) => { trailMapViewMock(props); return null; },
 }));
 vi.mock('../components/ClimateCard', () => ({
     default: (props: unknown) => { climateCardMock(props); return null; },
+}));
+// #1585: captures the `entries` prop CompetitionDetailPage builds, rather than asserting on
+// EventTrailLegend's own rendering (unchanged, already covered by its own render — it just
+// displays whatever `name` it's given) — same prop-capture pattern as trailMapViewMock above.
+vi.mock('../components/EventTrailLegend', () => ({
+    EventTrailLegend: (props: unknown) => { eventTrailLegendMock(props); return null; },
 }));
 
 import CompetitionDetailPage from './CompetitionDetailPage';
@@ -209,6 +221,28 @@ function makeRace(overrides: Partial<RaceDto> = {}): RaceDto {
     };
 }
 
+// #1585: minimal Trail fixture for the legend-entries suite below — name deliberately follows
+// the admin "{EventName} - {RaceName}" convention by default so the fallback-vs-race-name
+// distinction has something to tell apart.
+function makeTrail(overrides: Partial<import('../hooks/useTrails').Trail> = {}): import('../hooks/useTrails').Trail {
+    return {
+        id: 'trail-1',
+        name: 'Midnight Sun Trail - 10K',
+        slug: 'midnight-sun-trail-10k',
+        length: 10000,
+        elevationGain: 200,
+        elevationLoss: 200,
+        status: 'Active',
+        activityType: 'TrailRunning',
+        trailType: 'Loop',
+        difficulty: 'Moderate',
+        startLatitude: null,
+        startLongitude: null,
+        locations: [],
+        ...overrides,
+    };
+}
+
 function makeEdition(overrides: Partial<EventEditionDto> = {}): EventEditionDto {
     return {
         id: 'edition-1',
@@ -261,7 +295,9 @@ function renderCompetitionDetailPage(event: EventDetail) {
 beforeEach(() => {
     trailMapViewMock.mockClear();
     climateCardMock.mockClear();
+    eventTrailLegendMock.mockClear();
     mockClimateResult.current = { climate: null, loading: false, error: null };
+    mockTrails.current = [];
 });
 
 // #1299: PR #1298 removed CompetitionDetailPage's own `userLocation` state and the
@@ -434,5 +470,210 @@ describe('CompetitionDetailPage race Chip guards (#1532)', () => {
 
             expect(screen.queryByText(/km$/)).toBeNull();
         });
+    });
+});
+
+// #1585: Trail.name follows the admin "{EventName} - {RaceName}" convention (needed for Trail's
+// own global listing/search), which is redundant and crowds this event-scoped legend — prefer the
+// mapped race's own localized name per trailSlug instead, falling back to trail.name when no race
+// maps to that slug.
+describe('CompetitionDetailPage event trail legend entries (#1585)', () => {
+    function lastLegendEntries() {
+        expect(eventTrailLegendMock).toHaveBeenCalled();
+        const props = eventTrailLegendMock.mock.calls.at(-1)![0] as { entries: { slug: string; name: string }[] };
+        return props.entries;
+    }
+
+    it('prefers the mapped race name over the full "{Event} - {Race}" trail name', () => {
+        const trailA = makeTrail({ slug: 'trail-10k', name: 'Midnight Sun Trail - 10K' });
+        const trailB = makeTrail({ slug: 'trail-21k', name: 'Midnight Sun Trail - 21K' });
+        mockTrails.current = [trailA, trailB];
+        const edition = makeEdition({
+            races: [
+                makeRace({ id: 'race-10k', name: '10K', trailSlug: 'trail-10k' }),
+                makeRace({ id: 'race-21k', name: '21K', trailSlug: 'trail-21k' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([
+            { slug: 'trail-10k', name: '10K' },
+            { slug: 'trail-21k', name: '21K' },
+        ]);
+    });
+
+    it('falls back to trail.name when no race in the lookup points at that trailSlug', () => {
+        const trail = makeTrail({ slug: 'edition-trail', name: 'Midnight Sun Trail - Edition Route' });
+        mockTrails.current = [trail];
+        // Edition links its own trailSlug directly, with no race pointing at it — mirrors
+        // deriveEventTrailSlugs' edition-level tier, which exists independently of any race.
+        const edition = makeEdition({ trailSlug: 'edition-trail', races: [] });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([{ slug: 'edition-trail', name: 'Midnight Sun Trail - Edition Route' }]);
+    });
+
+    it('prefers the mapped race name even when the trail name does not follow the "{Event} - {Race}" convention', () => {
+        const trail = makeTrail({ slug: 'standalone-trail', name: 'Laugavegur' });
+        mockTrails.current = [trail];
+        const edition = makeEdition({
+            races: [makeRace({ id: 'race-1', name: 'Laugavegur Ultra', trailSlug: 'standalone-trail' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([{ slug: 'standalone-trail', name: 'Laugavegur Ultra' }]);
+    });
+
+    it('uses the first matching race when two races share a trailSlug, never merging the names', () => {
+        const trail = makeTrail({ slug: 'shared-trail', name: 'Midnight Sun Trail - Shared' });
+        mockTrails.current = [trail];
+        const edition = makeEdition({
+            races: [
+                makeRace({ id: 'race-first', name: 'First Race', trailSlug: 'shared-trail', sortOrder: 0 }),
+                makeRace({ id: 'race-second', name: 'Second Race', trailSlug: 'shared-trail', sortOrder: 1 }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        const entries = lastLegendEntries();
+        expect(entries).toEqual([{ slug: 'shared-trail', name: 'First Race' }]);
+    });
+});
+
+// #1587: isAllSoldOut (ticketStatus.ts) already suppressed the register button on
+// RacesPage/EventTableView once every race in scope is SoldOut/Closed — CompetitionDetailPage's
+// own two register-button conditions (EditionMeta's at the per-edition Paper, and the
+// primaryEdition-gated one above the race list) never got that guard, so a fully sold-out edition
+// still showed a clickable "Register" button here. Both below only add `!isAllSoldOut(...)`
+// alongside the existing registrationUrl/isRegistrationRequired gate.
+describe('CompetitionDetailPage register button vs sold-out races (#1587)', () => {
+    it('hides the EditionMeta register button for a sold-out edition, but keeps it for a sibling edition that is not (multi-edition path)', () => {
+        // Two editions with a null date both land in currentEditions (hasNoDate -> current, see
+        // #1532 fixture comment above), so showEditionSections (length > 1) is true and each
+        // edition's own register button renders via EditionMeta, not the primaryEdition-gated one.
+        const soldOutEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' })],
+        });
+        const openEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [soldOutEdition, openEdition] }));
+
+        // Exactly one Register button — the sold-out edition's is suppressed, the other edition's
+        // is not.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+    });
+
+    it('hides the primaryEdition-gated register button when every visible race is SoldOut or Closed (single-edition path)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' }), makeRace({ id: 'race-2', ticketStatus: 'Closed' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('still shows the primaryEdition-gated register button when at least one visible race is not SoldOut/Closed', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' }), makeRace({ id: 'race-2', ticketStatus: 'AlmostSoldOut' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    // Regression guard: isAllSoldOut([]) returns false (ticketStatus.ts:87), so an edition with no
+    // races must not have this change suppress a register button that would otherwise show.
+    it('still shows the register button for an edition with no races at all', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('leaves the registration status Chip rendering (EditionMeta line 260-264) even when the register button is hidden for being sold out', () => {
+        // EditionMeta's own register button (hideMeta=false) only renders in the showEditionSections
+        // (>1 current edition) path — see the primaryEdition-gated test above for the single-edition
+        // path, where EditionMeta is called with hideMeta and so renders neither button nor Chip.
+        const soldOutEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'SoldOut' })],
+        });
+        const otherEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [soldOutEdition, otherEdition] }));
+
+        // One Register button (the non-sold-out edition's), but the Chip renders for both editions
+        // regardless of sold-out status — isAllSoldOut only ever gates the button.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+        expect(screen.getAllByText('Registration is open')).toHaveLength(3);
+    });
+
+    // #1592: Cancelled races stay in visibleRaces (sorted last, #1587's block above is unaffected),
+    // but a Cancelled race's own ticketStatus isn't guaranteed SoldOut/Closed — isAllSoldOut must
+    // ignore it, not read it, or a mixed cancelled+sold-out edition fails the "every race" check
+    // open and leaves a clickable Register button up for a race nobody can actually register for.
+    it('hides the primaryEdition-gated register button for a mixed Cancelled+SoldOut edition (Cancelled race not SoldOut itself)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', status: 'Cancelled', ticketStatus: 'Available' }),
+                makeRace({ id: 'race-2', ticketStatus: 'SoldOut' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    // A lone Cancelled race must not force sold-out messaging on an otherwise-open edition — it's
+    // excluded from the check entirely, not treated as "SoldOut by default".
+    it('still shows the primaryEdition-gated register button for a mixed Cancelled+Available edition', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', status: 'Cancelled', ticketStatus: 'Available' }),
+                makeRace({ id: 'race-2', ticketStatus: 'Available' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
     });
 });

@@ -5,6 +5,9 @@ import TranslationHealth from './TranslationHealth';
 import { hashText } from '../utils/translationHash';
 import type { Trail } from '../hooks/useTrails';
 import type { TagDto } from '../hooks/useTags';
+import type { EventDetailDto } from '../hooks/useEvents';
+import type { LocationDto } from '../hooks/useLocations';
+import type { OrganizerDto } from '../hooks/useOrganizers';
 
 // #1481: translateItem/translateAll used to run every missing/stale field — including the
 // proper-noun "Name" field on Event/Race/Trail/Location — through the DeepL endpoint, which
@@ -45,6 +48,88 @@ const mockState = vi.hoisted(() => ({
     color: '#123456',
     trailCount: 3,
   } as TagDto,
+  // #1582: Event/Location/Organizer PUT bodies were built without `id`, so model binding filled
+  // it with Guid.Empty and the backend's `id != command.Id` guard 400'd every save. These three
+  // fixtures exist only to drive the regression assertions below (body.id present) — unlike the
+  // Trail/Tag fixtures above, their translation state is irrelevant to that bug.
+  // nameEn/descriptionEn default to filled (not missing) so these fixtures don't inflate the
+  // unrelated #1481/#1485 "Translate all missing" assertions above, which count items by kind;
+  // the #1582 describe block below nulls descriptionEn itself before each of its own tests.
+  event: {
+    id: 'event-1',
+    name: 'Hengill Ultra',
+    nameEn: 'Hengill Ultra' as string | null,
+    slug: 'hengill-ultra',
+    description: 'Lýsing á viðburði',
+    descriptionEn: 'Old English event description' as string | null,
+    type: 'Race',
+    activityType: 'TrailRunning',
+    status: 'Confirmed',
+    organizerName: null,
+    organizerNameEn: null,
+    organizerWebsite: null,
+    organizerId: null,
+    organizerSlug: null,
+    alertMessage: null,
+    alertMessageEn: null,
+    alertSeverity: null,
+    locationId: null,
+    locationName: null,
+    locationType: null,
+    scheduleRule: null,
+    socialLinks: null,
+    nextEditionDate: null,
+    daysUntil: null,
+    editionCount: 0,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    seriesRaces: null,
+    gpxPointLat: null,
+    gpxPointLng: null,
+    isMountainRace: false,
+    terrainType: null,
+    hasFutureEdition: false,
+    endDisplayDate: null,
+    translationHashes: undefined as Record<string, string> | undefined,
+    editionStatus: null,
+    editionEffectiveCancelled: false,
+    anyEditionNeedsReview: false,
+    anyEditionUnconfirmed: false,
+    upcomingDates: [],
+    editions: [],
+  } as EventDetailDto,
+  location: {
+    id: 'location-1',
+    name: 'Hengill',
+    nameEn: 'Hengill' as string | null,
+    slug: 'hengill',
+    description: 'Lýsing á svæði',
+    descriptionEn: 'Old English location description' as string | null,
+    type: 'Area',
+    parentId: null,
+    parentName: null,
+    latitude: null,
+    longitude: null,
+    radius: null,
+    childrenCount: 0,
+    translationHashes: undefined as Record<string, string> | undefined,
+  } as LocationDto,
+  organizer: {
+    id: 'organizer-1',
+    name: 'Hlaupahópur',
+    slug: 'hlaupahopur',
+    kennitala: null,
+    phone: null,
+    email: null,
+    website: null,
+    description: 'Lýsing á félagi',
+    descriptionEn: 'Old English organizer description' as string | null,
+    contactName: null,
+    eventCount: 0,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    translationHashes: undefined as Record<string, string> | undefined,
+  } as OrganizerDto,
   putCalls: [] as { endpoint: string; body: Record<string, unknown> }[],
   translateCalls: [] as string[][],
 }));
@@ -53,10 +138,10 @@ vi.mock('../hooks/api', () => ({
   apiFetch: vi.fn((endpoint: string, options?: { method?: string; body?: string }) => {
     const method = options?.method ?? 'GET';
     if (method === 'GET') {
-      if (endpoint === '/api/v1/admin/events/details') return Promise.resolve([]);
+      if (endpoint === '/api/v1/admin/events/details') return Promise.resolve([mockState.event]);
       if (endpoint === '/api/v1/admin/trails') return Promise.resolve([mockState.trail]);
-      if (endpoint === '/api/v1/admin/locations') return Promise.resolve([]);
-      if (endpoint === '/api/v1/admin/organizers') return Promise.resolve([]);
+      if (endpoint === '/api/v1/admin/locations') return Promise.resolve([mockState.location]);
+      if (endpoint === '/api/v1/admin/organizers') return Promise.resolve([mockState.organizer]);
       if (endpoint === '/api/v1/admin/tags') return Promise.resolve([mockState.tag]);
       return Promise.resolve([]);
     }
@@ -199,5 +284,55 @@ describe('TranslationHealth — "Translate all missing" bulk path (#1485)', () =
     expect(allTranslatedTexts).not.toContain('Súlur Vertical');
     expect(allTranslatedTexts).toContain('Lýsing á leiðinni');
     expect(allTranslatedTexts).toContain('Fjallahlaup');
+  });
+});
+
+// #1582: Event/Location/Organizer PUT bodies omitted `id`, so model binding defaulted it to
+// Guid.Empty and the backend's `id != command.Id` guard rejected every save with a 400 — only the
+// Edition/Race/Trail branches of savePatch included their own `id`. This asserts the PUT body for
+// each of the three previously-broken kinds now carries the correct id, mirroring the existing
+// endpoint/body assertions above for Trail/Tag.
+describe('TranslationHealth — Event/Location/Organizer PUT body includes id (#1582)', () => {
+  beforeEach(() => {
+    mockState.event.descriptionEn = null;
+    mockState.location.descriptionEn = null;
+    mockState.organizer.descriptionEn = null;
+    mockState.putCalls = [];
+    mockState.translateCalls = [];
+  });
+
+  afterEach(cleanup);
+
+  it('includes the Event id in its PUT body', async () => {
+    renderTranslationHealth();
+
+    await clickTranslateFor('Hengill Ultra');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/events/event-1');
+    expect(body.id).toBe('event-1');
+  });
+
+  it('includes the Location id in its PUT body', async () => {
+    renderTranslationHealth();
+
+    await clickTranslateFor('Hengill');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/locations/location-1');
+    expect(body.id).toBe('location-1');
+  });
+
+  it('includes the Organizer id in its PUT body', async () => {
+    renderTranslationHealth();
+
+    await clickTranslateFor('Hlaupahópur');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/organizers/organizer-1');
+    expect(body.id).toBe('organizer-1');
   });
 });

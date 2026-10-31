@@ -79,8 +79,11 @@ export function getRecentRaceDistanceDisplay(
     return { groupedDistances, singleDistanceLabel, showDistanceChips };
 }
 
-// Returns true when every race in the relevant edition is sold out — used to suppress registration UI (button, swipe action)
-export function isAllSoldOut(distances: DistanceEntry[] | null | undefined): boolean {
+// Returns true when every race in the relevant edition is sold out — used to suppress registration UI (button, swipe action).
+// Takes anything shaped like { ticketStatus } rather than DistanceEntry[] specifically, since callers
+// pass both pre-grouped DistanceEntry[]/GroupedDistance[] (RacesPage, EventTableView) and raw RaceDto[]
+// (CompetitionDetailPage) — only ticketStatus is ever read here, so the narrower shape is all this needs.
+export function isAllSoldOut(distances: { ticketStatus: string | null }[] | null | undefined): boolean {
     if (!distances || distances.length === 0) return false;
     return distances.every(d => d.ticketStatus === 'SoldOut' || d.ticketStatus === 'Closed');
 }
