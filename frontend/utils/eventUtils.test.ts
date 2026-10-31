@@ -804,6 +804,54 @@ describe('computeRaceDayFlags', () => {
             expect(result.isRaceDay).toBe(false);
         });
     });
+
+    // #1600: a Social/Advertisement/Festival/Other event sitting on daysUntil 0 (or within the
+    // 7-day window) is not a race at all, so neither flag should ever be true for it — regardless
+    // of what the day-count math alone would say. The type gate must run before the Series branch
+    // and before the day-count fallback below it.
+    describe('non-race event types (Social, Advertisement, Festival, Other)', () => {
+        it.each(['Social', 'Advertisement', 'Festival', 'Other'])('is neither race day nor race week for a %s event on daysUntil 0', (type) => {
+            const result = computeRaceDayFlags(
+                { type, daysUntil: 0, raceDates: [], displayDate: '2026-11-12', endDisplayDate: '2026-11-12' },
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: false });
+        });
+
+        it.each(['Social', 'Advertisement', 'Festival', 'Other'])('is neither race day nor race week for a %s event within the race week window (daysUntil 5)', (type) => {
+            const result = computeRaceDayFlags(
+                { type, daysUntil: 5, raceDates: [], displayDate: '2026-11-17', endDisplayDate: '2026-11-17' },
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: false });
+        });
+
+        it('is neither race day nor race week for a Social event with a Series-shaped raceDates match on today (type gate runs before the Series branch)', () => {
+            const now = new Date('2026-11-12T00:00:00');
+            const result = computeRaceDayFlags(
+                { type: 'Social', daysUntil: 0, raceDates: ['2026-11-12'], displayDate: '2026-10-08', endDisplayDate: '2027-03-11' },
+                now,
+            );
+            expect(result).toEqual({ isRaceDay: false, isRaceWeek: false });
+        });
+    });
+
+    // Regression: confirm Race/Series are unaffected by the new type gate.
+    describe('type gate regression (Race and Series still flag correctly)', () => {
+        it('still flags a Race event as race day on daysUntil 0', () => {
+            const result = computeRaceDayFlags(
+                { type: 'Race', daysUntil: 0, raceDates: [], displayDate: '2026-11-12', endDisplayDate: '2026-11-12' },
+            );
+            expect(result).toEqual({ isRaceDay: true, isRaceWeek: true });
+        });
+
+        it('still flags a Series event as race day when today is in raceDates', () => {
+            const now = new Date('2026-11-12T00:00:00');
+            const result = computeRaceDayFlags(
+                { type: 'Series', daysUntil: 0, raceDates: ['2026-09-14', '2026-11-12'], displayDate: '2026-10-08', endDisplayDate: '2027-03-11' },
+                now,
+            );
+            expect(result).toEqual({ isRaceDay: true, isRaceWeek: true });
+        });
+    });
 });
 
 describe('resolveSeriesClimateDate', () => {
