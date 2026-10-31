@@ -246,7 +246,10 @@ function EditionMeta({
             )}
             {!hideMeta && (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
-                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllSoldOut(edition.visibleRaces) && (
+                    {/* #1592: exclude Cancelled races before the sold-out check — a Cancelled race's own
+                        ticketStatus isn't guaranteed SoldOut/Closed, so leaving it in would fail the
+                        "every race" check open on a mixed cancelled+sold-out edition. */}
+                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllSoldOut(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                         <Button
                             variant="contained"
                             color="primary"
@@ -925,7 +928,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     <Box sx={{ mt: 2.5 }}>
                         {/* Row 1: action buttons */}
                         <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
-                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && !isAllSoldOut(primaryEdition.visibleRaces) && (
+                            {/* #1592: see the matching comment above — exclude Cancelled races before checking sold-out. */}
+                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && !isAllSoldOut(primaryEdition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                                 <Button
                                     variant="contained"
                                     color="primary"

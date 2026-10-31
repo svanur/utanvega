@@ -640,4 +640,40 @@ describe('CompetitionDetailPage register button vs sold-out races (#1587)', () =
         expect(screen.getAllByText('Register')).toHaveLength(1);
         expect(screen.getAllByText('Registration is open')).toHaveLength(2);
     });
+
+    // #1592: Cancelled races stay in visibleRaces (sorted last, #1587's block above is unaffected),
+    // but a Cancelled race's own ticketStatus isn't guaranteed SoldOut/Closed — isAllSoldOut must
+    // ignore it, not read it, or a mixed cancelled+sold-out edition fails the "every race" check
+    // open and leaves a clickable Register button up for a race nobody can actually register for.
+    it('hides the primaryEdition-gated register button for a mixed Cancelled+SoldOut edition (Cancelled race not SoldOut itself)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', status: 'Cancelled', ticketStatus: 'Available' }),
+                makeRace({ id: 'race-2', ticketStatus: 'SoldOut' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    // A lone Cancelled race must not force sold-out messaging on an otherwise-open edition — it's
+    // excluded from the check entirely, not treated as "SoldOut by default".
+    it('still shows the primaryEdition-gated register button for a mixed Cancelled+Available edition', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', status: 'Cancelled', ticketStatus: 'Available' }),
+                makeRace({ id: 'race-2', ticketStatus: 'Available' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
 });
