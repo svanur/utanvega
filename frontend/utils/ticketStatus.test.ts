@@ -273,12 +273,17 @@ describe('isRegistrationRequiredForRace', () => {
         expect(isRegistrationRequiredForRace('Invitational')).toBe(false);
     });
 
+    // #1607: this race's own registration window hasn't opened yet (#1553) — same unavailable
+    // outcome as Free/Invitational, just a different reason.
+    it('returns false for NotStarted (this race\'s registration window has not opened yet)', () => {
+        expect(isRegistrationRequiredForRace('NotStarted')).toBe(false);
+    });
+
     it('returns true for every other ticketStatus value, including null/undefined', () => {
         expect(isRegistrationRequiredForRace('Available')).toBe(true);
         expect(isRegistrationRequiredForRace('AlmostSoldOut')).toBe(true);
         expect(isRegistrationRequiredForRace('SoldOut')).toBe(true);
         expect(isRegistrationRequiredForRace('Closed')).toBe(true);
-        expect(isRegistrationRequiredForRace('NotStarted')).toBe(true);
         expect(isRegistrationRequiredForRace(null)).toBe(true);
         expect(isRegistrationRequiredForRace(undefined)).toBe(true);
     });

@@ -118,8 +118,13 @@ export function isRegistrationRequired(registrationStatus: string | null | undef
 // is derived per-race by the backend (EditionStatusHelpers.ComputeEffectiveTicketStatus), which maps
 // RegistrationStatus.NotRequired -> TicketStatus.Free and only NotRequired maps to Free — so 'Free'
 // here reliably means "this specific race's edition needs no registration."
+//
+// #1607: also excludes 'NotStarted' (#1553 — this race's own registration window hasn't opened yet,
+// per RegistrationOpensMinutesBeforeRace) — mirrors isAllUnavailableForRegistration's NotStarted
+// case above, but for the single-race Register button in a Series event's expanded race row rather
+// than the edition-aggregate gates.
 export function isRegistrationRequiredForRace(ticketStatus: string | null | undefined): boolean {
-    return ticketStatus !== 'Free' && ticketStatus !== 'Invitational';
+    return ticketStatus !== 'Free' && ticketStatus !== 'Invitational' && ticketStatus !== 'NotStarted';
 }
 
 // RegistrationCloses now carries real time-of-day precision for editions entered via
