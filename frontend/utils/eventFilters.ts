@@ -17,6 +17,9 @@ export interface EventFilters {
     mountainRaceOnly: boolean;
     favoritesOnly: boolean;
     distanceBuckets: RaceDistanceBucket[];
+    // #1588: keeps only events whose server-computed edition status is a confirmed, non-cancelled
+    // date — see the confirmedDateOnly predicate in applyFilters below for the exact condition.
+    confirmedDateOnly: boolean;
 }
 
 // #1026: used by RacesPage's URL→state hydration effect to bail out of `setFilters` when the
@@ -32,6 +35,7 @@ export function eventFiltersEqual(a: EventFilters, b: EventFilters): boolean {
         && a.nextWeekOnly === b.nextWeekOnly
         && a.mountainRaceOnly === b.mountainRaceOnly
         && a.favoritesOnly === b.favoritesOnly
+        && a.confirmedDateOnly === b.confirmedDateOnly
         && arraysEqual(a.activityTypes, b.activityTypes)
         && arraysEqual(a.months, b.months)
         && arraysEqual(a.locations, b.locations)
@@ -148,6 +152,10 @@ export function applyFilters(
     if (f.thisWeekOnly) { const { start, end } = getWeekRange('this'); result = result.filter(c => eventHasDateInRange(c, start, end)); }
     if (f.nextWeekOnly) { const { start, end } = getWeekRange('next'); result = result.filter(c => eventHasDateInRange(c, start, end)); }
     if (f.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
+    // #1588: "Confirmed date only" — editionStatus === 'Active' means the edition's date is set
+    // and confirmed (not merely tentative/unconfirmed); editionEffectiveCancelled covers the case
+    // where that status is still 'Active' but the edition has since been cancelled.
+    if (f.confirmedDateOnly) result = result.filter(c => c.editionStatus === 'Active' && !c.editionEffectiveCancelled);
     if (f.favoritesOnly) result = result.filter(c => favoriteEvents.includes(c.slug));
     if (f.distanceBuckets.length > 0) result = result.filter(c => {
         if (!c.distances?.length) return false;

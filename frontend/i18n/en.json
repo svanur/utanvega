@@ -1611,6 +1611,7 @@
             "nextWeek": "Next week",
             "weekendOnly": "Weekend only",
             "favoritesOnly": "Show favorites only",
+            "confirmedDateOnly": "Confirmed date only",
             "reset": "Reset filters",
             "noResults": "No events match the selected filters",
             "activeCount_one": "{{count}} filter active",

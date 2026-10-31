@@ -17,6 +17,7 @@ const DEFAULT_FILTERS: EventFilters = {
     mountainRaceOnly: false,
     favoritesOnly: false,
     distanceBuckets: [],
+    confirmedDateOnly: false,
 };
 
 // Minimal EventSummary factory — only the fields applyFilters actually reads are meaningful,
@@ -409,6 +410,36 @@ describe('applyFilters — mountain race filter', () => {
         ];
         const result = applyFilters(events, { ...DEFAULT_FILTERS, mountainRaceOnly: true }, '', [], false);
         expect(result.map(e => e.slug)).toEqual(['mountain']);
+    });
+});
+
+// #1588: "Confirmed date only" keeps events whose server-computed edition status is a
+// confirmed, non-cancelled date — see the confirmedDateOnly predicate in eventFilters.ts.
+describe('applyFilters — confirmed date only filter', () => {
+    it('excludes an Unconfirmed event', () => {
+        const events = [
+            makeEvent({ slug: 'unconfirmed', editionStatus: 'Unconfirmed', editionEffectiveCancelled: false }),
+            makeEvent({ slug: 'active', editionStatus: 'Active', editionEffectiveCancelled: false }),
+        ];
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, confirmedDateOnly: true }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual(['active']);
+    });
+
+    it('excludes an Active event that has since been effectively cancelled', () => {
+        const events = [
+            makeEvent({ slug: 'cancelled', editionStatus: 'Active', editionEffectiveCancelled: true }),
+            makeEvent({ slug: 'active', editionStatus: 'Active', editionEffectiveCancelled: false }),
+        ];
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, confirmedDateOnly: true }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual(['active']);
+    });
+
+    it('includes an Active, non-cancelled event', () => {
+        const events = [
+            makeEvent({ slug: 'active', editionStatus: 'Active', editionEffectiveCancelled: false }),
+        ];
+        const result = applyFilters(events, { ...DEFAULT_FILTERS, confirmedDateOnly: true }, '', [], false);
+        expect(result.map(e => e.slug)).toEqual(['active']);
     });
 });
 

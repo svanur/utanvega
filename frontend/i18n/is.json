@@ -1611,6 +1611,7 @@
             "nextWeek": "Næsta vika",
             "weekendOnly": "Aðeins um helgar",
             "favoritesOnly": "Sýna eingöngu eftirlæti",
+            "confirmedDateOnly": "Aðeins staðfestar dagsetningar",
             "reset": "Hreinsa síur",
             "noResults": "Engir viðburðir passa við valdar síur",
             "activeCount_one": "{{count}} sía virk",
