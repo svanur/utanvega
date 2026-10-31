@@ -6,7 +6,7 @@ import {
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
     Collapse, Box, Skeleton, Button, alpha, useTheme, Link,
 } from '@mui/material';
-import { getTicketStatusColor, groupDistances, isAllSoldOut, hasRaceStarted, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
+import { getTicketStatusColor, groupDistances, isAllSoldOut, isAllUnavailableForRegistration, hasRaceStarted, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -537,7 +537,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                         color="error"
                                                         variant="outlined"
                                                     />
-                                                ) : (
+                                                ) : isAllUnavailableForRegistration(event.distances) ? null : (
                                                     <Button
                                                         size="small"
                                                         variant="contained"

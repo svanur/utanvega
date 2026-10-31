@@ -622,3 +622,57 @@ describe('RacesPage copy buttons do not leak timer state updates after unmount (
         expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 });
+
+// #1601: list view's Register button (RacesPage.tsx:1597's swipe leftActions and :1743's inline
+// card button, both gated on the same comp.distances) used to ignore #1553's per-race 'NotStarted'
+// ticketStatus — an edition whose races hadn't opened registration yet still showed a live button.
+// The swipe leftActions copy of the button only renders once the card is swipe-revealed (not on a
+// plain mount — see SwipeableCard's showLeftPanel), so these assert against the always-rendered
+// inline button; both call sites share the same isAllUnavailableForRegistration(comp.distances)
+// condition, so this is a regression guard for both.
+describe('RacesPage list view Register button respects per-race NotStarted ticketStatus (#1601)', () => {
+    function makeRegisterableEvent(overrides: Partial<EventSummary> = {}): EventSummary {
+        return makeEvent({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            daysUntil: 10,
+            ...overrides,
+        });
+    }
+
+    it('hides the Register button when every race is NotStarted and registration is Open', async () => {
+        mockEvents.current = [makeRegisterableEvent({
+            distances: [{ label: '10 km', ticketStatus: 'NotStarted' }, { label: '21 km', ticketStatus: 'NotStarted' }],
+        })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('hides the Register button for a mix of SoldOut/NotStarted with zero Available/AlmostSoldOut races', async () => {
+        mockEvents.current = [makeRegisterableEvent({
+            distances: [{ label: '10 km', ticketStatus: 'SoldOut' }, { label: '21 km', ticketStatus: 'NotStarted' }],
+        })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('still shows the Register button when at least one race is Available (regression guard)', async () => {
+        mockEvents.current = [makeRegisterableEvent({
+            distances: [{ label: '10 km', ticketStatus: 'NotStarted' }, { label: '21 km', ticketStatus: 'Available' }],
+        })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+    });
+
+    it('shows the Register button when distances is empty, unchanged from before #1601', async () => {
+        mockEvents.current = [makeRegisterableEvent({ distances: [] })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+    });
+});
