@@ -76,7 +76,7 @@ public record EventEditionPublicDto(
     DateTime CreatedAt,
     DateTime? UpdatedAt,
     Dictionary<string, string>? TranslationHashes = null,
-    string Status = "Active",
+    string Status = "Confirmed",
     bool EffectiveCancelled = false,
     DateTime? RegistrationOpens = null,
     DateTime? RegistrationCloses = null,
