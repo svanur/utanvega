@@ -19,7 +19,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import dayjs, { type Dayjs } from 'dayjs';
 import { apiFetch } from '../hooks/api';
-import type { RaceStatus, TicketStatus } from '../hooks/useEvents';
+import type { RaceStatus, TicketStatus, EditionStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 
@@ -51,7 +51,7 @@ interface RaceDayEdition {
     eventSlug: string;
     eventType: string;
     eventStatus: string;
-    editionStatus: string;
+    editionStatus: EditionStatus;
     date: string | null;
     endDate: string | null;
     title: string | null;
