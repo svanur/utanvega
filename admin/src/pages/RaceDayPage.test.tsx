@@ -133,7 +133,7 @@ describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', (
   const invitationalEdition = {
     id: 'ed-invitational', eventId: 'event-invitational', eventName: 'Invitational Trail Run',
     eventSlug: 'invitational-trail-run', eventType: 'Trail', eventStatus: 'Active',
-    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    editionStatus: 'Confirmed', date: '2026-10-18', endDate: null, title: null,
     resultsUrl: null, registrationUrl: null, registrationStatus: 'Invitational',
     races: [{ ...baseRace, id: 'race-invitational' }],
   };
@@ -200,7 +200,7 @@ describe('RaceDayPage registration-status Select gains Invitational/NotRequired 
   const notStartedEdition = {
     id: 'ed-not-started', eventId: 'event-not-started', eventName: 'Not Started Run',
     eventSlug: 'not-started-run', eventType: 'Trail', eventStatus: 'Active',
-    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    editionStatus: 'Confirmed', date: '2026-10-18', endDate: null, title: null,
     resultsUrl: null, registrationUrl: null, registrationStatus: 'NotStarted',
     races: [],
   };
@@ -274,7 +274,7 @@ describe('RaceDayPage page-level readiness flags exempt override editions (#1396
   const notRequiredEdition = {
     id: 'ed-not-required', eventId: 'event-not-required', eventName: 'Not Required Run',
     eventSlug: 'not-required-run', eventType: 'Trail', eventStatus: 'Active',
-    editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
+    editionStatus: 'Confirmed', date: '2026-10-18', endDate: null, title: null,
     resultsUrl: 'https://example.com/results', registrationUrl: null, registrationStatus: 'NotRequired',
     races: [{ ...completedRace, id: 'race-not-required' }],
   };
