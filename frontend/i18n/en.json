@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_7": {
+                "title": "Clearer status naming in admin",
+                "description": "Event status is now called 'Active' instead of 'Confirmed', so it's no longer mistaken for a visibility setting, and edition status is now called 'Confirmed' instead of 'Active', so it reads as the natural opposite of 'Unconfirmed'. Admin's filters, labels, and type checks have all been updated to match."
+            },
             "v1_17_6": {
                 "title": "Register button and race-day pill fixes",
                 "description": "The Register button no longer appears for an edition whose races all have a registration window that hasn't opened yet, matching the existing sold-out behaviour — including for an individual race's own button in a series' expanded detail row. The 'It's Race Day' pill and share card no longer appear on Social, Advertisement, Festival, or Other events — only Race and Series events."

@@ -74,7 +74,7 @@ function makeEdition(overrides: Partial<EventEditionDto> = {}, races: RaceDto[] 
     galleries: [],
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: null,
-    status: 'Active',
+    status: 'Confirmed',
     effectiveCancelled: false,
     needsReview: false,
     ...overrides,

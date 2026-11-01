@@ -26,7 +26,7 @@ public class EventEndpointTests : IDisposable
 
     public void Dispose() => _factory.Dispose();
 
-    private Event CreateTestEvent(string name, EventStatus status = EventStatus.Confirmed)
+    private Event CreateTestEvent(string name, EventStatus status = EventStatus.Active)
     {
         return new Event
         {

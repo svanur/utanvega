@@ -56,7 +56,7 @@ public class EventHandlerTests : IDisposable
             Name = name,
             Slug = name.ToLower().Replace(" ", "-"),
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
             OrganizerName = "Test Org",
             ScheduleRule = new ScheduleRule
             {
@@ -115,7 +115,7 @@ public class EventHandlerTests : IDisposable
             Description: "55K ultra through the highlands",
             Type: "Race",
             ActivityType: "TrailRunning",
-            Status: "Confirmed",
+            Status: "Active",
             OrganizerName: "ÍSÍ",
             OrganizerWebsite: "https://marathon.is",
             OrganizerId: null,
@@ -135,7 +135,7 @@ public class EventHandlerTests : IDisposable
         Assert.Equal("Laugavegur Ultra", ev!.Name);
         Assert.Equal("laugavegur-ultra", ev.Slug);
         Assert.Equal(slug, ev.Slug);
-        Assert.Equal(EventStatus.Confirmed, ev.Status);
+        Assert.Equal(EventStatus.Active, ev.Status);
         Assert.Equal(EventType.Race, ev.Type);
     }
 
@@ -151,7 +151,7 @@ public class EventHandlerTests : IDisposable
             Description: null,
             Type: "Race",
             ActivityType: "Running",
-            Status: "Confirmed",
+            Status: "Active",
             OrganizerName: null,
             OrganizerWebsite: null,
             OrganizerId: null,
@@ -195,7 +195,7 @@ public class EventHandlerTests : IDisposable
                 Description: "55K ultra through the highlands",
                 Type: "Race",
                 ActivityType: "TrailRunning",
-                Status: "Confirmed",
+                Status: "Active",
                 OrganizerName: "ÍSÍ",
                 OrganizerWebsite: "https://marathon.is",
                 OrganizerId: null,
@@ -225,7 +225,7 @@ public class EventHandlerTests : IDisposable
                 Description: "55K ultra through the highlands",
                 Type: "Race",
                 ActivityType: "TrailRunning",
-                Status: "Confirmed",
+                Status: "Active",
                 OrganizerName: "ÍSÍ",
                 OrganizerWebsite: "https://marathon.is",
                 OrganizerId: null,
@@ -299,7 +299,7 @@ public class EventHandlerTests : IDisposable
             Description: null,
             Type: "Race",
             ActivityType: "TrailRunning",
-            Status: "Confirmed",
+            Status: "Active",
             OrganizerName: null,
             OrganizerWebsite: null,
             OrganizerId: null,
@@ -1179,7 +1179,7 @@ public class EventHandlerTests : IDisposable
     {
         var ev = CreateTestEvent();
         var edition = CreateTestEdition(ev.Id);
-        edition.Status = EditionStatus.Active;
+        edition.Status = EditionStatus.Confirmed;
         using (var ctx = _factory.CreateContext())
         {
             ctx.Events.Add(ev);
@@ -3705,7 +3705,7 @@ public class EventHandlerTests : IDisposable
         // Admin path (IncludeHidden: true) — the real aggregate must come through.
         var ev = CreateTestEvent("No Unconfirmed Edition Event");
         var edition = CreateTestEdition(ev.Id);
-        edition.Status = EditionStatus.Active;
+        edition.Status = EditionStatus.Confirmed;
         using (var ctx = _factory.CreateContext())
         {
             ctx.Events.Add(ev);
@@ -3732,7 +3732,7 @@ public class EventHandlerTests : IDisposable
         var pastUnconfirmedEdition = CreateTestEdition(ev.Id, year: 2024);
         var futureActiveEdition = CreateTestEdition(ev.Id, year: 2026);
         pastUnconfirmedEdition.Status = EditionStatus.Unconfirmed;
-        futureActiveEdition.Status = EditionStatus.Active;
+        futureActiveEdition.Status = EditionStatus.Confirmed;
         using (var ctx = _factory.CreateContext())
         {
             ctx.Events.Add(ev);
@@ -4817,11 +4817,11 @@ public class EventHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             var handler = new UpdateEditionCommandHandler(ctx, _cacheInvalidator);
-            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Active"), CancellationToken.None);
+            await handler.Handle(BuildUpdateEditionCommand(edition, status: "Confirmed"), CancellationToken.None);
         }
 
         using var verifyCtx = _factory.CreateContext();
-        Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(EditionStatus.Confirmed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
         Assert.Equal(RaceStatus.Cancelled, verifyCtx.Races.Find(race.Id)!.Status);
     }
 
@@ -5487,7 +5487,7 @@ public class EventHandlerTests : IDisposable
             EventId = ev.Id,
             Date = new DateOnly(2025, 6, 1),
             Year = null,
-            Status = EditionStatus.Active,
+            Status = EditionStatus.Confirmed,
             RegistrationStatus = RegistrationStatus.Closed,
         };
         using (var ctx = _factory.CreateContext())
@@ -5579,7 +5579,7 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent();
         var edition = CreateTestEdition(ev.Id, year: DateTime.UtcNow.Year + 1);
         edition.Date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
-        edition.Status = EditionStatus.Active;
+        edition.Status = EditionStatus.Confirmed;
         edition.RegistrationStatus = RegistrationStatus.Open;
         var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
 
@@ -5640,7 +5640,7 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent();
         var edition = CreateTestEdition(ev.Id, year: 2020);
         edition.Date = new DateOnly(2020, 7, 12);
-        edition.Status = EditionStatus.Active;
+        edition.Status = EditionStatus.Confirmed;
 
         using (var ctx = _factory.CreateContext())
         {
@@ -5656,7 +5656,7 @@ public class EventHandlerTests : IDisposable
         }
 
         using var verifyCtx = _factory.CreateContext();
-        Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(EditionStatus.Confirmed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
     }
 
     [Fact]
@@ -5696,7 +5696,7 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent();
         var edition = CreateTestEdition(ev.Id);
         edition.Date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
-        edition.Status = EditionStatus.Active;
+        edition.Status = EditionStatus.Confirmed;
         var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
 
         using (var ctx = _factory.CreateContext())
@@ -5726,7 +5726,7 @@ public class EventHandlerTests : IDisposable
         var ev = CreateTestEvent();
         var edition = CreateTestEdition(ev.Id, year: 2020);
         edition.Date = new DateOnly(2020, 7, 12);
-        edition.Status = EditionStatus.Active;
+        edition.Status = EditionStatus.Confirmed;
 
         using (var ctx = _factory.CreateContext())
         {
@@ -5742,7 +5742,7 @@ public class EventHandlerTests : IDisposable
         }
 
         using var verifyCtx = _factory.CreateContext();
-        Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(EditionStatus.Confirmed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
     }
 
     [Fact]
@@ -5765,12 +5765,12 @@ public class EventHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             var handler = new UpdateEventCommandHandler(ctx, _cacheInvalidator);
-            var result = await handler.Handle(BuildUpdateEventCommand(ev, "Confirmed"), CancellationToken.None);
+            var result = await handler.Handle(BuildUpdateEventCommand(ev, "Active"), CancellationToken.None);
             Assert.True(result);
         }
 
         using var verifyCtx = _factory.CreateContext();
-        Assert.Equal(EventStatus.Confirmed, verifyCtx.Events.Find(ev.Id)!.Status);
+        Assert.Equal(EventStatus.Active, verifyCtx.Events.Find(ev.Id)!.Status);
         // Reactivation must not cascade back — the edition stays exactly as it was left.
         Assert.Equal(EditionStatus.Cancelled, verifyCtx.EventEditions.Find(edition.Id)!.Status);
         Assert.Equal(RegistrationStatus.Closed, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);

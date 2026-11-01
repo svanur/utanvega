@@ -14,7 +14,7 @@ public class GetEventSuggestionsQueryHandlerTests : IDisposable
 
     public void Dispose() => _factory.Dispose();
 
-    private static Event CreateEvent(string name, string slug, EventStatus status = EventStatus.Confirmed)
+    private static Event CreateEvent(string name, string slug, EventStatus status = EventStatus.Active)
     {
         return new Event
         {

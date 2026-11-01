@@ -98,7 +98,7 @@ interface FormState {
 }
 
 function getEventStatusColor(status: EventSummaryDto['status']): 'default' | 'success' | 'error' | 'warning' {
-    if (status === 'Confirmed') return 'success';
+    if (status === 'Active') return 'success';
     if (status === 'Cancelled') return 'error';
     if (status === 'Unconfirmed') return 'warning';
     return 'default';

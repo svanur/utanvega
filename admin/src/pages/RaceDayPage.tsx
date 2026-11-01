@@ -19,7 +19,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import dayjs, { type Dayjs } from 'dayjs';
 import { apiFetch } from '../hooks/api';
-import type { RaceStatus, TicketStatus } from '../hooks/useEvents';
+import type { RaceStatus, TicketStatus, EditionStatus } from '../hooks/useEvents';
 import { formatMinutesToHHmm, parseHHmmToMinutes, normalizeCutoffTimeInput, normalizeCutoffTimeOnBlur } from '../utils/cutoffTime';
 import { EVENT_STATUS_CYCLE } from '../utils/eventForms';
 
@@ -51,7 +51,7 @@ interface RaceDayEdition {
     eventSlug: string;
     eventType: string;
     eventStatus: string;
-    editionStatus: string;
+    editionStatus: EditionStatus;
     date: string | null;
     endDate: string | null;
     title: string | null;
@@ -355,7 +355,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
         );
 
     const confirmAllEvents = async () => {
-        const unconfirmed = editions.filter(ed => ed.eventStatus !== 'Confirmed');
+        const unconfirmed = editions.filter(ed => ed.eventStatus !== 'Active');
         if (unconfirmed.length === 0) { onNotify('All events already confirmed'); return; }
         setBulkEvents(true);
         let ok = 0; let fail = 0;
@@ -363,7 +363,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
             try {
                 await apiFetch(`/api/v1/admin/events/${ed.eventId}/status`, {
                     method: 'PATCH',
-                    body: JSON.stringify({ id: ed.eventId, status: 'Confirmed' }),
+                    body: JSON.stringify({ id: ed.eventId, status: 'Active' }),
                 });
                 ok++;
             } catch { fail++; }
@@ -372,7 +372,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
         if (fail === 0) onNotify(`${ok} event${ok > 1 ? 's' : ''} confirmed`);
         else onNotify(`${ok} succeeded, ${fail} failed`, 'error');
         setEditions(prev => prev.map(ed =>
-            unconfirmed.some(u => u.eventId === ed.eventId) ? { ...ed, eventStatus: 'Confirmed' } : ed
+            unconfirmed.some(u => u.eventId === ed.eventId) ? { ...ed, eventStatus: 'Active' } : ed
         ));
     };
 
@@ -513,7 +513,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
     const isSetupReady = editions.length > 0 &&
         allRaces.filter(r => r.status !== 'Cancelled' && r.status !== 'Hidden').every(r => r.status === 'Active') &&
         editions.every(ed => ed.registrationStatus === 'Open' || isRegistrationOverride(ed)) &&
-        editions.every(ed => ed.eventStatus === 'Confirmed') &&
+        editions.every(ed => ed.eventStatus === 'Active') &&
         editions.every(ed => (registrationUrls[ed.id] ?? ed.registrationUrl ?? '') !== '');
 
     const isBusy = savingRaces.size > 0 || bulkEditions || bulkEvents;
@@ -522,7 +522,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
         const races = ed.races.filter(r => r.status !== 'Cancelled' && r.status !== 'Hidden');
         if (mode === 'setup') {
             return [
-                { label: 'Confirmed', done: ed.eventStatus === 'Confirmed' },
+                { label: 'Active', done: ed.eventStatus === 'Active' },
                 { label: 'Reg URL', done: (registrationUrls[ed.id] ?? ed.registrationUrl ?? '') !== '' },
                 { label: 'Races active', done: races.length > 0 && races.every(r => r.status === 'Active') },
                 { label: 'Reg open', done: ed.registrationStatus === 'Open' || isRegistrationOverride(ed) },
@@ -673,7 +673,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
                                 variant="outlined"
                                 size="small"
                                 color="info"
-                                disabled={isBusy || editions.every(ed => ed.eventStatus === 'Confirmed')}
+                                disabled={isBusy || editions.every(ed => ed.eventStatus === 'Active')}
                                 startIcon={bulkEvents ? <CircularProgress size={14} color="inherit" /> : undefined}
                                 onClick={confirmAllEvents}
                             >
@@ -790,7 +790,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
                                                                 <Chip
                                                                     label={s}
                                                                     size="small"
-                                                                    color={s === 'Confirmed' ? 'success' : s === 'Cancelled' ? 'error' : 'default'}
+                                                                    color={s === 'Active' ? 'success' : s === 'Cancelled' ? 'error' : 'default'}
                                                                     variant="outlined"
                                                                     sx={{ pointerEvents: 'none' }}
                                                                 />
@@ -860,7 +860,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
                                                 <WarningAmberIcon fontSize="small" color="warning" />
                                             </Tooltip>
                                         )}
-                                        {mode === 'setup' && ed.eventStatus !== 'Confirmed' && (
+                                        {mode === 'setup' && ed.eventStatus !== 'Active' && (
                                             <Tooltip title="Event not yet confirmed">
                                                 <WarningAmberIcon fontSize="small" color="warning" />
                                             </Tooltip>

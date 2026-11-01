@@ -13,7 +13,7 @@ public class EventTests
             Id = Guid.NewGuid(),
             Name = "Test Event",
             Slug = "test-event",
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
         foreach (var edition in editions)
         {
@@ -52,7 +52,7 @@ public class EventTests
     public void CancelWithEditions_CascadesToFutureDatedActiveEdition()
     {
         var race = new Race { Id = Guid.NewGuid(), Name = "10K", SortOrder = 0, Status = RaceStatus.Active, TicketStatus = TicketStatus.Available };
-        var edition = CreateEdition(EditionStatus.Active, Today.AddDays(30), race);
+        var edition = CreateEdition(EditionStatus.Confirmed, Today.AddDays(30), race);
         var ev = CreateEventWithEditions(edition);
 
         ev.CancelWithEditions(Today);
@@ -66,7 +66,7 @@ public class EventTests
     [Fact]
     public void CancelWithEditions_CascadesToUndatedActiveEdition()
     {
-        var edition = CreateEdition(EditionStatus.Active, date: null);
+        var edition = CreateEdition(EditionStatus.Confirmed, date: null);
         var ev = CreateEventWithEditions(edition);
 
         ev.CancelWithEditions(Today);
@@ -106,12 +106,12 @@ public class EventTests
     {
         // Past-dated Active editions are stale/overdue-unconfirmed data, not upcoming events — they
         // must not be asserted as Cancelled just because the parent event was.
-        var edition = CreateEdition(EditionStatus.Active, Today.AddDays(-1));
+        var edition = CreateEdition(EditionStatus.Confirmed, Today.AddDays(-1));
         var ev = CreateEventWithEditions(edition);
 
         ev.CancelWithEditions(Today);
 
-        Assert.Equal(EditionStatus.Active, edition.Status);
+        Assert.Equal(EditionStatus.Confirmed, edition.Status);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class EventTests
     {
         // Multi-day edition that started in the past but hasn't ended yet must still be treated as
         // in-progress/future, not stale.
-        var edition = CreateEdition(EditionStatus.Active, Today.AddDays(-1));
+        var edition = CreateEdition(EditionStatus.Confirmed, Today.AddDays(-1));
         edition.EndDate = Today.AddDays(1);
         var ev = CreateEventWithEditions(edition);
 
@@ -131,10 +131,10 @@ public class EventTests
     [Fact]
     public void CancelWithEditions_CascadesToMultipleQualifyingEditions_SkipsNonQualifying()
     {
-        var future = CreateEdition(EditionStatus.Active, Today.AddDays(10));
+        var future = CreateEdition(EditionStatus.Confirmed, Today.AddDays(10));
         var completed = CreateEdition(EditionStatus.Completed, Today.AddDays(-100));
         var alreadyCancelled = CreateEdition(EditionStatus.Cancelled, Today.AddDays(10));
-        var pastActive = CreateEdition(EditionStatus.Active, Today.AddDays(-10));
+        var pastActive = CreateEdition(EditionStatus.Confirmed, Today.AddDays(-10));
         var ev = CreateEventWithEditions(future, completed, alreadyCancelled, pastActive);
 
         ev.CancelWithEditions(Today);
@@ -142,6 +142,6 @@ public class EventTests
         Assert.Equal(EditionStatus.Cancelled, future.Status);
         Assert.Equal(EditionStatus.Completed, completed.Status);
         Assert.Equal(EditionStatus.Cancelled, alreadyCancelled.Status);
-        Assert.Equal(EditionStatus.Active, pastActive.Status);
+        Assert.Equal(EditionStatus.Confirmed, pastActive.Status);
     }
 }

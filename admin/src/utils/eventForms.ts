@@ -43,9 +43,9 @@ export interface RaceFormState {
 }
 
 export const RACE_STATUSES: RaceStatus[] = ['Active', 'Completed', 'Cancelled', 'Hidden'];
-export const EDITION_STATUSES: EditionStatus[] = ['Active', 'Unconfirmed', 'Cancelled', 'Hidden', 'Completed'];
+export const EDITION_STATUSES: EditionStatus[] = ['Confirmed', 'Unconfirmed', 'Cancelled', 'Hidden', 'Completed'];
 export const EDITION_STATUS_LABELS: Record<EditionStatus, string> = {
-  Active: 'Active',
+  Confirmed: 'Confirmed',
   Unconfirmed: 'Unconfirmed',
   Cancelled: 'Cancelled',
   Hidden: 'Draft — hidden from all',
@@ -53,11 +53,11 @@ export const EDITION_STATUS_LABELS: Record<EditionStatus, string> = {
 };
 // Cycling skips Cancelled and Completed — both are terminal states that should be set intentionally,
 // not landed on by clicking through a cycle.
-export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Active', 'Unconfirmed', 'Hidden'];
+export const EDITION_STATUS_CYCLE: EditionStatus[] = ['Confirmed', 'Unconfirmed', 'Hidden'];
 // Cancelling an event cascades to its editions and their races (see backend Event.CancelWithEditions),
 // so it must never be a click-through step in a status cycle — it's only reachable via the dedicated
 // Cancel Event confirmation dialog.
-export const EVENT_STATUS_CYCLE: EventStatus[] = ['Hidden', 'Unconfirmed', 'Confirmed', 'Unlisted'];
+export const EVENT_STATUS_CYCLE: EventStatus[] = ['Hidden', 'Unconfirmed', 'Active', 'Unlisted'];
 export const TICKET_STATUSES: TicketStatus[] = ['Free', 'NotStarted', 'Available', 'AlmostSoldOut', 'SoldOut', 'Closed', 'Invitational'];
 // null (not yet rated) is a distinct step from 0 (rated at zero points) — keep both in the cycle.
 export const ITRA_VALUES: (number | null)[] = [null, 0, 1, 2, 3, 4, 5, 6];
@@ -349,7 +349,7 @@ export function recomputeYearlyWeekdayDate(rule: ScheduleRule | null | undefined
 }
 
 export function getEditionStatusColor(status: EditionStatus): 'default' | 'success' | 'warning' | 'error' | 'info' {
-  if (status === 'Active') return 'success';
+  if (status === 'Confirmed') return 'success';
   if (status === 'Unconfirmed') return 'warning'; // matches getEventStatusColor's Unconfirmed mapping
   if (status === 'Cancelled') return 'error';
   if (status === 'Completed') return 'info';

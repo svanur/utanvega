@@ -102,7 +102,7 @@ function getHealthChecks(event: EventSummaryDto): HealthCheck[] {
     },
     {
       label: 'Published',
-      passed: event.status === 'Confirmed',
+      passed: event.status === 'Active',
       tooltip: `Status: ${event.status}`,
     },
   ];
@@ -213,7 +213,7 @@ export default function EventHealth({ onViewEvent, onNotify, initialFilter, onIn
   const avgScore = scored.length > 0 ? Math.round(scored.reduce((s, e) => s + e.score, 0) / scored.length) : 0;
   const perfectCount = scored.filter(s => s.score === 100).length;
   const criticalCount = scored.filter(s => s.score < 50).length;
-  const confirmedCount = scored.filter(s => s.event.status === 'Confirmed').length;
+  const activeCount = scored.filter(s => s.event.status === 'Active').length;
   // Only count events where the check is applicable (not N/A for their type)
   const noDateCount = scored.filter(s => !s.checks.find(c => c.label === 'Next Date')?.na && !s.event.nextEditionDate).length;
   const noLocationCount = scored.filter(s => !s.checks.find(c => c.label === 'Location')?.na && !s.event.locationId).length;
@@ -278,7 +278,7 @@ export default function EventHealth({ onViewEvent, onNotify, initialFilter, onIn
           filter="perfect" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="Critical (<50%)" value={criticalCount} color="#d32f2f"
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Confirmed" value={`${confirmedCount}/${events.length}`} color="#7b1fa2" />
+        <SummaryCard title="Active" value={`${activeCount}/${events.length}`} color="#7b1fa2" />
         <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? '#ed6c02' : '#2e7d32'}
           filter="no-date" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="No Location" value={noLocationCount} color={noLocationCount > 0 ? '#ed6c02' : '#2e7d32'}
@@ -367,7 +367,7 @@ export default function EventHealth({ onViewEvent, onNotify, initialFilter, onIn
                   <Chip
                     label={event.status}
                     size="small"
-                    color={event.status === 'Confirmed' ? 'success' : event.status === 'Cancelled' ? 'error' : event.status === 'Hidden' || event.status === 'Unlisted' ? 'default' : 'warning'}
+                    color={event.status === 'Active' ? 'success' : event.status === 'Cancelled' ? 'error' : event.status === 'Hidden' || event.status === 'Unlisted' ? 'default' : 'warning'}
                     variant="outlined"
                   />
                 </TableCell>

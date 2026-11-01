@@ -92,7 +92,7 @@ function getEventHealthScore(event: EventSummaryDto): number {
         { passed: event.gpxPointLat != null && event.gpxPointLng != null, na: isAd },
         { passed: !!(event.organizerName || event.organizerWebsite), na: isAd },
         { passed: !!event.scheduleRule, na: isAd || event.type === 'Race' },
-        { passed: event.status === 'Confirmed', na: false },
+        { passed: event.status === 'Active', na: false },
     ];
     const applicable = checks.filter(c => !c.na);
     if (applicable.length === 0) return 100;
@@ -250,7 +250,7 @@ export default function DashboardPage({ onNewEvent, onUploadTrail, onNavigate }:
     const activeEvents = events.filter(e => e.status !== 'Cancelled' && e.type !== 'Advertisement');
     const needsAttention = activeEvents.filter(e => getEventHealthScore(e) < 80);
     const noUpcomingDate = activeEvents.filter(
-        e => !e.nextEditionDate && e.status === 'Confirmed' && (e.type === 'Race' || e.type === 'Series')
+        e => !e.nextEditionDate && e.status === 'Active' && (e.type === 'Race' || e.type === 'Series')
     );
 
     const upcomingEvents = activeEvents

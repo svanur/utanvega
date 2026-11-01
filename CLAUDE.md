@@ -52,7 +52,7 @@ CI (`.github/workflows/ci.yml:17-37`) runs three jobs on every push/PR to `main`
 - PostGIS is used for spatial data: `GpxData` is `LineStringZ` (3D, elevation-preserving), location centers are `Point` + radius in km, SRID 4326.
 - Icelandic slug generation normalizes special characters (þ→th, ð→d, æ→ae, ö, á, é, í, ó, ú, ý).
 
-**backend.Tests/** — xUnit + Moq + SQLite in-memory (`TestDbContextFactory.cs`), organized to mirror source: `Caching/`, `Endpoints/`, `Entities/`, `Handlers/`, `Services/`, `Validators/`, `WebHost/`.
+**backend.Tests/** — xUnit + Moq + SQLite in-memory (`TestDbContextFactory.cs`), organized to mirror source: `Caching/`, `Endpoints/`, `Entities/`, `Handlers/`, `Migrations/`, `Services/`, `Validators/`, `WebHost/`.
 
 **Frontend** (`frontend/`) and **Admin** (`admin/`) — separate Vite apps, same conventions:
 - MUI 5 with `sx` prop / theme (`theme.ts`) for styling — no styled-components, no CSS modules, no hardcoded colors (breaks dark mode).

@@ -128,8 +128,8 @@ describe('EditionDialogInner — Status/Registration status Selects are reachabl
 
     expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Hidden);
 
-    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Active);
-    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Confirmed);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Confirmed);
   });
 
   it('locates Registration status by label and changes it', () => {
@@ -359,7 +359,7 @@ describe('EditionDialogInner — Registration opens/closes round-trip a stored i
 });
 
 // #1024: handleCycleEditionStatus (the chip labeled with the edition's own EditionStatus, e.g.
-// "Active" — not the Status *Select* covered above) fires a bare, non-awaited apiFetch PUT and,
+// "Confirmed" — not the Status *Select* covered above) fires a bare, non-awaited apiFetch PUT and,
 // unlike its sibling handleToggleEditionNeedsReview, never called invalidateEventsList() on
 // success — so a status cycle from this page left EventsListPage's cached
 // anyEditionUnconfirmed/hasFutureEdition/editionStatus-derived chips stale for up to its 30s
@@ -393,7 +393,7 @@ function buildEditionFixture(overrides: Partial<EventEditionDto> = {}): EventEdi
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: null,
     translationHashes: {},
-    status: 'Active',
+    status: 'Confirmed',
     effectiveCancelled: false,
     needsReview: false,
     ...overrides,
@@ -410,7 +410,7 @@ function buildEventDetailFixture(): EventDetailDto {
     descriptionEn: null,
     type: 'Race',
     activityType: 'TrailRunning',
-    status: 'Confirmed',
+    status: 'Active',
     organizerName: null,
     organizerNameEn: null,
     organizerWebsite: null,
@@ -437,7 +437,7 @@ function buildEventDetailFixture(): EventDetailDto {
     hasFutureEdition: true,
     endDisplayDate: null,
     translationHashes: {},
-    editionStatus: 'Active',
+    editionStatus: 'Confirmed',
     editionEffectiveCancelled: false,
     anyEditionNeedsReview: false,
     anyEditionUnconfirmed: false,
@@ -456,6 +456,17 @@ function renderEventDetailPage(queryClient: QueryClient, onNotify: (msg: ReactNo
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+// The edition's own EditionStatus chip — its visible label is "Confirmed" (renamed from "Active"
+// by #1604). Before that rename both this chip and the header's own Event status chip
+// (buildEventDetailFixture's `status: 'Active'`, #793's EventStatus.Confirmed-renamed-to-Active)
+// rendered the same "Active" text, making a plain findByText('Active') ambiguous. MUI's Tooltip
+// mirrors its `title` into the wrapped Chip's aria-label, and cycleTooltip() always starts that
+// title with the label passed in ('Edition status' vs 'Event status'), so matching on the chip's
+// accessible name disambiguates reliably regardless of either status's current text.
+function findEditionStatusChip() {
+  return screen.findByRole('button', { name: /^Edition status:/ });
 }
 
 describe('EventDetailPage — handleCycleEditionStatus invalidates the events list cache (#1024)', () => {
@@ -477,10 +488,9 @@ describe('EventDetailPage — handleCycleEditionStatus invalidates the events li
 
     renderEventDetailPage(queryClient);
 
-    // The edition's own EditionStatus chip — labeled "Active" here — not the Status Select
-    // covered by the describe block above. With no edition expanded and no races rendered, this
-    // is the only element in the tree with that exact text once the initial fetch resolves.
-    const statusChip = await screen.findByText('Active');
+    // The edition's own EditionStatus chip — not the Event status chip covered elsewhere — see
+    // findEditionStatusChip's own comment for why a plain findByText('Active') is now ambiguous.
+    const statusChip = await findEditionStatusChip();
     fireEvent.click(statusChip);
 
     await waitFor(() => {
@@ -498,13 +508,13 @@ describe('EventDetailPage — handleCycleEditionStatus invalidates the events li
 
     renderEventDetailPage(queryClient);
 
-    const statusChip = await screen.findByText('Active');
+    const statusChip = await findEditionStatusChip();
     fireEvent.click(statusChip);
 
     // The optimistic update flips the chip to "Unconfirmed" immediately, then the rejected PUT's
-    // .catch() rolls it back to "Active" — waiting for that reappearance is also proof the
+    // .catch() rolls it back to "Confirmed" — waiting for that reappearance is also proof the
     // rollback ran, not just that invalidateEventsList wasn't called.
-    await screen.findByText('Active');
+    await findEditionStatusChip();
     expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
   });
 });
@@ -564,7 +574,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     renderEventDetailPage(queryClient);
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const deleteButton = getEditionIconButton('Delete edition');
     fireEvent.click(deleteButton); // arms deletingEditionId
@@ -584,7 +594,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     const onNotify = vi.fn();
 
     renderEventDetailPage(queryClient, onNotify);
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const deleteButton = getEditionIconButton('Delete edition');
     fireEvent.click(deleteButton);
@@ -607,7 +617,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     renderEventDetailPage(queryClient);
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const cancelButton = getEditionIconButton('Cancel edition');
     fireEvent.click(cancelButton); // arms cancelingEditionId
@@ -627,7 +637,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     const onNotify = vi.fn();
 
     renderEventDetailPage(queryClient, onNotify);
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const cancelButton = getEditionIconButton('Cancel edition');
     fireEvent.click(cancelButton);
@@ -649,7 +659,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
     renderEventDetailPage(queryClient);
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const completeButton = getEditionIconButton('Mark edition Completed');
     fireEvent.click(completeButton); // arms completingEditionId
@@ -669,7 +679,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     const onNotify = vi.fn();
 
     renderEventDetailPage(queryClient, onNotify);
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const completeButton = getEditionIconButton('Mark edition Completed');
     fireEvent.click(completeButton);
@@ -690,7 +700,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     mockState.eventDetail = buildEventDetailFixture();
 
     renderEventDetailPage(seedQueryClient());
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const deleteButton = getEditionIconButton('Delete edition');
     expect(getDescribedByText(deleteButton)).toBe('');
@@ -706,7 +716,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     mockState.eventDetail = buildEventDetailFixture();
 
     renderEventDetailPage(seedQueryClient());
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const cancelButton = getEditionIconButton('Cancel edition');
     expect(getDescribedByText(cancelButton)).toBe('');
@@ -722,7 +732,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     mockState.eventDetail = buildEventDetailFixture();
 
     renderEventDetailPage(seedQueryClient());
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const completeButton = getEditionIconButton('Mark edition Completed');
     expect(getDescribedByText(completeButton)).toBe('');
@@ -751,7 +761,7 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     mockState.eventDetail = buildEventDetailFixture();
 
     renderEventDetailPage(seedQueryClient());
-    await screen.findByText('Active');
+    await findEditionStatusChip();
 
     const completeButton = getEditionIconButton('Mark edition Completed');
     const describedById = completeButton.getAttribute('aria-describedby');

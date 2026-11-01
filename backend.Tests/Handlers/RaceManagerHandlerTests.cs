@@ -21,7 +21,7 @@ public class RaceManagerHandlerTests : IDisposable
     public void Dispose() => _factory.Dispose();
 
     private async Task<(Event ev, EventEdition edition)> SeedEdition(
-        DateOnly date, DateOnly? endDate = null, EventStatus status = EventStatus.Confirmed)
+        DateOnly date, DateOnly? endDate = null, EventStatus status = EventStatus.Active)
     {
         using var db = _factory.CreateContext();
         var ev = new Event
@@ -58,7 +58,7 @@ public class RaceManagerHandlerTests : IDisposable
             Name = "My Race",
             Slug = "my-race",
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
         db.Events.Add(ev);
         await db.SaveChangesAsync();
@@ -77,7 +77,7 @@ public class RaceManagerHandlerTests : IDisposable
     {
         var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
 
-        var result = await handler.Handle(new PatchEventStatusCommand(Guid.NewGuid(), "Confirmed"), CancellationToken.None);
+        var result = await handler.Handle(new PatchEventStatusCommand(Guid.NewGuid(), "Active"), CancellationToken.None);
 
         Assert.False(result);
     }
@@ -92,7 +92,7 @@ public class RaceManagerHandlerTests : IDisposable
             Name = "My Race",
             Slug = "my-race-2",
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
         db.Events.Add(ev);
         await db.SaveChangesAsync();
@@ -103,13 +103,13 @@ public class RaceManagerHandlerTests : IDisposable
         Assert.False(result);
         // status should be unchanged
         using var verify = _factory.CreateContext();
-        Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
+        Assert.Equal(EventStatus.Active, (await verify.Events.FindAsync(ev.Id))!.Status);
     }
 
     [Fact]
     public async Task PatchEventStatus_AcceptsCaseInsensitiveStatus()
     {
-        // Regression: ignoreCase was missing, so "confirmed" silently returned false
+        // Regression: ignoreCase was missing, so "active" silently returned false
         // even though the event existed.
         using var db = _factory.CreateContext();
         var ev = new Event
@@ -124,11 +124,11 @@ public class RaceManagerHandlerTests : IDisposable
         await db.SaveChangesAsync();
 
         var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
-        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "confirmed"), CancellationToken.None);
+        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "active"), CancellationToken.None);
 
         Assert.True(result);
         using var verify = _factory.CreateContext();
-        Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
+        Assert.Equal(EventStatus.Active, (await verify.Events.FindAsync(ev.Id))!.Status);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class RaceManagerHandlerTests : IDisposable
         using (var db = _factory.CreateContext())
         {
             var found = await db.EventEditions.FindAsync(edition.Id);
-            found!.Status = EditionStatus.Active;
+            found!.Status = EditionStatus.Confirmed;
             await db.SaveChangesAsync();
         }
 
@@ -171,13 +171,13 @@ public class RaceManagerHandlerTests : IDisposable
     public async Task PatchEventStatus_NonCancellingChange_DoesNotInvalidateEventCache()
     {
         // Only the cascade-into-Cancelled path is covered by this endpoint's invalidation — a plain
-        // status change (e.g. Unconfirmed -> Confirmed) doesn't cascade, so there's nothing here
+        // status change (e.g. Unconfirmed -> Active) doesn't cascade, so there's nothing here
         // that requires invalidating the event's public cache entry.
         var (ev, _) = await SeedEdition(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30), status: EventStatus.Unconfirmed);
         var cacheInvalidator = new Mock<ICacheInvalidator>();
 
         var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), cacheInvalidator.Object);
-        await handler.Handle(new PatchEventStatusCommand(ev.Id, "Confirmed"), CancellationToken.None);
+        await handler.Handle(new PatchEventStatusCommand(ev.Id, "Active"), CancellationToken.None);
 
         cacheInvalidator.Verify(c => c.InvalidateEvent(It.IsAny<string>()), Times.Never);
     }
@@ -190,7 +190,7 @@ public class RaceManagerHandlerTests : IDisposable
         using (var db = _factory.CreateContext())
         {
             var found = await db.EventEditions.FindAsync(edition.Id);
-            found!.Status = EditionStatus.Active;
+            found!.Status = EditionStatus.Confirmed;
             await db.SaveChangesAsync();
         }
 
@@ -198,7 +198,7 @@ public class RaceManagerHandlerTests : IDisposable
         await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
 
         using var verify = _factory.CreateContext();
-        Assert.Equal(EditionStatus.Active, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
+        Assert.Equal(EditionStatus.Confirmed, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public class RaceManagerHandlerTests : IDisposable
     {
         // Reactivation must not be treated symmetrically with cancellation: an edition that was
         // separately cancelled while the event was cancelled stays cancelled — moving the event
-        // back to Confirmed doesn't imply the editions/races should un-cancel too.
+        // back to Active doesn't imply the editions/races should un-cancel too.
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var (ev, edition) = await SeedEdition(today.AddDays(30), status: EventStatus.Cancelled);
         using (var db = _factory.CreateContext())
@@ -217,11 +217,11 @@ public class RaceManagerHandlerTests : IDisposable
         }
 
         var handler = new PatchEventStatusCommandHandler(_factory.CreateContext(), _cacheInvalidator);
-        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "Confirmed"), CancellationToken.None);
+        var result = await handler.Handle(new PatchEventStatusCommand(ev.Id, "Active"), CancellationToken.None);
 
         Assert.True(result);
         using var verify = _factory.CreateContext();
-        Assert.Equal(EventStatus.Confirmed, (await verify.Events.FindAsync(ev.Id))!.Status);
+        Assert.Equal(EventStatus.Active, (await verify.Events.FindAsync(ev.Id))!.Status);
         Assert.Equal(EditionStatus.Cancelled, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
     }
 

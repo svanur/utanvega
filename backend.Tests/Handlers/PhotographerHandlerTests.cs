@@ -434,7 +434,7 @@ public class PhotographerHandlerTests : IDisposable
         var ev = new Event
         {
             Name = "Gallery Event", Slug = $"gallery-event-{Guid.NewGuid():N}",
-            Type = EventType.Race, Status = EventStatus.Confirmed,
+            Type = EventType.Race, Status = EventStatus.Active,
         };
         ctx.Events.Add(ev);
         await ctx.SaveChangesAsync();
@@ -599,7 +599,7 @@ public class PhotographerHandlerTests : IDisposable
 
     private async Task<(Guid PhotographerId, Guid EventId, Guid EditionId)> SeedGalleryFixture(
         Guid photographerId, string eventSlug, EventStatus eventStatus, int? editionYear, DateOnly? editionDate, string galleryUrl,
-        EditionStatus editionStatus = EditionStatus.Active)
+        EditionStatus editionStatus = EditionStatus.Confirmed)
     {
         using var ctx = _factory.CreateContext();
         var ev = new Event
@@ -701,7 +701,7 @@ public class PhotographerHandlerTests : IDisposable
             ), CancellationToken.None);
         }
 
-        await SeedGalleryFixture(photographerId, "visible-event", EventStatus.Confirmed, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/visible");
+        await SeedGalleryFixture(photographerId, "visible-event", EventStatus.Active, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/visible");
         await SeedGalleryFixture(photographerId, "hidden-event", EventStatus.Hidden, 2025, new DateOnly(2025, 5, 1), "https://photos.example.com/hidden");
         await SeedGalleryFixture(photographerId, "unlisted-event", EventStatus.Unlisted, 2025, new DateOnly(2025, 4, 1), "https://photos.example.com/unlisted");
 
@@ -728,8 +728,8 @@ public class PhotographerHandlerTests : IDisposable
             ), CancellationToken.None);
         }
 
-        await SeedGalleryFixture(photographerId, "visible-edition-event", EventStatus.Confirmed, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/visible-edition");
-        await SeedGalleryFixture(photographerId, "hidden-edition-event", EventStatus.Confirmed, 2024, new DateOnly(2024, 6, 1), "https://photos.example.com/hidden-edition", EditionStatus.Hidden);
+        await SeedGalleryFixture(photographerId, "visible-edition-event", EventStatus.Active, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/visible-edition");
+        await SeedGalleryFixture(photographerId, "hidden-edition-event", EventStatus.Active, 2024, new DateOnly(2024, 6, 1), "https://photos.example.com/hidden-edition", EditionStatus.Hidden);
 
         using var ctx2 = _factory.CreateContext();
         var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
@@ -751,9 +751,9 @@ public class PhotographerHandlerTests : IDisposable
             ), CancellationToken.None);
         }
 
-        await SeedGalleryFixture(photographerId, "oldest-event", EventStatus.Confirmed, 2022, new DateOnly(2022, 6, 1), "https://photos.example.com/2022");
-        await SeedGalleryFixture(photographerId, "newest-event", EventStatus.Confirmed, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/2025");
-        await SeedGalleryFixture(photographerId, "middle-event", EventStatus.Confirmed, 2023, new DateOnly(2023, 6, 1), "https://photos.example.com/2023");
+        await SeedGalleryFixture(photographerId, "oldest-event", EventStatus.Active, 2022, new DateOnly(2022, 6, 1), "https://photos.example.com/2022");
+        await SeedGalleryFixture(photographerId, "newest-event", EventStatus.Active, 2025, new DateOnly(2025, 6, 1), "https://photos.example.com/2025");
+        await SeedGalleryFixture(photographerId, "middle-event", EventStatus.Active, 2023, new DateOnly(2023, 6, 1), "https://photos.example.com/2023");
 
         using var ctx2 = _factory.CreateContext();
         var handler2 = new GetPhotographerPublicBySlugQueryHandler(ctx2);
