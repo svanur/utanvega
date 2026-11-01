@@ -13,7 +13,7 @@ public enum EventType
 public enum EventStatus
 {
     Unconfirmed,
-    Confirmed,
+    Active,
     Cancelled,
     Hidden,
     Unlisted,

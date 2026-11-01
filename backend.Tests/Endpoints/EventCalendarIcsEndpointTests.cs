@@ -45,7 +45,7 @@ public class EventCalendarIcsEndpointTests : IDisposable
             NameEn = "The Iceland Run",
             Slug = "islandshlaupid",
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
             OrganizerName = "Test Org",
             Location = location,
         };
@@ -107,7 +107,7 @@ public class EventCalendarIcsEndpointTests : IDisposable
             // NameEn intentionally null
             Slug = "nordurhlaupid",
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
             OrganizerName = "Test Org",
             Location = location,
         };

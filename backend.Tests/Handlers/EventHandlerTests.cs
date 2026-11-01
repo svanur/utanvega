@@ -56,7 +56,7 @@ public class EventHandlerTests : IDisposable
             Name = name,
             Slug = name.ToLower().Replace(" ", "-"),
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
             OrganizerName = "Test Org",
             ScheduleRule = new ScheduleRule
             {
@@ -115,7 +115,7 @@ public class EventHandlerTests : IDisposable
             Description: "55K ultra through the highlands",
             Type: "Race",
             ActivityType: "TrailRunning",
-            Status: "Confirmed",
+            Status: "Active",
             OrganizerName: "ÍSÍ",
             OrganizerWebsite: "https://marathon.is",
             OrganizerId: null,
@@ -135,7 +135,7 @@ public class EventHandlerTests : IDisposable
         Assert.Equal("Laugavegur Ultra", ev!.Name);
         Assert.Equal("laugavegur-ultra", ev.Slug);
         Assert.Equal(slug, ev.Slug);
-        Assert.Equal(EventStatus.Confirmed, ev.Status);
+        Assert.Equal(EventStatus.Active, ev.Status);
         Assert.Equal(EventType.Race, ev.Type);
     }
 
@@ -151,7 +151,7 @@ public class EventHandlerTests : IDisposable
             Description: null,
             Type: "Race",
             ActivityType: "Running",
-            Status: "Confirmed",
+            Status: "Active",
             OrganizerName: null,
             OrganizerWebsite: null,
             OrganizerId: null,
@@ -195,7 +195,7 @@ public class EventHandlerTests : IDisposable
                 Description: "55K ultra through the highlands",
                 Type: "Race",
                 ActivityType: "TrailRunning",
-                Status: "Confirmed",
+                Status: "Active",
                 OrganizerName: "ÍSÍ",
                 OrganizerWebsite: "https://marathon.is",
                 OrganizerId: null,
@@ -225,7 +225,7 @@ public class EventHandlerTests : IDisposable
                 Description: "55K ultra through the highlands",
                 Type: "Race",
                 ActivityType: "TrailRunning",
-                Status: "Confirmed",
+                Status: "Active",
                 OrganizerName: "ÍSÍ",
                 OrganizerWebsite: "https://marathon.is",
                 OrganizerId: null,
@@ -299,7 +299,7 @@ public class EventHandlerTests : IDisposable
             Description: null,
             Type: "Race",
             ActivityType: "TrailRunning",
-            Status: "Confirmed",
+            Status: "Active",
             OrganizerName: null,
             OrganizerWebsite: null,
             OrganizerId: null,
@@ -5765,12 +5765,12 @@ public class EventHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             var handler = new UpdateEventCommandHandler(ctx, _cacheInvalidator);
-            var result = await handler.Handle(BuildUpdateEventCommand(ev, "Confirmed"), CancellationToken.None);
+            var result = await handler.Handle(BuildUpdateEventCommand(ev, "Active"), CancellationToken.None);
             Assert.True(result);
         }
 
         using var verifyCtx = _factory.CreateContext();
-        Assert.Equal(EventStatus.Confirmed, verifyCtx.Events.Find(ev.Id)!.Status);
+        Assert.Equal(EventStatus.Active, verifyCtx.Events.Find(ev.Id)!.Status);
         // Reactivation must not cascade back — the edition stays exactly as it was left.
         Assert.Equal(EditionStatus.Cancelled, verifyCtx.EventEditions.Find(edition.Id)!.Status);
         Assert.Equal(RegistrationStatus.Closed, verifyCtx.EventEditions.Find(edition.Id)!.RegistrationStatus);

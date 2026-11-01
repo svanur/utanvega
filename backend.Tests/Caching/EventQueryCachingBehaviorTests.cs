@@ -44,7 +44,7 @@ public class EventQueryCachingBehaviorTests : IDisposable
         Name = name,
         Slug = slug,
         Type = EventType.Race,
-        Status = EventStatus.Confirmed,
+        Status = EventStatus.Active,
         OrganizerName = "Test Org",
     };
 

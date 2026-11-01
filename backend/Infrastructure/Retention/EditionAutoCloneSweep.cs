@@ -52,7 +52,7 @@ public static class EditionAutoCloneSweep
             .Include(ed => ed.Races)
             .Where(ed => ed.Status == EditionStatus.Completed &&
                          (ed.Event.Type == EventType.Race || ed.Event.Type == EventType.Series) &&
-                         ed.Event.Status == EventStatus.Confirmed)
+                         ed.Event.Status == EventStatus.Active)
             .ToListAsync(cancellationToken);
 
         if (eligibleEditions.Count == 0) return 0;

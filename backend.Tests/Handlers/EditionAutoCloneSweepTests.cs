@@ -23,7 +23,7 @@ public class EditionAutoCloneSweepTests : IDisposable
     private Event CreateEvent(
         string name = "Test Race",
         EventType type = EventType.Race,
-        EventStatus status = EventStatus.Confirmed)
+        EventStatus status = EventStatus.Active)
     {
         return new Event
         {

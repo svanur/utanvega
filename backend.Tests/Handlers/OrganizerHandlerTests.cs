@@ -412,7 +412,7 @@ public class OrganizerHandlerTests : IDisposable
             var ev = new Event
             {
                 Name = "Acme Race", Slug = "acme-race",
-                Type = EventType.Race, Status = EventStatus.Confirmed,
+                Type = EventType.Race, Status = EventStatus.Active,
                 OrganizerId = orgId,
                 OrganizerName = "Acme Running",
                 OrganizerWebsite = "https://acme.is",
@@ -485,13 +485,13 @@ public class OrganizerHandlerTests : IDisposable
             ctx.Events.Add(new Event
             {
                 Name = "Event A", Slug = "event-a",
-                Type = EventType.Race, Status = EventStatus.Confirmed,
+                Type = EventType.Race, Status = EventStatus.Active,
                 OrganizerId = orgId,
             });
             ctx.Events.Add(new Event
             {
                 Name = "Event B", Slug = "event-b",
-                Type = EventType.Race, Status = EventStatus.Confirmed,
+                Type = EventType.Race, Status = EventStatus.Active,
                 OrganizerId = orgId,
             });
             await ctx.SaveChangesAsync();
