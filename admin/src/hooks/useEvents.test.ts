@@ -96,7 +96,7 @@ describe('useEvents — createEdition', () => {
       await result.current.createEdition({
         eventId: 'event-1',
         registrationStatus: 'NotStarted',
-        status: 'Active',
+        status: 'Confirmed',
       });
     });
 

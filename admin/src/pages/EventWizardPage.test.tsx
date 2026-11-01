@@ -742,15 +742,15 @@ describe('EditionDetailsStep — Year field wiring', () => {
 
   it('does not clobber a manually-set Status when Year is edited again afterwards', () => {
     renderEditionDetailsStep();
-    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Active);
-    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Confirmed);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Confirmed);
 
     const pastYear = String(new Date().getFullYear() - 5);
     fireEvent.change(screen.getByLabelText('Year'), { target: { value: pastYear } });
 
     // Both nudged fields are gated by the same statusManuallySetRef, so a manual Status change
     // must also keep Registration status at its untouched initial value, not just Status itself.
-    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Confirmed);
     expect(getRegistrationStatusCombobox().textContent).toBe('NotStarted');
   });
 
@@ -782,8 +782,8 @@ describe('EditionDetailsStep — Year field wiring', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { rerender } = renderRoundTripHarness(queryClient);
 
-    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Active);
-    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Confirmed);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Confirmed);
 
     // Step2 -> Back -> Step1: only the child EditionDetailsStep unmounts here (mounted={false}) —
     // EditionDetailsRoundTripHarness stays mounted throughout, so its statusManuallySetRef (and
@@ -800,7 +800,7 @@ describe('EditionDetailsStep — Year field wiring', () => {
 
     // The manual choice from before the unmount must still be honored — the nudge logic on this
     // remounted instance must not overwrite it back to the year-derived default.
-    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Confirmed);
     expect(getRegistrationStatusCombobox().textContent).toBe('NotStarted');
   });
 });
