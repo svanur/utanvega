@@ -921,7 +921,7 @@ describe('EventDetailsStep — Type/Activity/Status Selects are reachable via ge
   it('changes Status via the Select reachable by its label', () => {
     renderEventDetailsStep();
 
-    chooseMenuOption(getStatusCombobox(), 'Confirmed');
-    expect(getStatusCombobox().textContent).toBe('Confirmed');
+    chooseMenuOption(getStatusCombobox(), 'Active');
+    expect(getStatusCombobox().textContent).toBe('Active');
   });
 });

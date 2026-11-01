@@ -96,10 +96,10 @@ function scoreMatch(query: string, name: string, slug: string): number {
 
 const EVENT_TYPES: EventType[] = ['Race', 'Series', 'Social', 'Advertisement', 'Festival', 'Other'];
 const ACTIVITY_TYPES: ActivityType[] = ['TrailRunning', 'Running', 'Cycling', 'Hiking', 'FunRun', 'ObstacleCourse', 'CrossCountryRun', 'Swim', 'Canicross', 'IronMan', 'Other'];
-const EVENT_STATUSES: EventStatus[] = ['Hidden', 'Unconfirmed', 'Confirmed', 'Cancelled', 'Unlisted'];
+const EVENT_STATUSES: EventStatus[] = ['Hidden', 'Unconfirmed', 'Active', 'Cancelled', 'Unlisted'];
 const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   Unconfirmed: 'Unconfirmed',
-  Confirmed: 'Confirmed',
+  Active: 'Active',
   Cancelled: 'Cancelled',
   Hidden: 'Draft — hidden from all',
   Unlisted: 'Unlisted — view by URL',

@@ -64,7 +64,7 @@ const mockState = vi.hoisted(() => ({
     descriptionEn: 'Old English event description' as string | null,
     type: 'Race',
     activityType: 'TrailRunning',
-    status: 'Confirmed',
+    status: 'Active',
     organizerName: null,
     organizerNameEn: null,
     organizerWebsite: null,

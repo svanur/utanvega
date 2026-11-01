@@ -1627,7 +1627,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
             <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center" sx={{ mb: 0.5 }}>
               <Tooltip title={cycleTooltip('Event status', EVENT_STATUS_CYCLE, detail.status)}>
                 <Chip label={detail.status} size="small"
-                  color={detail.status === 'Confirmed' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'}
+                  color={detail.status === 'Active' ? 'success' : detail.status === 'Cancelled' ? 'error' : detail.status === 'Unconfirmed' ? 'warning' : 'default'}
                   onClick={handleCycleEventStatus}
                   sx={{ cursor: 'pointer' }} />
               </Tooltip>
