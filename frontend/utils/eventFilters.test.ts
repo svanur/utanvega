@@ -419,24 +419,24 @@ describe('applyFilters — confirmed date only filter', () => {
     it('excludes an Unconfirmed event', () => {
         const events = [
             makeEvent({ slug: 'unconfirmed', editionStatus: 'Unconfirmed', editionEffectiveCancelled: false }),
-            makeEvent({ slug: 'active', editionStatus: 'Active', editionEffectiveCancelled: false }),
+            makeEvent({ slug: 'active', editionStatus: 'Confirmed', editionEffectiveCancelled: false }),
         ];
         const result = applyFilters(events, { ...DEFAULT_FILTERS, confirmedDateOnly: true }, '', [], false);
         expect(result.map(e => e.slug)).toEqual(['active']);
     });
 
-    it('excludes an Active event that has since been effectively cancelled', () => {
+    it('excludes a Confirmed event that has since been effectively cancelled', () => {
         const events = [
-            makeEvent({ slug: 'cancelled', editionStatus: 'Active', editionEffectiveCancelled: true }),
-            makeEvent({ slug: 'active', editionStatus: 'Active', editionEffectiveCancelled: false }),
+            makeEvent({ slug: 'cancelled', editionStatus: 'Confirmed', editionEffectiveCancelled: true }),
+            makeEvent({ slug: 'active', editionStatus: 'Confirmed', editionEffectiveCancelled: false }),
         ];
         const result = applyFilters(events, { ...DEFAULT_FILTERS, confirmedDateOnly: true }, '', [], false);
         expect(result.map(e => e.slug)).toEqual(['active']);
     });
 
-    it('includes an Active, non-cancelled event', () => {
+    it('includes a Confirmed, non-cancelled event', () => {
         const events = [
-            makeEvent({ slug: 'active', editionStatus: 'Active', editionEffectiveCancelled: false }),
+            makeEvent({ slug: 'active', editionStatus: 'Confirmed', editionEffectiveCancelled: false }),
         ];
         const result = applyFilters(events, { ...DEFAULT_FILTERS, confirmedDateOnly: true }, '', [], false);
         expect(result.map(e => e.slug)).toEqual(['active']);
