@@ -33,7 +33,7 @@ public class EditionsHistoryHandlerTests : IDisposable
         };
     }
 
-    private static EventEdition CreateEdition(Guid eventId, DateOnly? date, int? year = null, EditionStatus status = EditionStatus.Active)
+    private static EventEdition CreateEdition(Guid eventId, DateOnly? date, int? year = null, EditionStatus status = EditionStatus.Confirmed)
     {
         return new EventEdition
         {
@@ -482,7 +482,7 @@ public class EditionsHistoryHandlerTests : IDisposable
             EventId = ev.Id,
             Date = new DateOnly(pastYear, 6, 1),
             Year = null,
-            Status = EditionStatus.Active,
+            Status = EditionStatus.Confirmed,
             RegistrationStatus = RegistrationStatus.Closed,
         };
 

@@ -6,7 +6,7 @@ namespace backend.Tests.Validators;
 public class EnumValidationTests
 {
     [Theory]
-    [InlineData("Active")]
+    [InlineData("Confirmed")]
     [InlineData("unconfirmed")]
     [InlineData("COMPLETED")]
     public void IsDefined_NamedValue_ReturnsTrue(string value)
@@ -31,8 +31,9 @@ public class EnumValidationTests
     public void IsDefined_NumericString_ReturnsFalse(string value)
     {
         // Enum.TryParse alone accepts any numeric string that fits the underlying type, named member
-        // or not — "0" and "4" happen to map to real EditionStatus members (Active, Completed) when
-        // parsed as the enum's ordinal, so a bare TryParse would wrongly accept them as text input too.
+        // or not — "0" and "4" happen to map to real EditionStatus members (Confirmed, Completed)
+        // when parsed as the enum's ordinal, so a bare TryParse would wrongly accept them as text
+        // input too.
         // A status value arriving as JSON should only ever be the member name, never its ordinal.
         Assert.False(EnumValidation.IsDefined<EditionStatus>(value));
     }

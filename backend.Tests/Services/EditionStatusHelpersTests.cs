@@ -16,7 +16,7 @@ public class EditionStatusHelpersTests
     [Fact]
     public void ComputeEffectiveCancelled_ActiveWithNoRaces_ReturnsFalse()
     {
-        var result = EditionStatusHelpers.ComputeEffectiveCancelled(EditionStatus.Active, []);
+        var result = EditionStatusHelpers.ComputeEffectiveCancelled(EditionStatus.Confirmed, []);
         Assert.False(result);
     }
 
@@ -24,7 +24,7 @@ public class EditionStatusHelpersTests
     public void ComputeEffectiveCancelled_ActiveWithAllRacesCancelled_ReturnsTrue()
     {
         var result = EditionStatusHelpers.ComputeEffectiveCancelled(
-            EditionStatus.Active,
+            EditionStatus.Confirmed,
             [RaceStatus.Cancelled, RaceStatus.Cancelled]);
         Assert.True(result);
     }
@@ -33,7 +33,7 @@ public class EditionStatusHelpersTests
     public void ComputeEffectiveCancelled_ActiveWithMixedRaceStatuses_ReturnsFalse()
     {
         var result = EditionStatusHelpers.ComputeEffectiveCancelled(
-            EditionStatus.Active,
+            EditionStatus.Confirmed,
             [RaceStatus.Cancelled, RaceStatus.Active]);
         Assert.False(result);
     }
@@ -141,7 +141,7 @@ public class EditionStatusHelpersTests
         var closes = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Closed, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.Closed, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.NotStarted, result);
     }
@@ -154,7 +154,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.NotStarted, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.NotStarted, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.Open, result);
     }
@@ -167,7 +167,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.Open, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.Closed, result);
     }
@@ -183,7 +183,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 3, 1, 8, 59, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.Open, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.Open, result);
     }
@@ -198,7 +198,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 3, 1, 9, 0, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.Open, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.Closed, result);
     }
@@ -215,7 +215,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 3, 1, 23, 0, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.Open, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.Open, result);
     }
@@ -230,7 +230,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Open, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.Open, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.Closed, result);
     }
@@ -241,7 +241,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc);
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Open, null, null, now);
+            EditionStatus.Confirmed, RegistrationStatus.Open, null, null, now);
 
         Assert.Equal(RegistrationStatus.Open, result);
     }
@@ -254,7 +254,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc); // would compute Open
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.NotRequired, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.NotRequired, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.NotRequired, result);
     }
@@ -270,7 +270,7 @@ public class EditionStatusHelpersTests
         var now = new DateTime(2026, 2, 15, 0, 0, 0, DateTimeKind.Utc); // would compute Open
 
         var result = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.Invitational, opens, closes, now);
+            EditionStatus.Confirmed, RegistrationStatus.Invitational, opens, closes, now);
 
         Assert.Equal(RegistrationStatus.Invitational, result);
     }
@@ -385,7 +385,7 @@ public class EditionStatusHelpersTests
         // effective RegistrationStatus (from ComputeEffectiveRegistrationStatus) is handed in here
         // unchanged — this helper never re-derives from raw dates itself.
         var effectiveRegStatus = EditionStatusHelpers.ComputeEffectiveRegistrationStatus(
-            EditionStatus.Active, RegistrationStatus.NotRequired, null, null, DateTime.UtcNow);
+            EditionStatus.Confirmed, RegistrationStatus.NotRequired, null, null, DateTime.UtcNow);
 
         var result = EditionStatusHelpers.ComputeEffectiveTicketStatus(
             RaceStatus.Active, TicketStatus.Available, effectiveRegStatus,

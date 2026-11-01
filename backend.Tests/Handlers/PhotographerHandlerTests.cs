@@ -599,7 +599,7 @@ public class PhotographerHandlerTests : IDisposable
 
     private async Task<(Guid PhotographerId, Guid EventId, Guid EditionId)> SeedGalleryFixture(
         Guid photographerId, string eventSlug, EventStatus eventStatus, int? editionYear, DateOnly? editionDate, string galleryUrl,
-        EditionStatus editionStatus = EditionStatus.Active)
+        EditionStatus editionStatus = EditionStatus.Confirmed)
     {
         using var ctx = _factory.CreateContext();
         var ev = new Event
