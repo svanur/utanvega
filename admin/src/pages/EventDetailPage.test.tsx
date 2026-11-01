@@ -128,8 +128,8 @@ describe('EditionDialogInner — Status/Registration status Selects are reachabl
 
     expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Hidden);
 
-    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Active);
-    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Active);
+    chooseMenuOption(getStatusCombobox(), EDITION_STATUS_LABELS.Confirmed);
+    expect(getStatusCombobox().textContent).toBe(EDITION_STATUS_LABELS.Confirmed);
   });
 
   it('locates Registration status by label and changes it', () => {
@@ -359,7 +359,7 @@ describe('EditionDialogInner — Registration opens/closes round-trip a stored i
 });
 
 // #1024: handleCycleEditionStatus (the chip labeled with the edition's own EditionStatus, e.g.
-// "Active" — not the Status *Select* covered above) fires a bare, non-awaited apiFetch PUT and,
+// "Confirmed" — not the Status *Select* covered above) fires a bare, non-awaited apiFetch PUT and,
 // unlike its sibling handleToggleEditionNeedsReview, never called invalidateEventsList() on
 // success — so a status cycle from this page left EventsListPage's cached
 // anyEditionUnconfirmed/hasFutureEdition/editionStatus-derived chips stale for up to its 30s
@@ -393,7 +393,7 @@ function buildEditionFixture(overrides: Partial<EventEditionDto> = {}): EventEdi
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: null,
     translationHashes: {},
-    status: 'Active',
+    status: 'Confirmed',
     effectiveCancelled: false,
     needsReview: false,
     ...overrides,
@@ -437,7 +437,7 @@ function buildEventDetailFixture(): EventDetailDto {
     hasFutureEdition: true,
     endDisplayDate: null,
     translationHashes: {},
-    editionStatus: 'Active',
+    editionStatus: 'Confirmed',
     editionEffectiveCancelled: false,
     anyEditionNeedsReview: false,
     anyEditionUnconfirmed: false,
@@ -458,12 +458,13 @@ function renderEventDetailPage(queryClient: QueryClient, onNotify: (msg: ReactNo
   );
 }
 
-// The edition's own EditionStatus chip — its visible label is just "Active", which used to be the
-// only "Active" text in the tree. #793 renamed EventStatus.Confirmed to Active, so the header's own
-// Event status chip (buildEventDetailFixture's `status: 'Active'`) now renders that same text too —
-// findByText('Active') is ambiguous. MUI's Tooltip mirrors its `title` into the wrapped Chip's
-// aria-label, and cycleTooltip() always starts that title with the label passed in ('Edition
-// status' vs 'Event status'), so matching on the chip's accessible name disambiguates reliably.
+// The edition's own EditionStatus chip — its visible label is "Confirmed" (renamed from "Active"
+// by #1604). Before that rename both this chip and the header's own Event status chip
+// (buildEventDetailFixture's `status: 'Active'`, #793's EventStatus.Confirmed-renamed-to-Active)
+// rendered the same "Active" text, making a plain findByText('Active') ambiguous. MUI's Tooltip
+// mirrors its `title` into the wrapped Chip's aria-label, and cycleTooltip() always starts that
+// title with the label passed in ('Edition status' vs 'Event status'), so matching on the chip's
+// accessible name disambiguates reliably regardless of either status's current text.
 function findEditionStatusChip() {
   return screen.findByRole('button', { name: /^Edition status:/ });
 }
@@ -511,7 +512,7 @@ describe('EventDetailPage — handleCycleEditionStatus invalidates the events li
     fireEvent.click(statusChip);
 
     // The optimistic update flips the chip to "Unconfirmed" immediately, then the rejected PUT's
-    // .catch() rolls it back to "Active" — waiting for that reappearance is also proof the
+    // .catch() rolls it back to "Confirmed" — waiting for that reappearance is also proof the
     // rollback ran, not just that invalidateEventsList wasn't called.
     await findEditionStatusChip();
     expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));

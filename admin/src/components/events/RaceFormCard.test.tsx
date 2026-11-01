@@ -44,7 +44,7 @@ const edition: EventEditionDto = {
   galleries: [],
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: null,
-  status: 'Active',
+  status: 'Confirmed',
   effectiveCancelled: false,
   needsReview: false,
 };
