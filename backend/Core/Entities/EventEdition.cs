@@ -11,7 +11,7 @@ public enum RegistrationStatus
 
 public enum EditionStatus
 {
-    Active,
+    Confirmed,
     Unconfirmed,
     Cancelled,
     Hidden,

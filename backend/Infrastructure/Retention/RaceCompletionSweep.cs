@@ -22,7 +22,7 @@ namespace Utanvega.Backend.Infrastructure.Retention;
 /// </para>
 ///
 /// <para>
-/// Only races under <see cref="EditionStatus.Active"/> editions are swept. Races under
+/// Only races under <see cref="EditionStatus.Confirmed"/> editions are swept. Races under
 /// Unconfirmed/Hidden editions are deliberately left alone — same reasoning
 /// <see cref="EditionCompletionSweep"/> already applies at the edition level: those need a human
 /// to confirm the edition actually happened before anything under it is marked Completed.
@@ -51,7 +51,7 @@ public static class RaceCompletionSweep
             .Where(r =>
                 r.Status == RaceStatus.Active &&
                 r.DateOfRace.HasValue &&
-                r.EventEdition.Status == EditionStatus.Active)
+                r.EventEdition.Status == EditionStatus.Confirmed)
             .ToListAsync(cancellationToken);
 
         var due = candidateRaces

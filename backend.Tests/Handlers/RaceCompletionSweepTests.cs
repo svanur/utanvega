@@ -64,7 +64,7 @@ public class RaceCompletionSweepTests : IDisposable
     public async Task CompletesAPastDatedActiveRaceUnderAnActiveEdition()
     {
         var ev = CreateEvent();
-        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-30));
+        var edition = CreateEdition(ev.Id, EditionStatus.Confirmed, Today.AddDays(-30));
         var race = CreateRace(edition.Id, "10K", RaceStatus.Active, TicketStatus.Available, Today.AddDays(-1));
 
         using (var ctx = _factory.CreateContext())
@@ -86,7 +86,7 @@ public class RaceCompletionSweepTests : IDisposable
         var updated = verifyCtx.Races.Find(race.Id)!;
         Assert.Equal(RaceStatus.Completed, updated.Status);
         Assert.Equal(TicketStatus.Closed, updated.TicketStatus);
-        Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(EditionStatus.Confirmed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
 
         _cacheInvalidator.Verify(c => c.InvalidateEvent(ev.Slug), Times.Once);
     }
@@ -98,7 +98,7 @@ public class RaceCompletionSweepTests : IDisposable
         // the parent edition itself must stay Active — this sweep must never touch anything but
         // the one past-dated race.
         var ev = CreateEvent(type: EventType.Series);
-        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-60));
+        var edition = CreateEdition(ev.Id, EditionStatus.Confirmed, Today.AddDays(-60));
         var pastLeg = CreateRace(edition.Id, "October", RaceStatus.Active, TicketStatus.Available, Today.AddDays(-1));
         var futureLegs = new[]
         {
@@ -133,7 +133,7 @@ public class RaceCompletionSweepTests : IDisposable
             Assert.Equal(RaceStatus.Active, verifyCtx.Races.Find(leg.Id)!.Status);
             Assert.Equal(TicketStatus.Available, verifyCtx.Races.Find(leg.Id)!.TicketStatus);
         }
-        Assert.Equal(EditionStatus.Active, verifyCtx.EventEditions.Find(edition.Id)!.Status);
+        Assert.Equal(EditionStatus.Confirmed, verifyCtx.EventEditions.Find(edition.Id)!.Status);
 
         _cacheInvalidator.Verify(c => c.InvalidateEvent(ev.Slug), Times.Once);
     }
@@ -142,7 +142,7 @@ public class RaceCompletionSweepTests : IDisposable
     public async Task LeavesADatelessRaceUntouched()
     {
         var ev = CreateEvent();
-        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-30));
+        var edition = CreateEdition(ev.Id, EditionStatus.Confirmed, Today.AddDays(-30));
         var race = CreateRace(edition.Id, "Fun Run", RaceStatus.Active, TicketStatus.Available, dateOfRace: null);
 
         using (var ctx = _factory.CreateContext())
@@ -204,7 +204,7 @@ public class RaceCompletionSweepTests : IDisposable
     public async Task LeavesAnAlreadyTerminalRaceUntouched(RaceStatus status, TicketStatus ticketStatus)
     {
         var ev = CreateEvent();
-        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-30));
+        var edition = CreateEdition(ev.Id, EditionStatus.Confirmed, Today.AddDays(-30));
         var race = CreateRace(edition.Id, "10K", status, ticketStatus, Today.AddDays(-1));
 
         using (var ctx = _factory.CreateContext())
@@ -228,7 +228,7 @@ public class RaceCompletionSweepTests : IDisposable
     public async Task LeavesAFutureDatedActiveRaceUntouched()
     {
         var ev = CreateEvent();
-        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-30));
+        var edition = CreateEdition(ev.Id, EditionStatus.Confirmed, Today.AddDays(-30));
         var race = CreateRace(edition.Id, "10K", RaceStatus.Active, TicketStatus.Available, Today.AddDays(5));
 
         using (var ctx = _factory.CreateContext())
@@ -255,7 +255,7 @@ public class RaceCompletionSweepTests : IDisposable
         // single sweep. InvalidateEvent also bumps the shared EventVersion token, so calling it
         // once per race here would bump that token redundantly for the same event. See #909.
         var ev = CreateEvent(type: EventType.Series);
-        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-60));
+        var edition = CreateEdition(ev.Id, EditionStatus.Confirmed, Today.AddDays(-60));
         var race1 = CreateRace(edition.Id, "October", RaceStatus.Active, TicketStatus.Available, Today.AddDays(-30));
         var race2 = CreateRace(edition.Id, "November", RaceStatus.Active, TicketStatus.Available, Today.AddDays(-1));
 
@@ -284,7 +284,7 @@ public class RaceCompletionSweepTests : IDisposable
         // CompleteWithRaces() against a mix of races this sweep already completed and any
         // still-Active ones — must not double-process or throw.
         var ev = CreateEvent(type: EventType.Series);
-        var edition = CreateEdition(ev.Id, EditionStatus.Active, Today.AddDays(-60));
+        var edition = CreateEdition(ev.Id, EditionStatus.Confirmed, Today.AddDays(-60));
         var pastLeg = CreateRace(edition.Id, "October", RaceStatus.Active, TicketStatus.Available, Today.AddDays(-30));
         var lastLeg = CreateRace(edition.Id, "March", RaceStatus.Active, TicketStatus.Available, Today.AddDays(-1));
 

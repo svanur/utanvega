@@ -10,7 +10,7 @@ public class EventEditionTests
         {
             Id = Guid.NewGuid(),
             EventId = Guid.NewGuid(),
-            Status = EditionStatus.Active,
+            Status = EditionStatus.Confirmed,
             RegistrationStatus = RegistrationStatus.Open,
         };
         foreach (var race in races)

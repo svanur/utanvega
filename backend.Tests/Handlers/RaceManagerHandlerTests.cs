@@ -139,7 +139,7 @@ public class RaceManagerHandlerTests : IDisposable
         using (var db = _factory.CreateContext())
         {
             var found = await db.EventEditions.FindAsync(edition.Id);
-            found!.Status = EditionStatus.Active;
+            found!.Status = EditionStatus.Confirmed;
             await db.SaveChangesAsync();
         }
 
@@ -190,7 +190,7 @@ public class RaceManagerHandlerTests : IDisposable
         using (var db = _factory.CreateContext())
         {
             var found = await db.EventEditions.FindAsync(edition.Id);
-            found!.Status = EditionStatus.Active;
+            found!.Status = EditionStatus.Confirmed;
             await db.SaveChangesAsync();
         }
 
@@ -198,7 +198,7 @@ public class RaceManagerHandlerTests : IDisposable
         await handler.Handle(new PatchEventStatusCommand(ev.Id, "Cancelled"), CancellationToken.None);
 
         using var verify = _factory.CreateContext();
-        Assert.Equal(EditionStatus.Active, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
+        Assert.Equal(EditionStatus.Confirmed, (await verify.EventEditions.FindAsync(edition.Id))!.Status);
     }
 
     [Fact]

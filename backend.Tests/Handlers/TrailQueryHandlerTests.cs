@@ -302,7 +302,7 @@ public class TrailQueryHandlerTests : IDisposable
         Guid trailId,
         RaceStatus raceStatus = RaceStatus.Active,
         TicketStatus storedTicketStatus = TicketStatus.Available,
-        EditionStatus editionStatus = EditionStatus.Active,
+        EditionStatus editionStatus = EditionStatus.Confirmed,
         RegistrationStatus storedRegistrationStatus = RegistrationStatus.Open,
         DateTime? registrationOpens = null,
         DateTime? registrationCloses = null)

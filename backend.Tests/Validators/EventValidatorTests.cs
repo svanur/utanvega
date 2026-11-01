@@ -784,7 +784,7 @@ public class EventValidatorTests : IDisposable
     private async Task<Guid> SeedActiveEdition(string slug)
     {
         var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = slug, Type = EventType.Race, Status = EventStatus.Active };
-        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Active, RegistrationStatus = RegistrationStatus.Open };
+        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Confirmed, RegistrationStatus = RegistrationStatus.Open };
         using var ctx = _factory.CreateContext();
         ctx.Events.Add(ev);
         ctx.EventEditions.Add(edition);
@@ -944,7 +944,7 @@ public class EventValidatorTests : IDisposable
     public async Task CreateRace_UnderActiveEdition_Passes()
     {
         var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-rae", Type = EventType.Race, Status = EventStatus.Active };
-        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Active, RegistrationStatus = RegistrationStatus.Open };
+        var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Confirmed, RegistrationStatus = RegistrationStatus.Open };
         using (var ctx = _factory.CreateContext())
         {
             ctx.Events.Add(ev);
@@ -1089,7 +1089,7 @@ public class EventValidatorTests : IDisposable
     [Fact]
     public async Task UpdateRace_ChangingStatus_WhileEditionActive_Passes()
     {
-        var (_, _, race) = await SeedRaceUnderEdition(EditionStatus.Active, RaceStatus.Active, "urcswea");
+        var (_, _, race) = await SeedRaceUnderEdition(EditionStatus.Confirmed, RaceStatus.Active, "urcswea");
 
         var cmd = ValidUpdateRaceCommand with { Id = race.Id, Status = "Completed" };
         var result = await UpdateRaceValidator().TestValidateAsync(cmd);
