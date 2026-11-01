@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_7": {
+                "title": "Breytingar á Status fyrir Event og Edition",
+                "description": "Breytingar á Status heitum fyrir Event og Edition. Event er nú með Status „Active\" í stað „Confirmed\". Edition hefur Status „Confirmed\" í stað „Active\". Síur, merkingar og prófanir uppfærðar til samræmis."
+            },
             "v1_17_6": {
                 "title": "Lagfæringar á skráningarhnappi og keppnisdags-merki",
                 "description": "Skráningarhnappur birtist ekki lengur fyrir útgáfu þar sem öll keppnishlaup eru með skráningarglugga sem er ekki opinn, til samræmis við núverandi hegðun fyrir uppseld hlaup — einnig fyrir skráningarhnapp einstakrar greinar í útvíkkaðri greinarlínu seríu. Merkið „Það er keppnisdagur\" og deilikortið birtast ekki lengur á félagslegum viðburðum, auglýsingum, hátíðum eða öðrum viðburðum — aðeins fyrir keppnishlaup og seríur."
