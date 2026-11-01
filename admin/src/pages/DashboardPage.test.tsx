@@ -33,7 +33,7 @@ vi.mock('../hooks/api', () => ({
                     descriptionEn: null,
                     type: 'Race',
                     activityType: 'TrailRunning',
-                    status: 'Confirmed',
+                    status: 'Active',
                     organizerName: null,
                     organizerNameEn: null,
                     organizerWebsite: null,

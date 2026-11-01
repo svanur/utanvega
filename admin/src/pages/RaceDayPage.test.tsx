@@ -132,7 +132,7 @@ describe('RaceDayPage markEditionsCompleted registrationStatus patch (#1288)', (
 
   const invitationalEdition = {
     id: 'ed-invitational', eventId: 'event-invitational', eventName: 'Invitational Trail Run',
-    eventSlug: 'invitational-trail-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    eventSlug: 'invitational-trail-run', eventType: 'Trail', eventStatus: 'Active',
     editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
     resultsUrl: null, registrationUrl: null, registrationStatus: 'Invitational',
     races: [{ ...baseRace, id: 'race-invitational' }],
@@ -199,7 +199,7 @@ describe('RaceDayPage registration-status Select gains Invitational/NotRequired 
 
   const notStartedEdition = {
     id: 'ed-not-started', eventId: 'event-not-started', eventName: 'Not Started Run',
-    eventSlug: 'not-started-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    eventSlug: 'not-started-run', eventType: 'Trail', eventStatus: 'Active',
     editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
     resultsUrl: null, registrationUrl: null, registrationStatus: 'NotStarted',
     races: [],
@@ -273,7 +273,7 @@ describe('RaceDayPage page-level readiness flags exempt override editions (#1396
 
   const notRequiredEdition = {
     id: 'ed-not-required', eventId: 'event-not-required', eventName: 'Not Required Run',
-    eventSlug: 'not-required-run', eventType: 'Trail', eventStatus: 'Confirmed',
+    eventSlug: 'not-required-run', eventType: 'Trail', eventStatus: 'Active',
     editionStatus: 'Active', date: '2026-10-18', endDate: null, title: null,
     resultsUrl: 'https://example.com/results', registrationUrl: null, registrationStatus: 'NotRequired',
     races: [{ ...completedRace, id: 'race-not-required' }],
@@ -319,7 +319,7 @@ describe('RaceDayPage page-level readiness flags exempt override editions (#1396
   // NotRequired/Invitational editions via isRegistrationOverride, but the regression test above
   // only exercised mode === 'wrapup'. This test covers the setup-mode mirror (isSetupReady, the
   // "Ready to go!" banner) with the same override editions, switched to the conditions isSetupReady
-  // actually checks: races Active (not Completed), eventStatus Confirmed, and a non-empty
+  // actually checks: races Active (not Completed), eventStatus Active, and a non-empty
   // registrationUrl — registrationStatus itself stays NotRequired/Invitational throughout, which is
   // exactly the case isRegistrationOverride exists to exempt from the plain 'Open' check.
   const activeRace = {

@@ -103,11 +103,11 @@ const ACTIVITY_ICONS: Record<string, string> = {
   TrailRunning: '🏃‍♂️', Running: '🏃', Hiking: '🥾', Cycling: '🚴', FunRun: '🎊',
   ObstacleCourse: '🧗', CrossCountryRun: '🌾', Swim: '🏊', Canicross: '🐕', IronMan: '🥇', Other: '🏅',
 };
-const EVENT_STATUSES: EventStatus[] = ['Unconfirmed', 'Confirmed', 'Cancelled', 'Hidden', 'Unlisted'];
+const EVENT_STATUSES: EventStatus[] = ['Hidden', 'Unconfirmed', 'Active', 'Cancelled', 'Unlisted'];
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getEventStatusColor(status: EventStatus): 'default' | 'success' | 'warning' | 'error' {
-  if (status === 'Confirmed') return 'success';
+  if (status === 'Active') return 'success';
   if (status === 'Unconfirmed') return 'warning';
   if (status === 'Cancelled') return 'error';
   return 'default';
@@ -317,7 +317,7 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
     if (n > 0) attentionItems.push({ key: 'seriesMissingReg', label: `${n} series event${n !== 1 ? 's' : ''} with races in ≤30 days missing registration URL` });
   }
   {
-    const n = events.filter(e => e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < todayStr).length;
+    const n = events.filter(e => e.status === 'Active' && e.nextEditionDate && e.nextEditionDate < todayStr).length;
     if (n > 0) attentionItems.push({ key: 'pastActive', label: `${n} event${n !== 1 ? 's' : ''} whose latest edition has passed — check results URL and registration status` });
   }
 
@@ -346,7 +346,7 @@ export default function EventsListPage({ onNotify }: EventsListPageProps) {
         }
         if (attentionFilter === 'noEdition' && !(!e.hasFutureEdition && (e.type === 'Race' || e.type === 'Series') && e.status !== 'Cancelled')) return false;
         if (attentionFilter === 'seriesMissingReg' && !(e.type === 'Series' && e.nextEditionDate && e.nextEditionDate <= in30daysStr && e.seriesRaces?.some(r => !r.registrationUrl))) return false;
-        if (attentionFilter === 'pastActive' && !(e.status === 'Confirmed' && e.nextEditionDate && e.nextEditionDate < todayStr)) return false;
+        if (attentionFilter === 'pastActive' && !(e.status === 'Active' && e.nextEditionDate && e.nextEditionDate < todayStr)) return false;
         if (needsReviewOnly && !e.anyEditionNeedsReview) return false;
         if (unconfirmedEditionsOnly && !e.anyEditionUnconfirmed) return false;
         return true;
