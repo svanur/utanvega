@@ -312,7 +312,7 @@ public class TrailQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Name = "Test Event",
             Slug = $"test-event-{Guid.NewGuid():N}",
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
         var edition = new EventEdition
         {

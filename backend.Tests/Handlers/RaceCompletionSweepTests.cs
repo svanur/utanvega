@@ -27,7 +27,7 @@ public class RaceCompletionSweepTests : IDisposable
             Name = name,
             Slug = name.ToLower().Replace(" ", "-"),
             Type = type,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
     }
 

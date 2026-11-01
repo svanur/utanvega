@@ -34,7 +34,7 @@ public class PhotoGalleryEndpointTests : IDisposable
             Name = "Test Event",
             Slug = $"test-event-{Guid.NewGuid():N}",
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
         var edition = new EventEdition
         {

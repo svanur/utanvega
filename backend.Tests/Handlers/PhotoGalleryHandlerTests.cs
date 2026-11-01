@@ -28,7 +28,7 @@ public class PhotoGalleryHandlerTests : IDisposable
             Name = "Test Event",
             Slug = $"test-event-{Guid.NewGuid():N}",
             Type = EventType.Race,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
         var edition = new EventEdition
         {
@@ -492,7 +492,7 @@ public class PhotoGalleryHandlerTests : IDisposable
             var ev = new Event
             {
                 Name = "Laugavegur Ultra", Slug = "laugavegur-ultra",
-                Type = EventType.Race, Status = EventStatus.Confirmed,
+                Type = EventType.Race, Status = EventStatus.Active,
             };
             ctx.Events.Add(ev);
             await ctx.SaveChangesAsync();

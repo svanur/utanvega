@@ -13,7 +13,7 @@ public class EventTests
             Id = Guid.NewGuid(),
             Name = "Test Event",
             Slug = "test-event",
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
         };
         foreach (var edition in editions)
         {

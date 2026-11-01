@@ -21,7 +21,7 @@ public class EditionsHistoryHandlerTests : IDisposable
         _memoryCache.Dispose();
     }
 
-    private static Event CreateTestEvent(string name, EventType type = EventType.Race, EventStatus status = EventStatus.Confirmed)
+    private static Event CreateTestEvent(string name, EventType type = EventType.Race, EventStatus status = EventStatus.Active)
     {
         return new Event
         {

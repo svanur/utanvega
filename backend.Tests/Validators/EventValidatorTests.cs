@@ -27,7 +27,7 @@ public class EventValidatorTests : IDisposable
         Description: "55K ultra through the highlands",
         Type: "Race",
         ActivityType: "TrailRunning",
-        Status: "Confirmed",
+        Status: "Active",
         OrganizerName: "ÍSÍ",
         OrganizerWebsite: "https://marathon.is",
         OrganizerId: null,
@@ -171,7 +171,7 @@ public class EventValidatorTests : IDisposable
         Description: null,
         Type: "Race",
         ActivityType: "TrailRunning",
-        Status: "Confirmed",
+        Status: "Active",
         OrganizerName: null,
         OrganizerWebsite: null,
         OrganizerId: null,
@@ -783,7 +783,7 @@ public class EventValidatorTests : IDisposable
 
     private async Task<Guid> SeedActiveEdition(string slug)
     {
-        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = slug, Type = EventType.Race, Status = EventStatus.Confirmed };
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = slug, Type = EventType.Race, Status = EventStatus.Active };
         var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Active, RegistrationStatus = RegistrationStatus.Open };
         using var ctx = _factory.CreateContext();
         ctx.Events.Add(ev);
@@ -916,7 +916,7 @@ public class EventValidatorTests : IDisposable
     [Fact]
     public async Task CreateRace_UnderCancelledEdition_Fails()
     {
-        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-car", Type = EventType.Race, Status = EventStatus.Confirmed };
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-car", Type = EventType.Race, Status = EventStatus.Active };
         var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Cancelled, RegistrationStatus = RegistrationStatus.Closed };
         using (var ctx = _factory.CreateContext())
         {
@@ -943,7 +943,7 @@ public class EventValidatorTests : IDisposable
     [Fact]
     public async Task CreateRace_UnderActiveEdition_Passes()
     {
-        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-rae", Type = EventType.Race, Status = EventStatus.Confirmed };
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = "test-event-rae", Type = EventType.Race, Status = EventStatus.Active };
         var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = EditionStatus.Active, RegistrationStatus = RegistrationStatus.Open };
         using (var ctx = _factory.CreateContext())
         {
@@ -1055,7 +1055,7 @@ public class EventValidatorTests : IDisposable
 
     private async Task<(Event ev, EventEdition edition, Race race)> SeedRaceUnderEdition(EditionStatus editionStatus, RaceStatus raceStatus, string slugSuffix)
     {
-        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = $"test-event-{slugSuffix}", Type = EventType.Race, Status = EventStatus.Confirmed };
+        var ev = new Event { Id = Guid.NewGuid(), Name = "Test Event", Slug = $"test-event-{slugSuffix}", Type = EventType.Race, Status = EventStatus.Active };
         var edition = new EventEdition { Id = Guid.NewGuid(), EventId = ev.Id, Status = editionStatus, RegistrationStatus = RegistrationStatus.Closed };
         var race = new Race { Id = Guid.NewGuid(), EventEditionId = edition.Id, Name = "Test Race", SortOrder = 0, Status = raceStatus, TicketStatus = TicketStatus.Closed };
         using var ctx = _factory.CreateContext();

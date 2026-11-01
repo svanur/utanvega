@@ -46,7 +46,7 @@ public class GetEventClimateQueryHandlerTests : IDisposable
             Slug = name.ToLower().Replace(" ", "-"),
             Type = EventType.Race,
             ActivityType = ActivityType.TrailRunning,
-            Status = EventStatus.Confirmed,
+            Status = EventStatus.Active,
             GpxPointLat = gpxLat,
             GpxPointLng = gpxLng,
             Location = location,
