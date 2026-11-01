@@ -278,7 +278,7 @@ export default function EventHealth({ onViewEvent, onNotify, initialFilter, onIn
           filter="perfect" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="Critical (<50%)" value={criticalCount} color="#d32f2f"
           filter="critical" activeFilter={activeFilter} onFilter={setActiveFilter} />
-        <SummaryCard title="Confirmed" value={`${activeCount}/${events.length}`} color="#7b1fa2" />
+        <SummaryCard title="Active" value={`${activeCount}/${events.length}`} color="#7b1fa2" />
         <SummaryCard title="No Date" value={noDateCount} color={noDateCount > 0 ? '#ed6c02' : '#2e7d32'}
           filter="no-date" activeFilter={activeFilter} onFilter={setActiveFilter} />
         <SummaryCard title="No Location" value={noLocationCount} color={noLocationCount > 0 ? '#ed6c02' : '#2e7d32'}

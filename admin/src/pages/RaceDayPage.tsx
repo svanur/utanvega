@@ -522,7 +522,7 @@ export default function RaceDayPage({ onNotify }: RaceDayPageProps) {
         const races = ed.races.filter(r => r.status !== 'Cancelled' && r.status !== 'Hidden');
         if (mode === 'setup') {
             return [
-                { label: 'Confirmed', done: ed.eventStatus === 'Active' },
+                { label: 'Active', done: ed.eventStatus === 'Active' },
                 { label: 'Reg URL', done: (registrationUrls[ed.id] ?? ed.registrationUrl ?? '') !== '' },
                 { label: 'Races active', done: races.length > 0 && races.every(r => r.status === 'Active') },
                 { label: 'Reg open', done: ed.registrationStatus === 'Open' || isRegistrationOverride(ed) },
