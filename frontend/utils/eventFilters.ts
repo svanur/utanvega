@@ -152,10 +152,10 @@ export function applyFilters(
     if (f.thisWeekOnly) { const { start, end } = getWeekRange('this'); result = result.filter(c => eventHasDateInRange(c, start, end)); }
     if (f.nextWeekOnly) { const { start, end } = getWeekRange('next'); result = result.filter(c => eventHasDateInRange(c, start, end)); }
     if (f.mountainRaceOnly) result = result.filter(c => c.isMountainRace === true);
-    // #1588: "Confirmed date only" — editionStatus === 'Active' means the edition's date is set
+    // #1588: "Confirmed date only" — editionStatus === 'Confirmed' means the edition's date is set
     // and confirmed (not merely tentative/unconfirmed); editionEffectiveCancelled covers the case
-    // where that status is still 'Active' but the edition has since been cancelled.
-    if (f.confirmedDateOnly) result = result.filter(c => c.editionStatus === 'Active' && !c.editionEffectiveCancelled);
+    // where that status is still 'Confirmed' but the edition has since been cancelled.
+    if (f.confirmedDateOnly) result = result.filter(c => c.editionStatus === 'Confirmed' && !c.editionEffectiveCancelled);
     if (f.favoritesOnly) result = result.filter(c => favoriteEvents.includes(c.slug));
     if (f.distanceBuckets.length > 0) result = result.filter(c => {
         if (!c.distances?.length) return false;
