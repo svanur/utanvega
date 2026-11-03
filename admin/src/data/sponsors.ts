@@ -64,16 +64,12 @@ export const PROMO_SLOTS: PromoSlot[] = [
     },
     {
         flag: 'ad_top_promo_3',
-        name: 'Mæðgur á hlaupum podcast',
-        img: '/sponsors/maedgur-a-hlaupum-podcast.png',
-        href: 'https://open.spotify.com/episode/0QYEU8rvLYD14lLYzv51lr',
-        alt: 'Mæðgur á hlaupum podcast — hlustaðu á Spotify',
+        name: 'Hlaupaferð til Sviss - júní 2027',
+        img: '/sponsors/hlaupaferd-til-sviss.png',
+        href: 'https://verslun.hlaupadagskra.is/',
+        alt: 'Hlaupaferð til Sviss, júní 2027 - Skráning hafin',
         position: 'top',
         shape: 'wide',
-        // Flag not yet created in admin — default to hidden until the owner creates+enables it,
-        // instead of inheriting isEnabled()'s unknown-flag-defaults-true behavior. Safe to drop
-        // this line once ad_top_promo_3 exists in admin as a real toggle.
-        defaultEnabled: false,
         notes: 'Text baked into image, 900x120. Toggle ad_top_promo_3 off in admin when the campaign ends.',
     },
     {

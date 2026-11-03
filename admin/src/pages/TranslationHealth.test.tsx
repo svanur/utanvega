@@ -5,7 +5,7 @@ import TranslationHealth from './TranslationHealth';
 import { hashText } from '../utils/translationHash';
 import type { Trail } from '../hooks/useTrails';
 import type { TagDto } from '../hooks/useTags';
-import type { EventDetailDto } from '../hooks/useEvents';
+import type { EventDetailDto, EventEditionDto, RaceDto } from '../hooks/useEvents';
 import type { LocationDto } from '../hooks/useLocations';
 import type { OrganizerDto } from '../hooks/useOrganizers';
 
@@ -36,6 +36,11 @@ const mockState = vi.hoisted(() => ({
     status: 'Published',
     activityType: 'TrailRunning',
     trailType: 'Loop',
+    // #1622: GPX pin / registration windows / YouTube URL / social links fields below exist only
+    // to drive the "savePatch preserves unlisted command fields" assertions further down — a
+    // non-null youtubeUrl here is what lets a test prove it survives a save targeting a
+    // different field.
+    youtubeUrl: 'https://youtube.com/watch?v=old' as string | null,
     locations: [],
     createdAt: '2024-01-01T00:00:00Z',
     translationHashes: undefined as Record<string, string> | undefined,
@@ -84,8 +89,10 @@ const mockState = vi.hoisted(() => ({
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: null,
     seriesRaces: null,
-    gpxPointLat: null,
-    gpxPointLng: null,
+    // #1622: non-null so the "saving Description leaves gpxPointLat/gpxPointLng unchanged"
+    // assertion below has a real value to prove survives the save, not just two nulls staying null.
+    gpxPointLat: 64.123 as number | null,
+    gpxPointLng: -21.456 as number | null,
     isMountainRace: false,
     terrainType: null,
     hasFutureEdition: false,
@@ -96,8 +103,75 @@ const mockState = vi.hoisted(() => ({
     anyEditionNeedsReview: false,
     anyEditionUnconfirmed: false,
     upcomingDates: [],
-    editions: [],
+    // Wired to mockState.edition/.race below (assigned after this object literal closes, since
+    // mockState can't reference itself mid-initializer) so clickTranslateFor can find those rows.
+    editions: [] as EventEditionDto[],
   } as EventDetailDto,
+  // #1622: Edition/Race fixtures for savePatch's "preserves unlisted command fields" coverage.
+  // notesEn/descriptionEn default to filled (not missing) for the same #1481/#1485 bulk-count
+  // reason as the event/location/organizer fixtures above — the #1622 describe block nulls the
+  // field it's testing itself, per test.
+  edition: {
+    id: 'edition-1',
+    eventId: 'event-1',
+    year: 2026,
+    date: '2026-08-15',
+    endDate: '2026-08-16' as string | null,
+    title: 'Edition 2026',
+    titleEn: 'Edition 2026' as string | null,
+    registrationUrl: null,
+    resultsUrl: null,
+    notes: 'Athugasemdir um mótið',
+    notesEn: 'Old English notes' as string | null,
+    registrationStatus: 'Open',
+    registrationOpens: '2026-06-01T00:00:00Z' as string | null,
+    registrationCloses: '2026-08-10T00:00:00Z' as string | null,
+    trailId: null,
+    trailName: null,
+    trailSlug: null,
+    races: [] as RaceDto[],
+    galleries: [],
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: null,
+    translationHashes: undefined as Record<string, string> | undefined,
+    status: 'Confirmed',
+    effectiveCancelled: false,
+    needsReview: false,
+  } as EventEditionDto,
+  race: {
+    id: 'race-1',
+    eventEditionId: 'edition-1',
+    trailId: null,
+    trailName: null,
+    trailSlug: null,
+    name: 'Hvannadalshnjúkur Race',
+    nameEn: 'Hvannadalshnjúkur Race' as string | null,
+    distanceLabel: '20km',
+    distanceLabelEn: '20km' as string | null,
+    cutoffMinutes: 240,
+    description: 'Lýsing á hlaupi',
+    descriptionEn: 'Old English race description' as string | null,
+    status: 'Active',
+    sortOrder: 0,
+    ticketStatus: 'Available',
+    resultType: 'Time',
+    maxParticipants: null,
+    itraPoints: null,
+    certifiedBy: null,
+    certifiedByEn: null,
+    prizeMoney: 0,
+    championshipCategory: null,
+    championshipCategoryEn: null,
+    dateOfRace: '2026-08-15',
+    startTime: '09:00:00',
+    trailDistanceMeters: null,
+    trailElevationGain: null,
+    activityType: 'TrailRunning',
+    translationHashes: undefined as Record<string, string> | undefined,
+    // #1622: non-zero so the "saving Description leaves registrationOpensMinutesBeforeRace
+    // unchanged" assertion has a real value to prove survives the save.
+    registrationOpensMinutesBeforeRace: 30 as number | null,
+  } as RaceDto,
   location: {
     id: 'location-1',
     name: 'Hengill',
@@ -128,11 +202,20 @@ const mockState = vi.hoisted(() => ({
     eventCount: 0,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: null,
+    // #1622: non-null so the "saving Description leaves socialLinks unchanged" assertion has a
+    // real value to prove survives the save.
+    socialLinks: [{ type: 'facebook', url: 'https://facebook.com/hlaupahopur' }],
     translationHashes: undefined as Record<string, string> | undefined,
   } as OrganizerDto,
   putCalls: [] as { endpoint: string; body: Record<string, unknown> }[],
   translateCalls: [] as string[][],
 }));
+
+// Wired here rather than inline above — mockState can't reference itself mid-initializer. Nests
+// the Edition fixture under the Event fixture (and the Race under the Edition) so buildItems'
+// e.editions/ed.races traversal surfaces them as their own clickTranslateFor-able rows.
+mockState.event.editions = [mockState.edition];
+mockState.edition.races = [mockState.race];
 
 vi.mock('../hooks/api', () => ({
   apiFetch: vi.fn((endpoint: string, options?: { method?: string; body?: string }) => {
@@ -334,5 +417,97 @@ describe('TranslationHealth — Event/Location/Organizer PUT body includes id (#
     const [{ endpoint, body }] = mockState.putCalls;
     expect(endpoint).toBe('/api/v1/admin/organizers/organizer-1');
     expect(body.id).toBe('organizer-1');
+  });
+});
+
+// #1622: savePatch's Event/Edition/Race/Trail/Organizer branches built their PUT body from a
+// hand-written object literal that had drifted out of sync with their Update*Command handlers —
+// each of those five handlers writes one field unconditionally with no null-guard
+// (gpxPointLat/gpxPointLng, endDate/registrationOpens/registrationCloses,
+// registrationOpensMinutesBeforeRace, youtubeUrl, socialLinks respectively) that the hand-written
+// literal never included, so every Translation Health save silently nulled it. Fixed by spreading
+// the full already-loaded raw object as the PUT body base instead. This asserts, per entity, that
+// saving an unrelated field leaves that entity's previously-omitted field untouched, and that the
+// actual target-field translation still lands (proving `...patch` still overrides the base spread).
+describe('TranslationHealth — savePatch preserves unlisted command fields (#1622)', () => {
+  beforeEach(() => {
+    mockState.event.descriptionEn = 'Old English event description';
+    mockState.edition.notesEn = 'Old English notes';
+    mockState.race.descriptionEn = 'Old English race description';
+    mockState.trail.nameEn = null;
+    mockState.trail.descriptionEn = null;
+    mockState.trail.translationHashes = undefined;
+    mockState.organizer.descriptionEn = 'Old English organizer description';
+    mockState.putCalls = [];
+    mockState.translateCalls = [];
+  });
+
+  afterEach(cleanup);
+
+  it('Event: saving Description leaves gpxPointLat/gpxPointLng unchanged and still translates Description', async () => {
+    mockState.event.descriptionEn = null;
+    renderTranslationHealth();
+
+    await clickTranslateFor('Hengill Ultra');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/events/event-1');
+    expect(body.gpxPointLat).toBe(64.123);
+    expect(body.gpxPointLng).toBe(-21.456);
+    expect(body.descriptionEn).toBe('EN:Lýsing á viðburði');
+  });
+
+  it('Edition: saving Notes leaves endDate/registrationOpens/registrationCloses unchanged and still translates Notes', async () => {
+    mockState.edition.notesEn = null;
+    renderTranslationHealth();
+
+    await clickTranslateFor('Edition 2026');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/editions/edition-1');
+    expect(body.endDate).toBe('2026-08-16');
+    expect(body.registrationOpens).toBe('2026-06-01T00:00:00Z');
+    expect(body.registrationCloses).toBe('2026-08-10T00:00:00Z');
+    expect(body.notesEn).toBe('EN:Athugasemdir um mótið');
+  });
+
+  it('Race: saving Description leaves registrationOpensMinutesBeforeRace unchanged and still translates Description', async () => {
+    mockState.race.descriptionEn = null;
+    renderTranslationHealth();
+
+    await clickTranslateFor('Hvannadalshnjúkur Race');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/races/race-1');
+    expect(body.registrationOpensMinutesBeforeRace).toBe(30);
+    expect(body.descriptionEn).toBe('EN:Lýsing á hlaupi');
+  });
+
+  it('Trail: saving Description leaves youtubeUrl unchanged and still translates Description', async () => {
+    renderTranslationHealth();
+
+    await clickTranslateFor('Súlur Vertical');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/trails/trail-1');
+    expect(body.youtubeUrl).toBe('https://youtube.com/watch?v=old');
+    expect(body.descriptionEn).toBe('EN:Lýsing á leiðinni');
+  });
+
+  it('Organizer: saving Description leaves socialLinks unchanged and still translates Description', async () => {
+    mockState.organizer.descriptionEn = null;
+    renderTranslationHealth();
+
+    await clickTranslateFor('Hlaupahópur');
+
+    await waitFor(() => expect(mockState.putCalls).toHaveLength(1));
+    const [{ endpoint, body }] = mockState.putCalls;
+    expect(endpoint).toBe('/api/v1/admin/organizers/organizer-1');
+    expect(body.socialLinks).toEqual([{ type: 'facebook', url: 'https://facebook.com/hlaupahopur' }]);
+    expect(body.descriptionEn).toBe('EN:Lýsing á félagi');
   });
 });

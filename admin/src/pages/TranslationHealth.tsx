@@ -132,14 +132,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/events/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        id: e.id, name: e.name, nameEn: e.nameEn, slug: e.slug,
-        description: e.description, descriptionEn: e.descriptionEn,
-        type: e.type, activityType: e.activityType, status: e.status,
-        organizerName: e.organizerName, organizerNameEn: e.organizerNameEn,
-        organizerWebsite: e.organizerWebsite, organizerId: e.organizerId,
-        alertMessage: e.alertMessage, alertMessageEn: e.alertMessageEn,
-        alertSeverity: e.alertSeverity, locationId: e.locationId,
-        scheduleRule: e.scheduleRule, socialLinks: e.socialLinks,
+        ...e,
         ...patch,
         ...(translationHashes ? { translationHashes } : {}),
       }),
@@ -149,11 +142,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/editions/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        id: ed.id, year: ed.year, date: ed.date,
-        title: ed.title, titleEn: ed.titleEn,
-        registrationUrl: ed.registrationUrl, resultsUrl: ed.resultsUrl,
-        notes: ed.notes, notesEn: ed.notesEn,
-        registrationStatus: ed.registrationStatus, trailId: ed.trailId,
+        ...ed,
         ...patch,
         ...(translationHashes ? { translationHashes } : {}),
       }),
@@ -163,16 +152,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/races/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        id: rc.id, trailId: rc.trailId,
-        name: rc.name, nameEn: rc.nameEn,
-        distanceLabel: rc.distanceLabel, cutoffMinutes: rc.cutoffMinutes,
-        description: rc.description, descriptionEn: rc.descriptionEn,
-        status: rc.status, sortOrder: rc.sortOrder,
-        ticketStatus: rc.ticketStatus, maxParticipants: rc.maxParticipants,
-        itraPoints: rc.itraPoints, certifiedBy: rc.certifiedBy, certifiedByEn: rc.certifiedByEn,
-        prizeMoney: rc.prizeMoney,
-        championshipCategory: rc.championshipCategory, championshipCategoryEn: rc.championshipCategoryEn,
-        dateOfRace: rc.dateOfRace, startTime: rc.startTime,
+        ...rc,
         ...patch,
         ...(translationHashes ? { translationHashes } : {}),
       }),
@@ -182,11 +162,16 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/trails/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        id: t.id, name: t.name, nameEn: t.nameEn ?? null, slug: t.slug,
-        description: t.description, descriptionEn: t.descriptionEn ?? null,
-        activityType: t.activityType, status: t.status, type: t.trailType,
+        ...t,
+        type: t.trailType,
         difficulty: t.difficulty ?? 'Moderate', visibility: 'Public',
         updatedBy: 'admin',
+        // Trail.locations ({id,name,slug,role}[], the read shape) shares its JSON key with
+        // UpdateTrailCommand.Locations ({locationId,role,order}[], the write shape) but not its
+        // field names — spreading it through unchanged would feed malformed rows into the
+        // handler's unconditional location-sync block and wipe real trail-location links.
+        // Unset so JSON.stringify drops the key, same as omitting it entirely (prior behaviour).
+        locations: undefined,
         ...patch,
         ...(translationHashes ? { translationHashes } : {}),
       }),
@@ -209,10 +194,7 @@ async function savePatch(item: EntityItem, patch: Record<string, string>, transl
     await apiFetch(`/api/v1/admin/organizers/${item.id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        id: o.id, name: o.name, kennitala: o.kennitala, phone: o.phone,
-        email: o.email, website: o.website,
-        description: o.description, descriptionEn: o.descriptionEn,
-        contactName: o.contactName,
+        ...o,
         ...patch,
         ...(translationHashes ? { translationHashes } : {}),
       }),

@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_8": {
+                "title": "Gagnatap lagað í Translation Health",
+                "description": "Við þýðingu í 'Translation Health' í stjórnborði hreinsaði út önnur gögn, s.s. GPS-punkt viðburðar, skráningarglugga viðburða, skráningartíma hlaupa, YouTube-tengil leiðar og samfélagsmiðlatengla skipuleggjanda. essi gögn varðveitast nú við vistun."
+            },
             "v1_17_7": {
                 "title": "Breytingar á Status fyrir Event og Edition",
                 "description": "Breytingar á Status heitum fyrir Event og Edition. Event er nú með Status „Active\" í stað „Confirmed\". Edition hefur Status „Confirmed\" í stað „Active\". Síur, merkingar og prófanir uppfærðar til samræmis."
