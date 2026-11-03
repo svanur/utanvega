@@ -833,6 +833,10 @@
             }
         },
         "changelog": {
+            "v1_17_8": {
+                "title": "Fixed data loss in Translation Health saves",
+                "description": "Saving a translation edit in admin's Translation Health page no longer clears unrelated fields. Event GPX pin locations, edition registration windows, race registration-open timing, trail YouTube links, and organizer social links are now preserved on save."
+            },
             "v1_17_7": {
                 "title": "Clearer status naming in admin",
                 "description": "Event status is now called 'Active' instead of 'Confirmed', so it's no longer mistaken for a visibility setting, and edition status is now called 'Confirmed' instead of 'Active', so it reads as the natural opposite of 'Unconfirmed'. Admin's filters, labels, and type checks have all been updated to match."
