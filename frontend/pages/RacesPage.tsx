@@ -1691,52 +1691,55 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                             {/* Row 1: activity icon + name + status chips + countdown */}
                                             <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
-                                                <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
-                                                    <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
-                                                    <Box sx={{ minWidth: 0 }}>
-                                                        <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                                                            <Typography variant="subtitle1" fontWeight={700} sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
-                                                                {loc(comp.name, comp.nameEn)}
-                                                            </Typography>
-                                                            {comp.type === 'Advertisement' && (
-                                                                <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            )}
-                                                            {isEffectivelyCancelled(comp) && (
-                                                                <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            )}
-                                                            {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
-                                                                <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            )}
-                                                        </Stack>
-                                                        {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
-                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
-                                                                <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                <Typography variant="body2" color="text.secondary" noWrap>
-                                                                    {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
+                                                <Stack direction="column" gap={0} sx={{ minWidth: 0, width: '100%' }}>
+                                                    <Stack direction="row" alignItems="flex-start" gap={1}>
+                                                        <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
+                                                        <Box sx={{ minWidth: 0 }}>
+                                                            <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
+                                                                <Typography variant="subtitle1" fontWeight={700} sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
+                                                                    {loc(comp.name, comp.nameEn)}
                                                                 </Typography>
-                                                                {comp.daysUntil != null && (
-                                                                    <Chip
-                                                                        label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
-                                                                            ? t('races.ongoing')
-                                                                            : getCountdownLabel(comp.daysUntil, t)}
-                                                                        color={getCountdownColor(comp.daysUntil)}
-                                                                        size="small"
-                                                                        sx={{
-                                                                            fontWeight: 700,
-                                                                            ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
-                                                                                animation: 'pulseToday 1.5s ease-in-out infinite',
-                                                                                '@keyframes pulseToday': {
-                                                                                    '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
-                                                                                    '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
-                                                                                },
-                                                                            }),
-                                                                        }}
-                                                                    />
+                                                                {comp.type === 'Advertisement' && (
+                                                                    <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                                )}
+                                                                {isEffectivelyCancelled(comp) && (
+                                                                    <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                                )}
+                                                                {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
+                                                                    <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                                 )}
                                                             </Stack>
-                                                        )}
-                                                    </Box>
+                                                        </Box>
+                                                    </Stack>
+                                                    {/* Row 2: date + countdown — sibling of icon+title row, not nested inside it, so it stays flush-left */}
+                                                    {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
+                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                            <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
+                                                            <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                            <Typography variant="body2" color="text.secondary" noWrap>
+                                                                {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
+                                                            </Typography>
+                                                            {comp.daysUntil != null && (
+                                                                <Chip
+                                                                    label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
+                                                                        ? t('races.ongoing')
+                                                                        : getCountdownLabel(comp.daysUntil, t)}
+                                                                    color={getCountdownColor(comp.daysUntil)}
+                                                                    size="small"
+                                                                    sx={{
+                                                                        fontWeight: 700,
+                                                                        ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
+                                                                            animation: 'pulseToday 1.5s ease-in-out infinite',
+                                                                            '@keyframes pulseToday': {
+                                                                                '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                                                '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                                                            },
+                                                                        }),
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Stack>
+                                                    )}
                                                 </Stack>
                                                 {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
                                                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
