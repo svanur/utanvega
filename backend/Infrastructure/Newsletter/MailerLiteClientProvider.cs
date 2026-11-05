@@ -114,6 +114,15 @@ public sealed class MailerLiteClientProvider
     /// <summary>
     /// MailerLite responds 422 with an error naming the email as already taken/in use when the
     /// address is already subscribed — a success outcome for a newsletter signup, not a failure.
+    ///
+    /// <para>
+    /// This is a deliberate, acknowledged fallback: MailerLite's error response is not confirmed
+    /// (from this codebase's sources — no access to their live API or current docs) to carry a
+    /// structured error code distinguishing "already subscribed" from any other 422, so matching on
+    /// the word "already" in the raw error text is what we have. Do not replace this with a
+    /// structured-code check unless that code's shape has actually been verified against a real
+    /// MailerLite response — see #1644.
+    /// </para>
     /// </summary>
     private static bool LooksAlreadySubscribed(HttpStatusCode statusCode, string body) =>
         statusCode == HttpStatusCode.UnprocessableEntity &&
