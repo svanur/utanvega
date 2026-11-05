@@ -93,6 +93,7 @@ export default function FooterStatus() {
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
                             <MuiLink component={Link} to="/contact" variant="body2" color="text.secondary" underline="hover">{t('contact.title')}</MuiLink>
                             <MuiLink component={Link} to="/newsletter" variant="body2" color="text.secondary" underline="hover">{t('newsletter.subscribe')}</MuiLink>
+                            <MuiLink component={Link} to="/pages/send-comments" variant="body2" color="text.secondary" underline="hover">{t('footer.feedback')}</MuiLink>
                         </Stack>
                     </Box>
                 </Stack>

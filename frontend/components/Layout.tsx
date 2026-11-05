@@ -18,7 +18,6 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FooterStatus from './FooterStatus';
-import AnnouncementBanner from './AnnouncementBanner';
 import HeroBand from './HeroBand';
 import EventDayBanner from './EventDayBanner';
 import SponsorStrip from './SponsorStrip';
@@ -356,8 +355,6 @@ export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', 
                     {loginEnabled && <UserAvatar />}
                 </Toolbar>
             </DynamicHeader>
-
-            {isEnabled('announcement_banner') && <AnnouncementBanner />}
 
             {breadcrumb && breadcrumb.length > 0 && (
                 <Box

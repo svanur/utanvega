@@ -452,7 +452,8 @@
         "discover": "Skoða",
         "info": "Upplýsingar",
         "follow": "Fylgstu með",
-        "contact": "Samband"
+        "contact": "Samband",
+        "feedback": "Ábendingar"
     },
     "tip": {
         "button": "Senda ábendingu",
@@ -503,11 +504,6 @@
         "description": "Viltu fá fréttir og upplýsingar? Skráðu þig á póstlista hlaupadagskra.is.",
         "comingSoon": "Skráning opnar bráðum.",
         "subscribe": "Skráðu þig á póstlistann"
-    },
-    "announcement": {
-        "text": "Nýr hlaupadagskra.is vefur er enn í þróun. Vertu með okkur og",
-        "href": "/pages/send-comments",
-        "linkText": "sendu inn þínar ábendingar"
     },
     "sort": {
         "date": "Dagsetning",
