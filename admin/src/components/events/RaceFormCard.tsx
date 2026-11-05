@@ -102,6 +102,13 @@ function RaceFormCardInner({
 
   const staleTx = race ? raceHasStaleTx(race) : false;
 
+  // #1628: the per-race days/hours-before window only matters once an edition has 2+ races to
+  // stagger registration between — on a single-race edition it just duplicates the edition-level
+  // RegistrationOpens/Closes fields. Stay shown if a value is already set, though (regression
+  // guard: don't hide a field that's silently holding non-null data).
+  const totalRaceCount = race === null ? edition.races.length + 1 : edition.races.length;
+  const showRegistrationOffset = totalRaceCount > 1 || race?.registrationOpensMinutesBeforeRace != null;
+
   // #1563: recomputed on every render from the four fields it depends on, so it stays live as
   // the admin types — no save/reopen needed to see what the days/hours-before window resolves to.
   const registrationOpensPreview = computeRegistrationOpensPreview(
@@ -274,24 +281,26 @@ function RaceFormCardInner({
               shared RegistrationOpens/Closes — for Series editions whose races each open on
               their own schedule (e.g. one short window per race-day). Blank in both fields means
               no window of its own: this race falls back to the edition-level window unchanged. */}
-          <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
-            <TextField
-              size="small" fullWidth label="Days before" type="number"
-              value={form.registrationOpensDaysBefore}
-              onChange={e => set('registrationOpensDaysBefore', e.target.value)}
-              inputProps={{ min: 0, step: 1 }}
-            />
-            <TextField
-              size="small" fullWidth label="Hours before" type="number"
-              value={form.registrationOpensHoursBefore}
-              onChange={e => set('registrationOpensHoursBefore', e.target.value)}
-              inputProps={{ min: 0, step: 1 }}
-            />
-          </Stack>
+          {showRegistrationOffset && (
+            <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+              <TextField
+                size="small" fullWidth label="Days before" type="number"
+                value={form.registrationOpensDaysBefore}
+                onChange={e => set('registrationOpensDaysBefore', e.target.value)}
+                inputProps={{ min: 0, step: 1 }}
+              />
+              <TextField
+                size="small" fullWidth label="Hours before" type="number"
+                value={form.registrationOpensHoursBefore}
+                onChange={e => set('registrationOpensHoursBefore', e.target.value)}
+                inputProps={{ min: 0, step: 1 }}
+              />
+            </Stack>
+          )}
           {/* #1563: live, read-only preview of what the days/hours-before window above resolves
               to — mirrors EditionStatusHelpers.ComputeEffectiveTicketStatus's raceInstant formula
               client-side, no new API call. */}
-          {registrationOpensPreview.kind !== 'none' && (
+          {showRegistrationOffset && registrationOpensPreview.kind !== 'none' && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
               {registrationOpensPreview.kind === 'invalid' && REGISTRATION_OPENS_INVALID_MESSAGE}
               {registrationOpensPreview.kind === 'needsDate' && 'Set a race date to preview when registration opens'}
