@@ -102,6 +102,24 @@ public class NewsletterEndpointTests : IDisposable
         handlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
+    // #1644: server-side cap matching the frontend <TextField>'s maxLength=320
+    // (frontend/pages/NewsletterPage.tsx) — the API must not accept anything the form itself blocks.
+    [Fact]
+    public async Task Subscribe_EmailOverLengthCap_Returns400WithoutCallingMailerLite()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.OK, "{}");
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object);
+
+        // 320 chars is the cap; this local part pushes the full address past it while still
+        // parsing as a syntactically valid email, so the length check is what trips, not the format one.
+        var overLongEmail = new string('a', 310) + "@example.com";
+
+        var response = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = overLongEmail });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        handlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
     // Covers the "provider-error-logged-not-leaked" acceptance criterion at the HTTP layer: a
     // MailerLite failure unrelated to "already subscribed" (here, an invalid API key) must come back
     // as a generic problem response — the raw response body MailerLite actually sent must never

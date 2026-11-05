@@ -105,6 +105,36 @@ public class MailerLiteClientProviderTests
         Assert.Contains("Invalid API key", result.ErrorDetail);
     }
 
+    // #1644: LooksAlreadySubscribed is a documented fallback (no confirmed structured error code
+    // from MailerLite) — locks in that the substring match is case-insensitive and scoped to 422
+    // only, so a future refactor can't silently narrow or widen it without a test noticing.
+    [Theory]
+    [InlineData("{\"message\":\"The email has ALREADY been taken.\"}")]
+    [InlineData("{\"message\":\"the email is already in use\"}")]
+    public async Task SubscribeAsync_AlreadySubscribedMatchIsCaseInsensitive_ReturnsAlreadySubscribed(string body)
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.UnprocessableEntity, body);
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("existing-subscriber@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.AlreadySubscribed, result.Outcome);
+    }
+
+    // The "already" substring match must only be consulted on a 422 — the same body text on any
+    // other status code (even one MailerLite might plausibly use) must not be treated as success.
+    [Fact]
+    public async Task SubscribeAsync_AlreadyTextOnNon422Status_ReturnsFailedNotAlreadySubscribed()
+    {
+        var handlerMock = MockHandlerReturning(
+            HttpStatusCode.BadRequest, "{\"message\":\"The email has already been taken.\"}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("someone@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+    }
+
     // A network-level failure (DNS, timeout, connection reset) must propagate as an exception
     // rather than being swallowed into a Failed result — the endpoint's own try/catch is what
     // logs it via logger.LogError(ex, ...), matching SubmitFeedback's shape (Program.cs).

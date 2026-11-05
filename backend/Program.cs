@@ -2553,6 +2553,10 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
 {
     if (string.IsNullOrWhiteSpace(req.Email))
         return Results.BadRequest("Email is required.");
+    // Matches the frontend <TextField>'s maxLength cap (frontend/pages/NewsletterPage.tsx) — enforced
+    // here too since the API is reachable independently of that form.
+    if (req.Email.Length > 320)
+        return Results.BadRequest("Email is too long.");
     try { _ = new System.Net.Mail.MailAddress(req.Email); }
     catch { return Results.BadRequest("Email format is invalid."); }
 
