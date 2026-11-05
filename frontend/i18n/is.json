@@ -502,8 +502,11 @@
     "newsletter": {
         "title": "Skráðu þig á póstlistann",
         "description": "Viltu fá fréttir og upplýsingar? Skráðu þig á póstlista hlaupadagskra.is.",
-        "comingSoon": "Skráning opnar bráðum.",
-        "subscribe": "Skráðu þig á póstlistann"
+        "emailLabel": "Netfang",
+        "emailInvalid": "Sláðu inn gilt netfang.",
+        "subscribe": "Skráðu þig á póstlistann",
+        "success": "Athugaðu tölvupóstinn þinn til að staðfesta áskriftina.",
+        "error": "Eitthvað fór úrskeiðis. Vinsamlegast reyndu aftur síðar."
     },
     "sort": {
         "date": "Dagsetning",

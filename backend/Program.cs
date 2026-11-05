@@ -320,8 +320,10 @@ builder.Services.AddScoped<LocationDetector>();
 builder.Services.AddSingleton<IScheduleRuleEngine, ScheduleRuleEngine>();
 builder.Services.AddSingleton<ICacheInvalidator, CacheInvalidator>();
 builder.Services.AddHttpClient("OpenMeteo");
+builder.Services.AddHttpClient("MailerLite");
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<Utanvega.Backend.Infrastructure.Translation.DeepLTranslatorProvider>();
+builder.Services.AddSingleton<Utanvega.Backend.Infrastructure.Newsletter.MailerLiteClientProvider>();
 
 // builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
@@ -410,6 +412,16 @@ builder.Services.AddRateLimiter(options =>
             _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+            }));
+    options.AddPolicy("newsletter-subscribe", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            ClientIpResolver.GetPartitionKey(httpContext),
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(10),
                 SegmentsPerWindow = 5,
                 QueueLimit = 0,
@@ -2532,6 +2544,40 @@ app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator medi
 .WithName("SubmitFeedback")
 .RequireRateLimiting("send-feedback");
 
+// --- Newsletter ---
+
+app.MapPost("/api/v1/newsletter/subscribe", async (
+    NewsletterSubscribeRequest req,
+    Utanvega.Backend.Infrastructure.Newsletter.MailerLiteClientProvider mailerLite,
+    ILogger<Program> logger) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Email))
+        return Results.BadRequest("Email is required.");
+    try { _ = new System.Net.Mail.MailAddress(req.Email); }
+    catch { return Results.BadRequest("Email format is invalid."); }
+
+    try
+    {
+        var result = await mailerLite.SubscribeAsync(req.Email);
+        if (result.Outcome is Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.Subscribed
+            or Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.AlreadySubscribed)
+        {
+            return Results.Ok();
+        }
+
+        // ErrorDetail may carry MailerLite's raw response body — log it, never return it.
+        logger.LogError("Failed to subscribe to newsletter via MailerLite: {Detail}", result.ErrorDetail);
+        return Results.Problem("Failed to subscribe. Please try again later.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to subscribe to newsletter via MailerLite");
+        return Results.Problem("Failed to subscribe. Please try again later.");
+    }
+})
+.WithName("SubscribeNewsletter")
+.RequireRateLimiting("newsletter-subscribe");
+
 app.MapGet("/api/v1/admin/feedback", [Authorize(Policy = "AdminOnly")] async (
     IMediator mediator, string? status, int page = 1, int pageSize = 25, string? sortBy = null, string? sortDir = null, string? search = null) =>
 {
@@ -2575,6 +2621,7 @@ public record SendTipRequest(string PageUrl, string Message);
 public record SubmitFeedbackRequest(
     string PageUrl, string Message, string? Category, string? Name, string? Email,
     string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
+public record NewsletterSubscribeRequest(string Email);
 public record PatchFeedbackRequest(
     string? Status, string? Priority, int? GitHubIssue, bool? ClearGitHubIssue, string? AdminComment);
 public record TranslateRequest(List<string> Texts);

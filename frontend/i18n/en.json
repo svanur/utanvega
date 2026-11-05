@@ -502,8 +502,11 @@
     "newsletter": {
         "title": "Subscribe to the mailing list",
         "description": "Want to receive news and updates? Subscribe to the {{brandName}} mailing list.",
-        "comingSoon": "Sign-up opening soon.",
-        "subscribe": "Subscribe to mailing list"
+        "emailLabel": "Email address",
+        "emailInvalid": "Enter a valid email address.",
+        "subscribe": "Subscribe to mailing list",
+        "success": "Check your email to confirm your subscription.",
+        "error": "Something went wrong. Please try again later."
     },
     "sort": {
         "date": "Date",
