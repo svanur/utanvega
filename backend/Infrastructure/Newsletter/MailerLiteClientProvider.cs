@@ -108,8 +108,21 @@ public sealed class MailerLiteClientProvider
 
         return new MailerLiteSubscribeResult(
             MailerLiteSubscribeOutcome.Failed,
-            $"MailerLite returned {(int)response.StatusCode}: {body}");
+            $"MailerLite returned {(int)response.StatusCode}: {RedactEmail(body, email)}");
     }
+
+    /// <summary>
+    /// Replaces any case-insensitive occurrence of <paramref name="email"/> within
+    /// <paramref name="body"/> with a placeholder — MailerLite's error bodies commonly echo the
+    /// submitted address back in their diagnostic text, and <see cref="ErrorDetail"/> above ends
+    /// up in server logs verbatim, so the address must not survive into them (see #1647). A
+    /// targeted substring replace, not a blanket suppression: bodies that don't contain the email
+    /// pass through unchanged.
+    /// </summary>
+    private static string RedactEmail(string body, string email) =>
+        string.IsNullOrEmpty(email)
+            ? body
+            : body.Replace(email, "[redacted]", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// MailerLite responds 422 with an error naming the email as already taken/in use when the

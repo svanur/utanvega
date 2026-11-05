@@ -120,6 +120,58 @@ public class NewsletterEndpointTests : IDisposable
         handlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
+    // #1647: a second submission of the same (normalized) email within the cooldown window must
+    // short-circuit before ever calling MailerLite, and still answer with the identical 200 OK
+    // shape as a first-time success — so a caller probing for "did this get rate-limited?" learns
+    // nothing from the response itself.
+    [Fact]
+    public async Task Subscribe_SameEmailTwiceWithinCooldown_SecondCallSkipsMailerLiteButReturns200()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{\"data\":{\"id\":\"1\"}}");
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object);
+
+        var first = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "cooldown@example.com" });
+        var second = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "cooldown@example.com" });
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        handlerMock.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    // #1647 acceptance criterion: the cooldown check normalizes (trim + lowercase) before keying
+    // the cache, so case/whitespace variants of the same address collapse to one entry rather than
+    // each getting their own cooldown slot.
+    [Fact]
+    public async Task Subscribe_SameEmailDifferingByCaseAndWhitespace_TreatedAsSameForCooldown()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{\"data\":{\"id\":\"1\"}}");
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object);
+
+        var first = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = " Test@X.com " });
+        var second = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "test@x.com" });
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        handlerMock.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    // #1647 acceptance criterion: the per-email cooldown must not interact with or loosen the
+    // existing per-IP limiter — two distinct emails from the same client are each independently
+    // allowed through, each calling MailerLite once.
+    [Fact]
+    public async Task Subscribe_DifferentEmailsSameClient_AreEachIndependentlyAllowedThrough()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{\"data\":{\"id\":\"1\"}}");
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object);
+
+        var first = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "runner-one@example.com" });
+        var second = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "runner-two@example.com" });
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
     // Covers the "provider-error-logged-not-leaked" acceptance criterion at the HTTP layer: a
     // MailerLite failure unrelated to "already subscribed" (here, an invalid API key) must come back
     // as a generic problem response — the raw response body MailerLite actually sent must never
