@@ -77,7 +77,7 @@ import { trackViewModeChange } from '../utils/analytics';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { useEvents } from '../hooks/useEvents';
-import { isOngoingPastDayTwo } from '../utils/eventUtils';
+import { isOngoingPastDayTwo, resolveCarouselSortDate } from '../utils/eventUtils';
 import { formatTrailListForClipboard, formatListHeading, formatActiveFiltersSummary } from '../utils/copyListToClipboard';
 import type { ActiveFilterLine } from '../utils/copyListToClipboard';
 import { useOfflineTrails } from '../hooks/useOfflineTrails';
@@ -238,10 +238,15 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
     }, [trending, trails]);
 
     const upcomingCompetitions = React.useMemo(() =>
+        // #1632: sort/filter by resolveCarouselSortDate, not raw nextEditionDate — a mid-season
+        // Series event's nextEditionDate is its season's end date (see comment on
+        // resolveCarouselSortDate), which otherwise pushes it off this carousel's top-10 cutoff.
         allCompetitions
-            .filter(c => !['Cancelled', 'Hidden', 'Unlisted'].includes(c.status) && c.nextEditionDate != null && (c.daysUntil ?? 999) >= 0)
-            .sort((a, b) => (a.nextEditionDate ?? '').localeCompare(b.nextEditionDate ?? ''))
-            .slice(0, 10),
+            .map(c => ({ c, sortDate: resolveCarouselSortDate(c) }))
+            .filter(({ c, sortDate }) => !['Cancelled', 'Hidden', 'Unlisted'].includes(c.status) && sortDate != null && (c.daysUntil ?? 999) >= 0)
+            .sort((a, b) => (a.sortDate ?? '').localeCompare(b.sortDate ?? ''))
+            .slice(0, 10)
+            .map(({ c }) => c),
         [allCompetitions]
     );
 

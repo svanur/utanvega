@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveCarouselSortDate, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -881,6 +881,56 @@ describe('resolveSeriesClimateDate', () => {
         const now = new Date('2027-02-20T00:00:00');
         const powerade = ['2026-10-08', '2026-11-12', '2026-12-10', '2027-01-14', '2027-02-25', '2027-03-11'];
         expect(resolveSeriesClimateDate(powerade, now)).toBe('2027-02-25');
+    });
+});
+
+// #1632: the "/trails" carousel's sort/filter key, not raw nextEditionDate — a mid-season Series
+// event's nextEditionDate is its season's end date, which wrongly pushes it off the top-10 cutoff
+// even though its next individual race is days away.
+describe('resolveCarouselSortDate', () => {
+    it('resolves a mid-season Series event to its nearest upcoming race, not its season end date', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        const event = {
+            type: 'Series',
+            nextEditionDate: '2027-03-11', // the season's end date
+            seriesRaces: [
+                { dateOfRace: '2026-09-14' },
+                { dateOfRace: '2026-11-12' },
+                { dateOfRace: '2027-01-14' },
+                { dateOfRace: '2027-03-11' },
+            ],
+        };
+        expect(resolveCarouselSortDate(event, now)).toBe('2026-11-12');
+    });
+
+    it('falls back to nextEditionDate once no seriesRaces entry is on or after today', () => {
+        const now = new Date('2027-04-01T00:00:00');
+        const event = {
+            type: 'Series',
+            nextEditionDate: '2027-10-01', // next season, already resolved by the backend
+            seriesRaces: [
+                { dateOfRace: '2026-09-14' },
+                { dateOfRace: '2027-03-11' },
+            ],
+        };
+        expect(resolveCarouselSortDate(event, now)).toBe('2027-10-01');
+    });
+
+    it('falls back to nextEditionDate for a Series event with no seriesRaces at all', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(resolveCarouselSortDate({ type: 'Series', nextEditionDate: '2026-12-01', seriesRaces: null }, now)).toBe('2026-12-01');
+        expect(resolveCarouselSortDate({ type: 'Series', nextEditionDate: '2026-12-01', seriesRaces: [] }, now)).toBe('2026-12-01');
+    });
+
+    it('leaves a non-Series event\'s sort date as its nextEditionDate', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        const event = { type: 'Race', nextEditionDate: '2026-12-01', seriesRaces: null };
+        expect(resolveCarouselSortDate(event, now)).toBe('2026-12-01');
+    });
+
+    it('returns null when nextEditionDate is null and there is no qualifying seriesRaces entry', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(resolveCarouselSortDate({ type: 'Race', nextEditionDate: null, seriesRaces: null }, now)).toBeNull();
     });
 });
 
