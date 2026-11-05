@@ -1708,34 +1708,6 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                             )}
                                                         </Stack>
-                                                        {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
-                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                                <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
-                                                                <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                <Typography variant="body2" color="text.secondary" noWrap>
-                                                                    {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
-                                                                </Typography>
-                                                                {comp.daysUntil != null && (
-                                                                    <Chip
-                                                                        label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
-                                                                            ? t('races.ongoing')
-                                                                            : getCountdownLabel(comp.daysUntil, t)}
-                                                                        color={getCountdownColor(comp.daysUntil)}
-                                                                        size="small"
-                                                                        sx={{
-                                                                            fontWeight: 700,
-                                                                            ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
-                                                                                animation: 'pulseToday 1.5s ease-in-out infinite',
-                                                                                '@keyframes pulseToday': {
-                                                                                    '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
-                                                                                    '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
-                                                                                },
-                                                                            }),
-                                                                        }}
-                                                                    />
-                                                                )}
-                                                            </Stack>
-                                                        )}
                                                     </Box>
                                                 </Stack>
                                                 {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
@@ -1764,6 +1736,36 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     </Stack>
                                                 )}
                                             </Stack>
+
+                                            {/* Row 2: date + countdown */}
+                                            {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
+                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                    <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
+                                                    <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                    <Typography variant="body2" color="text.secondary" noWrap>
+                                                        {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
+                                                    </Typography>
+                                                    {comp.daysUntil != null && (
+                                                        <Chip
+                                                            label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
+                                                                ? t('races.ongoing')
+                                                                : getCountdownLabel(comp.daysUntil, t)}
+                                                            color={getCountdownColor(comp.daysUntil)}
+                                                            size="small"
+                                                            sx={{
+                                                                fontWeight: 700,
+                                                                ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
+                                                                    animation: 'pulseToday 1.5s ease-in-out infinite',
+                                                                    '@keyframes pulseToday': {
+                                                                        '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                                        '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                                                    },
+                                                                }),
+                                                            }}
+                                                        />
+                                                    )}
+                                                </Stack>
+                                            )}
 
                                             {/* type · location · km away */}
                                             {(comp.type !== 'Advertisement' || comp.locationName || (userLocation && comp.gpxPointLat != null)) && !isEffectivelyCancelled(comp) && (
