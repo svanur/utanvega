@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -9,10 +10,34 @@ export default function PromoStrip({ position }: { position: 'top' | 'bottom' })
     const { isEnabled } = useFeatureFlags();
 
     const active = PROMO_SLOTS.filter(slot => slot.position === position && isEnabled(slot.flag, slot.defaultEnabled ?? true));
-    if (active.length === 0) return null;
 
-    const wideSlots = active.filter(slot => slot.shape === 'wide');
-    const cardSlots = active.filter(slot => slot.shape !== 'wide');
+    // Slots sharing a rotationGroup occupy one physical slot — pick exactly one at random
+    // per render (re-rolled on every page load/navigation, never persisted). Slots without a
+    // rotationGroup pass through untouched. `active` is a fresh array every render, so this
+    // useMemo still re-rolls every render; it exists only to keep the random pick next to its
+    // inputs. Math.random is intentionally impure here — the whole point is a fresh pick per
+    // render, not a memoized/stable one.
+    const rotated = useMemo(() => {
+        const picked: typeof active = [];
+        const seenGroups = new Set<string>();
+        for (const slot of active) {
+            if (!slot.rotationGroup) {
+                picked.push(slot);
+                continue;
+            }
+            if (seenGroups.has(slot.rotationGroup)) continue;
+            seenGroups.add(slot.rotationGroup);
+            const group = active.filter(s => s.rotationGroup === slot.rotationGroup);
+            // eslint-disable-next-line react-hooks/purity -- intentional: fresh random pick per render, not a stable/memoized value
+            picked.push(group[Math.floor(Math.random() * group.length)]);
+        }
+        return picked;
+    }, [active]);
+
+    if (rotated.length === 0) return null;
+
+    const wideSlots = rotated.filter(slot => slot.shape === 'wide');
+    const cardSlots = rotated.filter(slot => slot.shape !== 'wide');
 
     return (
         <Stack data-promo-strip spacing={1.5} sx={{ mt: position === 'bottom' ? 4 : 0, mb: 3 }}>
