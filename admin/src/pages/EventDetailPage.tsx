@@ -1523,6 +1523,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         resultsUrl: edition.resultsUrl ?? undefined,
         notes: edition.notes ?? undefined,
         notesEn: edition.notesEn ?? undefined,
+        registrationOpens: edition.registrationOpens ?? undefined,
+        registrationCloses: edition.registrationCloses ?? undefined,
         trailId: edition.trailId,
         status: next,
       }),
@@ -1563,6 +1565,8 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         resultsUrl: edition.resultsUrl ?? undefined,
         notes: edition.notes ?? undefined,
         notesEn: edition.notesEn ?? undefined,
+        registrationOpens: edition.registrationOpens ?? undefined,
+        registrationCloses: edition.registrationCloses ?? undefined,
         trailId: edition.trailId,
       }),
     }).catch(() => {

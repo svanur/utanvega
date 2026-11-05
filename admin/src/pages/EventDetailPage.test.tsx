@@ -39,15 +39,21 @@ const mockState = vi.hoisted(() => ({
   editionDeleteShouldFail: false,
   editionCancelShouldFail: false,
   editionCompleteShouldFail: false,
+  // #1627: records every PUT body sent to /api/v1/admin/editions/:id so the chip-handler tests
+  // below can assert on exactly what was sent, not just on success/failure.
+  editionPutBodies: [] as Record<string, unknown>[],
 }));
 
 vi.mock('../hooks/api', () => ({
-  apiFetch: vi.fn((endpoint: string, options?: { method?: string }) => {
+  apiFetch: vi.fn((endpoint: string, options?: { method?: string; body?: string }) => {
     const method = options?.method ?? 'GET';
     if (method === 'GET' && /^\/api\/v1\/admin\/events\/[^/]+$/.test(endpoint)) {
       return Promise.resolve(mockState.eventDetail);
     }
     if (method === 'PUT' && /^\/api\/v1\/admin\/editions\/[^/]+$/.test(endpoint)) {
+      if (typeof options?.body === 'string') {
+        mockState.editionPutBodies.push(JSON.parse(options.body) as Record<string, unknown>);
+      }
       return mockState.editionPutShouldFail
         ? Promise.reject(new Error('Failed to update edition status'))
         : Promise.resolve({});
@@ -533,10 +539,11 @@ function findRegistrationStatusChip() {
 // registrationStatus is computed live server-side (ComputeEffectiveRegistrationStatus) — the Edit
 // edition dialog's own Select already disables for this case (EditionDialogInner, :668/:679), but
 // this chip's handleCycleRegStatus cycle-on-click had no equivalent guard, so clicking it on a
-// windowed edition silently fired a PUT that both fights the server's computed value and — per
-// #1627 (tracked separately, out of scope here) — omits registrationOpens/registrationCloses from
-// its body, wiping the window on save. These tests prove the chip itself is now unreachable for a
-// windowed edition, and that a non-windowed edition's chip is untouched by this change.
+// windowed edition silently fired a PUT that both fights the server's computed value and — fixed
+// separately in #1627, see that describe block below — omitted registrationOpens/
+// registrationCloses from its body, wiping the window on save. These tests prove the chip itself
+// is now unreachable for a windowed edition, and that a non-windowed edition's chip is untouched
+// by this change.
 describe('EventDetailPage — Registration status chip disabled when registration window is set (#1626)', () => {
   afterEach(() => {
     cleanup();
@@ -598,6 +605,121 @@ describe('EventDetailPage — Registration status chip disabled when registratio
     // Optimistic update flips NotStarted → Open immediately; a disabled chip (onClick undefined)
     // would never flip at all.
     await waitFor(() => expect(screen.getByRole('button', { name: /^Registration status:/ }).textContent).toBe('Open'));
+  });
+});
+
+// #1627: both handleCycleEditionStatus's and handleCycleRegStatus's hand-written PUT bodies
+// omitted registrationOpens/registrationCloses entirely. UpdateEditionCommandHandler
+// (UpdateEditionCommand.cs:84-85) writes both fields unconditionally with no null-guard, so a
+// missing field in either body nulled out any existing registration window the moment either chip
+// was clicked — same root cause as #1622 (TranslationHealth.tsx's savePatch, fixed in PR #1623),
+// found here in EventDetailPage's two chip handlers instead.
+describe('EventDetailPage — Edition/Registration status chips preserve the registration window on save (#1627)', () => {
+  beforeEach(() => {
+    // Earlier describe blocks' PUT clicks also land in this same recorder (the mock records every
+    // PUT to the editions endpoint, not just this block's), so it must be zeroed before each test
+    // here too, not only after.
+    mockState.editionPutBodies = [];
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockState.editionPutBodies = [];
+  });
+
+  it('Edition status chip: PUT body carries an existing registration window unchanged', async () => {
+    mockState.eventDetail = buildEventDetailFixture({
+      editions: [buildEditionFixture({
+        status: 'Confirmed',
+        registrationOpens: '2026-01-01T00:00:00',
+        registrationCloses: '2026-05-01T00:00:00',
+      })],
+    });
+    mockState.editionPutShouldFail = false;
+
+    renderEventDetailPage(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    const statusChip = await findEditionStatusChip();
+    fireEvent.click(statusChip);
+
+    await waitFor(() => expect(mockState.editionPutBodies).toHaveLength(1));
+    const [body] = mockState.editionPutBodies;
+    expect(body.status).toBe('Unconfirmed'); // the status actually being cycled still updates
+    expect(body.registrationOpens).toBe('2026-01-01T00:00:00');
+    expect(body.registrationCloses).toBe('2026-05-01T00:00:00');
+  });
+
+  it('Edition status chip: PUT body still sends no window for a no-window edition (regression)', async () => {
+    mockState.eventDetail = buildEventDetailFixture({
+      editions: [buildEditionFixture({
+        status: 'Confirmed',
+        registrationOpens: null,
+        registrationCloses: null,
+      })],
+    });
+    mockState.editionPutShouldFail = false;
+
+    renderEventDetailPage(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    const statusChip = await findEditionStatusChip();
+    fireEvent.click(statusChip);
+
+    await waitFor(() => expect(mockState.editionPutBodies).toHaveLength(1));
+    const [body] = mockState.editionPutBodies;
+    expect(body.status).toBe('Unconfirmed');
+    expect(body.registrationOpens).toBeUndefined();
+    expect(body.registrationCloses).toBeUndefined();
+  });
+
+  // #1626 fully disables the Registration status chip once *both* registrationOpens and
+  // registrationCloses are set (EventDetailPage.tsx's `windowed` check) — so a complete window can
+  // no longer reach handleCycleRegStatus's PUT through the UI at all, and re-enabling it for that
+  // case is explicitly out of scope here. A partial window (only one bound set) is not "windowed"
+  // by that same check and still cycles normally, making it the only reachable state that still
+  // exercises this handler's body with a real registrationOpens/registrationCloses value.
+  it('Registration status chip: PUT body carries a partial registration window unchanged', async () => {
+    mockState.eventDetail = buildEventDetailFixture({
+      editions: [buildEditionFixture({
+        registrationStatus: 'NotStarted',
+        registrationOpens: '2026-01-01T00:00:00',
+        registrationCloses: null,
+      })],
+    });
+    mockState.editionPutShouldFail = false;
+
+    renderEventDetailPage(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    const regChip = await findRegistrationStatusChip();
+    fireEvent.click(regChip);
+
+    await waitFor(() => expect(mockState.editionPutBodies).toHaveLength(1));
+    const [body] = mockState.editionPutBodies;
+    expect(body.registrationStatus).toBe('Open'); // the status actually being cycled still updates
+    expect(body.registrationOpens).toBe('2026-01-01T00:00:00');
+    expect(body.registrationCloses).toBeUndefined();
+  });
+
+  it('Registration status chip: PUT body still sends no window for a no-window edition (regression)', async () => {
+    mockState.eventDetail = buildEventDetailFixture({
+      editions: [buildEditionFixture({
+        registrationStatus: 'NotStarted',
+        registrationOpens: null,
+        registrationCloses: null,
+      })],
+    });
+    mockState.editionPutShouldFail = false;
+
+    renderEventDetailPage(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    const regChip = await findRegistrationStatusChip();
+    fireEvent.click(regChip);
+
+    await waitFor(() => expect(mockState.editionPutBodies).toHaveLength(1));
+    const [body] = mockState.editionPutBodies;
+    expect(body.registrationStatus).toBe('Open');
+    expect(body.registrationOpens).toBeUndefined();
+    expect(body.registrationCloses).toBeUndefined();
   });
 });
 
