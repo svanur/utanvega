@@ -452,7 +452,8 @@
         "discover": "Explore",
         "info": "Info",
         "follow": "Follow",
-        "contact": "Contact"
+        "contact": "Contact",
+        "feedback": "Feedback"
     },
     "tip": {
         "button": "Send a tip",
@@ -503,11 +504,6 @@
         "description": "Want to receive news and updates? Subscribe to the {{brandName}} mailing list.",
         "comingSoon": "Sign-up opening soon.",
         "subscribe": "Subscribe to mailing list"
-    },
-    "announcement": {
-        "text": "The new {{brandName}} site is still in development. Join us and",
-        "href": "/pages/send-comments",
-        "linkText": "send us your feedback"
     },
     "sort": {
         "date": "Date",

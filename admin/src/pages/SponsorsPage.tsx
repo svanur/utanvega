@@ -91,47 +91,6 @@ export default function SponsorsPage() {
                 </Box>
             </Paper>
 
-            {/* Announcement Banner */}
-            <Paper variant="outlined" sx={{ mb: 4 }}>
-                <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                    <Typography variant="subtitle1" fontWeight={700}>Announcement Banner</Typography>
-                </Box>
-                <Box sx={{ p: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        A dismissible full-width bar shown directly below the site header. Controlled by a feature flag and three i18n keys.
-                        Once a visitor dismisses it, it stays hidden in their browser (localStorage key <code>announcement_dismissed_v1</code>).
-                    </Typography>
-                    <Stack spacing={1.5}>
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
-                            <Chip icon={<FlagOutlinedIcon />} label="announcement_banner" size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: '0.7rem', width: 'fit-content' }} />
-                            <Typography variant="caption" color="text.secondary">— toggle on/off from the Features admin page</Typography>
-                        </Stack>
-                        <Box sx={{ overflowX: 'auto' }}>
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow sx={{ '& th': { fontWeight: 700 } }}>
-                                        <TableCell>i18n key</TableCell>
-                                        <TableCell>File to edit</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {[
-                                        'announcement.text',
-                                        'announcement.linkText',
-                                        'announcement.href',
-                                    ].map(key => (
-                                        <TableRow key={key}>
-                                            <TableCell><Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{key}</Typography></TableCell>
-                                            <TableCell><Typography variant="caption" sx={{ fontFamily: 'monospace' }}>frontend/i18n/en.json &amp; is.json</Typography></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Box>
-                    </Stack>
-                </Box>
-            </Paper>
-
             <Divider sx={{ my: 4 }} />
 
             {/* How to add a new ad */}
@@ -273,14 +232,13 @@ export default function SponsorsPage() {
                     </TableHead>
                     <TableBody>
                         {[
-                            { order: 1, name: 'Announcement Banner',       flag: 'announcement_banner',                              component: 'AnnouncementBanner' },
-                            { order: 2, name: 'Sponsor Strip (top)',        flag: 'ad_top_sponsor_garmin / ad_top_sponsor_craft',     component: 'SponsorStrip' },
-                            { order: 3, name: 'Hero Band',                  flag: 'hero_band',                                        component: 'HeroBand' },
-                            { order: 4, name: 'Promo Cards (top)',          flag: 'ad_top_promo_1 / ad_top_promo_2',                  component: 'PromoStrip' },
-                            { order: 5, name: 'Event Day Banner',           flag: 'event_day_banner',                                 component: 'EventDayBanner' },
-                            { order: 6, name: 'Page Content',               flag: '—',                                                component: 'children' },
-                            { order: 7, name: 'Promo Cards (bottom)',       flag: 'ad_bottom_promo_1 / ad_bottom_promo_2',            component: 'PromoStrip' },
-                            { order: 8, name: 'Sponsor Strip (bottom)',     flag: 'ad_bottom_sponsor_garmin / ad_bottom_sponsor_craft', component: 'SponsorStrip' },
+                            { order: 1, name: 'Sponsor Strip (top)',        flag: 'ad_top_sponsor_garmin / ad_top_sponsor_craft',     component: 'SponsorStrip' },
+                            { order: 2, name: 'Hero Band',                  flag: 'hero_band',                                        component: 'HeroBand' },
+                            { order: 3, name: 'Promo Cards (top)',          flag: 'ad_top_promo_1 / ad_top_promo_2',                  component: 'PromoStrip' },
+                            { order: 4, name: 'Event Day Banner',           flag: 'event_day_banner',                                 component: 'EventDayBanner' },
+                            { order: 5, name: 'Page Content',               flag: '—',                                                component: 'children' },
+                            { order: 6, name: 'Promo Cards (bottom)',       flag: 'ad_bottom_promo_1 / ad_bottom_promo_2',            component: 'PromoStrip' },
+                            { order: 7, name: 'Sponsor Strip (bottom)',     flag: 'ad_bottom_sponsor_garmin / ad_bottom_sponsor_craft', component: 'SponsorStrip' },
                         ].map(row => (
                             <TableRow key={row.order}>
                                 <TableCell>{row.order}</TableCell>
