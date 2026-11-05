@@ -439,6 +439,27 @@ export function resolveSeriesClimateDate(raceDates: string[], now: Date = new Da
     return past[0] ?? null;
 }
 
+// #1632: the "/trails" discovery carousel sorts and filters by nextEditionDate, but for a Series
+// event mid-season that field holds the season's *end* date (ResolveNextEditionDate on the
+// backend, by design for #1320), not the next individual race — which pushes a mid-season Series
+// event with its next leg days away off the carousel's hard top-10 cutoff. Mirrors
+// resolveSeriesClimateDate's upcoming-race filter/sort above, but falls back to nextEditionDate
+// (not a past race) once no seriesRaces entry remains on or after today, since that's the existing
+// sort key for every non-Series event and for a fully-finished Series season.
+export function resolveCarouselSortDate(
+    event: { type: string; seriesRaces: { dateOfRace: string | null }[] | null; nextEditionDate: string | null },
+    now: Date = new Date(),
+): string | null {
+    if (event.type === 'Series' && event.seriesRaces && event.seriesRaces.length > 0) {
+        const upcoming = event.seriesRaces
+            .map(r => r.dateOfRace)
+            .filter((d): d is string => d != null && daysBetween(d, now) >= 0)
+            .sort((a, b) => daysBetween(a, now) - daysBetween(b, now));
+        if (upcoming.length > 0) return upcoming[0];
+    }
+    return event.nextEditionDate;
+}
+
 // #1357: pulls CompetitionDetailPage's hero pill fallback countdown out into a pure function —
 // the page has no render-level test harness (see CompetitionDetailPage.test.tsx), so logic that
 // needs covering lives here instead, same as computeRaceDayFlags/resolveSeriesClimateDate above.
