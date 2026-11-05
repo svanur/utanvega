@@ -1839,17 +1839,28 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                     sx={{ cursor: (edition.status === 'Cancelled' || edition.status === 'Completed') ? 'default' : 'pointer' }}
                   />
                 </Tooltip>
-                <Tooltip title={edition.registrationStatus === 'NotRequired'
-                  ? 'Registration status: Not Required — change via Edit edition'
-                  : cycleTooltip('Registration status', ['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
-                  <Chip
-                    label={edition.registrationStatus}
-                    size="small"
-                    color={getRegistrationStatusColor(edition.registrationStatus)}
-                    onClick={edition.registrationStatus === 'NotRequired' ? undefined : () => void handleCycleRegStatus(edition)}
-                    sx={{ cursor: edition.registrationStatus === 'NotRequired' ? 'default' : 'pointer' }}
-                  />
-                </Tooltip>
+                {(() => {
+                  // Mirrors the Edit edition dialog's own gating (:668, :679) — when both window
+                  // bounds are set, the server computes registrationStatus live and this chip's
+                  // own cycle-on-click (NotStarted → Open → Closed) must not fight that.
+                  const windowed = !!edition.registrationOpens && !!edition.registrationCloses;
+                  const disabled = edition.registrationStatus === 'NotRequired' || windowed;
+                  return (
+                    <Tooltip title={edition.registrationStatus === 'NotRequired'
+                      ? 'Registration status: Not Required — change via Edit edition'
+                      : windowed
+                        ? 'Registration status: computed from Registration opens/closes — change via Edit edition'
+                        : cycleTooltip('Registration status', ['NotStarted', 'Open', 'Closed'], edition.registrationStatus)}>
+                      <Chip
+                        label={edition.registrationStatus}
+                        size="small"
+                        color={getRegistrationStatusColor(edition.registrationStatus)}
+                        onClick={disabled ? undefined : () => void handleCycleRegStatus(edition)}
+                        sx={{ cursor: disabled ? 'default' : 'pointer' }}
+                      />
+                    </Tooltip>
+                  );
+                })()}
                 <Chip
                   label={raceCount === 0 ? 'No races' : `${raceCount} race${raceCount !== 1 ? 's' : ''}`}
                   size="small"

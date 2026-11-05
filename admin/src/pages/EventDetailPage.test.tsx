@@ -10,6 +10,7 @@ import EventDetailPage, { EditionDialogInner } from './EventDetailPage';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 import { EDITION_STATUS_LABELS } from '../utils/eventForms';
 import { EVENTS_QUERY_KEY, type EventDetailDto, type EventEditionDto, type EventType, type RaceDto } from '../hooks/useEvents';
+import { apiFetch } from '../hooks/api';
 
 // #977: PR #976 (closing #970) gave EditionDialogInner's Status/Registration status Selects
 // explicit labelId/id wiring so each has an accessible name reachable via getByLabelText — mirrors
@@ -400,7 +401,7 @@ function buildEditionFixture(overrides: Partial<EventEditionDto> = {}): EventEdi
   };
 }
 
-function buildEventDetailFixture(): EventDetailDto {
+function buildEventDetailFixture(overrides: Partial<EventDetailDto> = {}): EventDetailDto {
   return {
     id: 'event-1',
     name: 'Test Trail Race',
@@ -443,6 +444,7 @@ function buildEventDetailFixture(): EventDetailDto {
     anyEditionUnconfirmed: false,
     upcomingDates: [],
     editions: [buildEditionFixture()],
+    ...overrides,
   };
 }
 
@@ -516,6 +518,86 @@ describe('EventDetailPage — handleCycleEditionStatus invalidates the events li
     // rollback ran, not just that invalidateEventsList wasn't called.
     await findEditionStatusChip();
     expect(invalidateSpy).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: EVENTS_QUERY_KEY }));
+  });
+});
+
+// The Registration status chip (adjacent to the Edition status chip above, same row) — its
+// accessible name starts with the Tooltip title, which is either cycleTooltip('Registration
+// status', ...) or one of two fixed override strings, so matching on /^Registration status:/
+// disambiguates it the same way findEditionStatusChip does for its sibling.
+function findRegistrationStatusChip() {
+  return screen.findByRole('button', { name: /^Registration status:/ });
+}
+
+// #1626: when an edition has both registrationOpens and registrationCloses set, its effective
+// registrationStatus is computed live server-side (ComputeEffectiveRegistrationStatus) — the Edit
+// edition dialog's own Select already disables for this case (EditionDialogInner, :668/:679), but
+// this chip's handleCycleRegStatus cycle-on-click had no equivalent guard, so clicking it on a
+// windowed edition silently fired a PUT that both fights the server's computed value and — per
+// #1627 (tracked separately, out of scope here) — omits registrationOpens/registrationCloses from
+// its body, wiping the window on save. These tests prove the chip itself is now unreachable for a
+// windowed edition, and that a non-windowed edition's chip is untouched by this change.
+describe('EventDetailPage — Registration status chip disabled when registration window is set (#1626)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('disables the chip, shows the computed-from-window tooltip, and never fires handleCycleRegStatus\'s PUT', async () => {
+    mockState.eventDetail = buildEventDetailFixture({
+      editions: [buildEditionFixture({
+        registrationStatus: 'NotStarted',
+        registrationOpens: '2026-01-01T00:00:00',
+        registrationCloses: '2026-05-01T00:00:00',
+      })],
+    });
+
+    const { container } = renderEventDetailPage(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    // Without an onClick, MUI's Chip stops exposing role="button"/tabIndex (see the
+    // TrailRunning/Race Chips elsewhere on the same page, which never had one to begin with) — so
+    // unlike findEditionStatusChip's findByRole, this disabled chip is found via the Tooltip's own
+    // aria-label mirror onto its child instead. No @testing-library/jest-dom in this repo (see
+    // DashboardPage.test.tsx's own note), hence the plain attribute selector rather than
+    // toHaveAccessibleName.
+    const regChip = await waitFor(() => {
+      const el = container.querySelector(
+        '[aria-label="Registration status: computed from Registration opens/closes — change via Edit edition"]',
+      );
+      if (!el) throw new Error('disabled Registration status chip not found yet');
+      return el;
+    });
+    expect(regChip.getAttribute('role')).not.toBe('button');
+
+    fireEvent.click(regChip);
+
+    // Not NotStarted → Open: proof the click never reached handleCycleRegStatus, not just that
+    // the label happens to read the same by coincidence.
+    expect(regChip.textContent).toBe('NotStarted');
+    expect(apiFetch).not.toHaveBeenCalledWith(
+      expect.stringMatching(/^\/api\/v1\/admin\/editions\//),
+      expect.objectContaining({ method: 'PUT' }),
+    );
+  });
+
+  it('leaves a non-windowed edition\'s chip clickable and cycling as before', async () => {
+    mockState.eventDetail = buildEventDetailFixture({
+      editions: [buildEditionFixture({
+        registrationStatus: 'NotStarted',
+        registrationOpens: null,
+        registrationCloses: null,
+      })],
+    });
+    mockState.editionPutShouldFail = false;
+
+    renderEventDetailPage(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    const regChip = await findRegistrationStatusChip();
+    fireEvent.click(regChip);
+
+    // Optimistic update flips NotStarted → Open immediately; a disabled chip (onClick undefined)
+    // would never flip at all.
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Registration status:/ }).textContent).toBe('Open'));
   });
 });
 
