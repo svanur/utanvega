@@ -87,7 +87,8 @@ export const PROMO_SLOTS: PromoSlot[] = [
         position: 'top',
         shape: 'wide',
         rotationGroup: 'top_promo_3',
-        notes: 'Internal link to the "Mæðgur á hlaupum" podcast on /media (see media.podcasts.mothersRunning in i18n). Rotates with ad_top_promo_3 — shares slot via rotationGroup top_promo_3.',
+        defaultEnabled: false,
+        notes: 'Internal link to the "Mæðgur á hlaupum" podcast on /media (see media.podcasts.mothersRunning in i18n). Rotates with ad_top_promo_3 — shares slot via rotationGroup top_promo_3. defaultEnabled: false until the admin flag is created+toggled on.',
     },
     {
         flag: 'ad_bottom_promo_1',
