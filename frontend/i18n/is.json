@@ -501,7 +501,7 @@
     },
     "newsletter": {
         "title": "Skráðu þig á póstlistann",
-        "description": "Viltu fá fréttir og upplýsingar? Skráðu þig á póstlista hlaupadagskra.is.",
+        "description": "Viltu fá fréttir og upplýsingar? Skráðu þig á póstlista {{brandName}}.",
         "emailLabel": "Netfang",
         "emailInvalid": "Sláðu inn gilt netfang.",
         "subscribe": "Skráðu þig á póstlistann",
