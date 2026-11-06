@@ -17,6 +17,17 @@ import en from '../i18n/en.json';
 import { createAppTheme } from '../theme';
 import type { EventSummary } from '../hooks/useEvents';
 
+// #1672: RacesPage.tsx pulls in 25+ separate @mui/icons-material/* modules plus MUI core,
+// react-query, react-i18next, and qrcode.react — isolated, this file's own module-graph import
+// (not the test body) measured 4.48s cold on an 8-core dev machine; constraining the suite to 2
+// worker threads (simulating a CPU-starved CI runner) pushed individual it()s in this file up to
+// ~1.4s and PR #1671 observed this file's import step alone cost 10-28s in a real full-suite CI
+// run. vitest's default per-it() testTimeout is 5000ms (vitest.config.ts sets no override), so
+// under enough contention any test here — not just the slow one spotted in #1671 — can trip it.
+// vi.setConfig() only touches this file's own isolated test context (vitest.config.ts doesn't set
+// `isolate: false`), so this doesn't loosen the 5000ms budget anywhere else in the suite.
+vi.setConfig({ testTimeout: 20000 });
+
 // vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
 // afterEach(cleanup) registration never fires — without this, a later test's screen queries can
 // match leftover DOM nodes still mounted from an earlier test in this file. Mirrors
@@ -674,5 +685,60 @@ describe('RacesPage list view Register button respects per-race NotStarted ticke
         renderRacesPage('/events');
 
         await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+    });
+});
+
+// #1664: PR #1661's list-card redesign incidentally fixed a pre-existing regression where the
+// series-race branch (RacesPage.tsx:1398, row.kind === 'series-race') rendered none of the
+// Cancelled chip, Unconfirmed chip, or Announcement alert that the regular-event branch already
+// had — #1652 is prior precedent for the two branches drifting like this. None of the describe
+// blocks above exercise a seriesRaces row at all, so nothing guarded against the gap reopening.
+// These build a Series event with one seriesRaces entry (flattenEventRows, eventUtils.ts:249,
+// only emits a 'series-race' row when event.type === 'Series' and seriesRaces is non-empty) and
+// assert each of the three pieces of UI directly off isEffectivelyCancelled/isEffectivelyUnconfirmed
+// (eventUtils.ts:7-14), which read off the *event* (comp), not the race.
+describe('RacesPage series-race row renders Cancelled/Unconfirmed/Announcement (#1664)', () => {
+    function makeSeriesRaceEvent(overrides: Partial<EventSummary> = {}): EventSummary {
+        return makeEvent({
+            type: 'Series',
+            seriesRaces: [{
+                raceId: 'race-1',
+                raceName: 'Series Race One',
+                raceNameEn: null,
+                dateOfRace: '2026-12-01',
+                startTime: null,
+                distanceLabel: '10 km',
+                trailElevationGain: null,
+                ticketStatus: 'Open',
+                registrationUrl: null,
+            }],
+            ...overrides,
+        });
+    }
+
+    it('renders the Cancelled chip for a series-race row whose parent event is effectively cancelled', async () => {
+        mockEvents.current = [makeSeriesRaceEvent({ status: 'Cancelled' })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Series Race One')).not.toBeNull());
+        expect(screen.getByText('Cancelled')).not.toBeNull();
+        expect(screen.queryByText('Date is unconfirmed')).toBeNull();
+    });
+
+    it('renders the Unconfirmed/upcoming chip for a series-race row that is unconfirmed but not cancelled', async () => {
+        mockEvents.current = [makeSeriesRaceEvent({ editionStatus: 'Unconfirmed' })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Series Race One')).not.toBeNull());
+        expect(screen.getByText('Date is unconfirmed')).not.toBeNull();
+        expect(screen.queryByText('Cancelled')).toBeNull();
+    });
+
+    it('renders the Announcement alert for a series-race row whose parent event has an alert message', async () => {
+        mockEvents.current = [makeSeriesRaceEvent({ alertMessage: 'Route changed this year due to construction' })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Series Race One')).not.toBeNull());
+        expect(screen.getByText('Route changed this year due to construction')).not.toBeNull();
     });
 });

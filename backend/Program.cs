@@ -320,8 +320,17 @@ builder.Services.AddScoped<LocationDetector>();
 builder.Services.AddSingleton<IScheduleRuleEngine, ScheduleRuleEngine>();
 builder.Services.AddSingleton<ICacheInvalidator, CacheInvalidator>();
 builder.Services.AddHttpClient("OpenMeteo");
+// #1659: the newsletter subscribe endpoint arms a short-lived in-flight cooldown marker
+// (TimeSpan.FromSeconds(30), see the "/api/v1/newsletter/subscribe" handler below) *before*
+// awaiting this client's call — left at its HttpClient default (100s), that call could still be
+// outstanding after the marker expires, reopening the #1658 concurrent-duplicate-request race the
+// marker exists to close. 20s is comfortably under the marker's 30s TTL while still well above
+// MailerLite's typical response time; if that TTL ever changes, this Timeout must stay below it.
+builder.Services.AddHttpClient("MailerLite")
+    .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<Utanvega.Backend.Infrastructure.Translation.DeepLTranslatorProvider>();
+builder.Services.AddSingleton<Utanvega.Backend.Infrastructure.Newsletter.MailerLiteClientProvider>();
 
 // builder.Services.AddEndpointsApiExplorer();
 // builder.Services.AddSwaggerGen();
@@ -410,6 +419,16 @@ builder.Services.AddRateLimiter(options =>
             _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+            }));
+    options.AddPolicy("newsletter-subscribe", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            ClientIpResolver.GetPartitionKey(httpContext),
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(10),
                 SegmentsPerWindow = 5,
                 QueueLimit = 0,
@@ -2532,6 +2551,78 @@ app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator medi
 .WithName("SubmitFeedback")
 .RequireRateLimiting("send-feedback");
 
+// --- Newsletter ---
+
+app.MapPost("/api/v1/newsletter/subscribe", async (
+    NewsletterSubscribeRequest req,
+    Utanvega.Backend.Infrastructure.Newsletter.MailerLiteClientProvider mailerLite,
+    IMemoryCache cache,
+    ILogger<Program> logger) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Email))
+        return Results.BadRequest("Email is required.");
+    // Matches the frontend <TextField>'s maxLength cap (frontend/pages/NewsletterPage.tsx) — enforced
+    // here too since the API is reachable independently of that form.
+    if (req.Email.Length > 320)
+        return Results.BadRequest("Email is too long.");
+    try { _ = new System.Net.Mail.MailAddress(req.Email); }
+    catch { return Results.BadRequest("Email format is invalid."); }
+
+    // Per-email cooldown, independent of and on top of the per-IP "newsletter-subscribe" rate
+    // limit above: MailerLite's double opt-in means every accepted submission sends a
+    // confirmation email to the submitted address, so repeating the same address from rotating
+    // IPs could otherwise spam a third party ("subscription bombing" — see #1647). Keyed on the
+    // normalized address so case/whitespace variants of the same email collapse to one entry.
+    var normalizedEmail = req.Email.Trim().ToLowerInvariant();
+    var cooldownKey = $"newsletter-subscribe-cooldown:{normalizedEmail}";
+    // Check-and-arm a short-lived "in-flight" marker *before* calling MailerLite, as a single
+    // atomic step — a plain TryGetValue-then-Set here is two separate calls, so two
+    // near-simultaneous requests for the same email could both observe "not present" and both
+    // reach MailerLite (#1655). NewsletterCooldownGate.TryArm closes that window. Arming the
+    // marker up front also closes the concurrent-duplicate-request window for the full round trip
+    // (rotating-IP "subscription bombing", #1647/#1658 review), without reintroducing #1654 (a
+    // failed/thrown SubscribeAsync leaving the full 5-minute cooldown in place). On success it's
+    // promoted to the real cooldown; on failure or exception it's removed immediately below so a
+    // legitimate retry isn't blocked. This 30s TTL must stay above the "MailerLite" HttpClient's
+    // configured Timeout (builder.Services.AddHttpClient("MailerLite") above, 20s, #1659) — a
+    // marker that could expire while SubscribeAsync is still outstanding would reopen the exact
+    // race this in-flight marker exists to close.
+    var armToken = Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryArm(cache, cooldownKey, TimeSpan.FromSeconds(30));
+    if (armToken is null)
+    {
+        // Same shape as the real success path below — no new signal to probe for.
+        return Results.Ok();
+    }
+    try
+    {
+        var result = await mailerLite.SubscribeAsync(req.Email);
+        if (result.Outcome is Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.Subscribed
+            or Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.AlreadySubscribed)
+        {
+            cache.Set(cooldownKey, true, TimeSpan.FromMinutes(5));
+            return Results.Ok();
+        }
+
+        // ErrorDetail may carry MailerLite's raw response body — log it, never return it. Release
+        // only the marker this request itself armed: if it already expired or was re-armed/promoted
+        // by a different request for the same (normalized) email while this one was in flight, an
+        // unconditional cache.Remove(cooldownKey) here would delete that other request's marker
+        // instead, reopening the #1647/#1655 race (#1667).
+        Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryRelease(cache, cooldownKey, armToken.Value);
+        logger.LogError("Failed to subscribe to newsletter via MailerLite: {Detail}", result.ErrorDetail);
+        return Results.Problem("Failed to subscribe. Please try again later.");
+    }
+    catch (Exception ex)
+    {
+        // Same compare-and-remove rationale as the failure branch above — see #1667.
+        Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryRelease(cache, cooldownKey, armToken.Value);
+        logger.LogError(ex, "Failed to subscribe to newsletter via MailerLite");
+        return Results.Problem("Failed to subscribe. Please try again later.");
+    }
+})
+.WithName("SubscribeNewsletter")
+.RequireRateLimiting("newsletter-subscribe");
+
 app.MapGet("/api/v1/admin/feedback", [Authorize(Policy = "AdminOnly")] async (
     IMediator mediator, string? status, int page = 1, int pageSize = 25, string? sortBy = null, string? sortDir = null, string? search = null) =>
 {
@@ -2575,6 +2666,7 @@ public record SendTipRequest(string PageUrl, string Message);
 public record SubmitFeedbackRequest(
     string PageUrl, string Message, string? Category, string? Name, string? Email,
     string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
+public record NewsletterSubscribeRequest(string Email);
 public record PatchFeedbackRequest(
     string? Status, string? Priority, int? GitHubIssue, bool? ClearGitHubIssue, string? AdminComment);
 public record TranslateRequest(List<string> Texts);

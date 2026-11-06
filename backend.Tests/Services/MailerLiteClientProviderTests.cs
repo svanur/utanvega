@@ -1,0 +1,198 @@
+using System.Net;
+using System.Text;
+using Microsoft.Extensions.Configuration;
+using Moq;
+using Moq.Protected;
+using Utanvega.Backend.Infrastructure.Newsletter;
+
+namespace Utanvega.Backend.Tests.Services;
+
+// #1641: MailerLiteClientProvider mirrors DeepLTranslatorProvider's lazy-singleton shape, but also
+// owns the subscribe call itself (unlike DeepLTranslatorProvider, which only hands back the
+// DeepL.Translator and leaves the call site to Program.cs) — see the class's doc comment for why.
+// These tests cover the three outcomes SubscribeAsync must distinguish: a plain success, MailerLite
+// reporting "already subscribed" as a success rather than an error (owner-confirmed double opt-in
+// requirement, #1641), and a provider failure whose raw detail is available for the caller to log
+// but is never itself returned to a visitor.
+public class MailerLiteClientProviderTests
+{
+    private static IConfiguration ConfigWith(string? apiKey, string? groupId = "group-123") =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["MailerLite:ApiKey"] = apiKey,
+                ["MailerLite:GroupId"] = groupId,
+            })
+            .Build();
+
+    private static Mock<HttpMessageHandler> MockHandlerReturning(HttpStatusCode statusCode, string body) =>
+        MockHandler(_ => new HttpResponseMessage
+        {
+            StatusCode = statusCode,
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        });
+
+    private static Mock<HttpMessageHandler> MockHandlerThrowing(Exception ex)
+    {
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(ex);
+        return handlerMock;
+    }
+
+    private static Mock<HttpMessageHandler> MockHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
+    {
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync((HttpRequestMessage req, CancellationToken _) => respond(req));
+        return handlerMock;
+    }
+
+    private static MailerLiteClientProvider BuildProvider(
+        HttpMessageHandler handler, string? apiKey = "test-key", string? groupId = "group-123")
+    {
+        var httpClient = new HttpClient(handler);
+        var factoryMock = new Mock<IHttpClientFactory>();
+        factoryMock.Setup(f => f.CreateClient("MailerLite")).Returns(httpClient);
+        return new MailerLiteClientProvider(ConfigWith(apiKey, groupId), factoryMock.Object);
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_MailerLiteAccepts_ReturnsSubscribed()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{\"data\":{\"id\":\"1\"}}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("new-runner@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Subscribed, result.Outcome);
+        Assert.Null(result.ErrorDetail);
+    }
+
+    // #1641 acceptance criterion: an already-subscribed email submitted again must show the same
+    // success/confirmation message as a brand-new subscribe, not an error — MailerLite's documented
+    // "already in this group" 422 is the one non-2xx response this provider treats as success.
+    [Fact]
+    public async Task SubscribeAsync_MailerLiteReportsAlreadySubscribed_ReturnsAlreadySubscribed()
+    {
+        var handlerMock = MockHandlerReturning(
+            HttpStatusCode.UnprocessableEntity,
+            "{\"message\":\"The email has already been taken.\"}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("existing-subscriber@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.AlreadySubscribed, result.Outcome);
+    }
+
+    // Any other non-success response (bad key, outage-shaped 5xx, unrelated validation error) must
+    // come back as Failed with the raw response body attached for server-side logging only — the
+    // endpoint converts this to a generic message before it ever reaches the caller.
+    [Fact]
+    public async Task SubscribeAsync_MailerLiteRejectsForAnOtherReason_ReturnsFailedWithRawDetail()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Unauthorized, "{\"message\":\"Invalid API key.\"}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("someone@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+        Assert.NotNull(result.ErrorDetail);
+        Assert.Contains("Invalid API key", result.ErrorDetail);
+    }
+
+    // #1644: LooksAlreadySubscribed is a documented fallback (no confirmed structured error code
+    // from MailerLite) — locks in that the substring match is case-insensitive and scoped to 422
+    // only, so a future refactor can't silently narrow or widen it without a test noticing.
+    [Theory]
+    [InlineData("{\"message\":\"The email has ALREADY been taken.\"}")]
+    [InlineData("{\"message\":\"the email is already in use\"}")]
+    public async Task SubscribeAsync_AlreadySubscribedMatchIsCaseInsensitive_ReturnsAlreadySubscribed(string body)
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.UnprocessableEntity, body);
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("existing-subscriber@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.AlreadySubscribed, result.Outcome);
+    }
+
+    // The "already" substring match must only be consulted on a 422 — the same body text on any
+    // other status code (even one MailerLite might plausibly use) must not be treated as success.
+    [Fact]
+    public async Task SubscribeAsync_AlreadyTextOnNon422Status_ReturnsFailedNotAlreadySubscribed()
+    {
+        var handlerMock = MockHandlerReturning(
+            HttpStatusCode.BadRequest, "{\"message\":\"The email has already been taken.\"}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("someone@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+    }
+
+    // A network-level failure (DNS, timeout, connection reset) must propagate as an exception
+    // rather than being swallowed into a Failed result — the endpoint's own try/catch is what
+    // logs it via logger.LogError(ex, ...), matching SubmitFeedback's shape (Program.cs).
+    [Fact]
+    public async Task SubscribeAsync_NetworkFailure_PropagatesException()
+    {
+        var handlerMock = MockHandlerThrowing(new HttpRequestException("MailerLite unreachable"));
+        var provider = BuildProvider(handlerMock.Object);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.SubscribeAsync("someone@example.com"));
+    }
+
+    // #1647: ErrorDetail ends up verbatim in server logs (Program.cs's
+    // logger.LogError("... {Detail}", result.ErrorDetail)), and MailerLite's error bodies commonly
+    // echo the submitted address back in their diagnostic text — so the submitted email must not
+    // survive into ErrorDetail, case-insensitively.
+    [Fact]
+    public async Task SubscribeAsync_FailureBodyContainsSubmittedEmail_RedactsItInErrorDetail()
+    {
+        const string email = "someone@example.com";
+        var handlerMock = MockHandlerReturning(
+            HttpStatusCode.UnprocessableEntity, $"{{\"message\":\"{email} is not a valid address.\"}}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync(email);
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+        Assert.NotNull(result.ErrorDetail);
+        Assert.DoesNotContain(email, result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[redacted]", result.ErrorDetail);
+        Assert.Contains("is not a valid address", result.ErrorDetail);
+    }
+
+    // Redaction is a targeted substring replace, not a blanket suppression: a failure body that
+    // never mentions the submitted email must be logged unchanged.
+    [Fact]
+    public async Task SubscribeAsync_FailureBodyWithoutSubmittedEmail_IsLoggedUnchanged()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Unauthorized, "{\"message\":\"Invalid API key.\"}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("someone-else@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+        Assert.Contains("Invalid API key.", result.ErrorDetail);
+        Assert.DoesNotContain("[redacted]", result.ErrorDetail);
+    }
+
+    [Fact]
+    public async Task SubscribeAsync_ApiKeyNotConfigured_ReturnsFailedWithoutMakingAnHttpCall()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.OK, "{}");
+        var provider = BuildProvider(handlerMock.Object, apiKey: null);
+
+        var result = await provider.SubscribeAsync("someone@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+        Assert.False(provider.IsConfigured);
+        handlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+}

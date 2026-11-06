@@ -23,6 +23,11 @@ export interface PromoSlot {
     /** 'wide' renders full-width at natural aspect ratio, no crop — for non-square banners. Defaults to 'card'. */
     shape?: 'card' | 'wide';
     /**
+     * Slots sharing the same rotationGroup occupy one physical slot: PromoStrip picks exactly one
+     * enabled member at random per render (not persisted across loads). Omit for standalone slots.
+     */
+    rotationGroup?: string;
+    /**
      * Fallback passed to useFeatureFlags().isEnabled() when the flag hasn't been created in
      * admin yet (unknown flags default to true there). Set to false for a slot that must stay
      * hidden until the owner creates+toggles its flag — e.g. a brand-new campaign slot. Omit for
@@ -70,7 +75,20 @@ export const PROMO_SLOTS: PromoSlot[] = [
         alt: 'Hlaupaferð til Sviss, júní 2027 - Skráning hafin',
         position: 'top',
         shape: 'wide',
-        notes: 'Text baked into image, 900x120. Toggle ad_top_promo_3 off in admin when the campaign ends.',
+        rotationGroup: 'top_promo_3',
+        notes: 'Text baked into image, 900x120. Toggle ad_top_promo_3 off in admin when the campaign ends. Rotates with ad_top_promo_4 — shares slot via rotationGroup top_promo_3.',
+    },
+    {
+        flag: 'ad_top_promo_4',
+        name: 'Mæðgur á hlaupum',
+        img: '/sponsors/maedgur-a-hlaupum-podcast.png',
+        href: '/media',
+        alt: 'Mæðgur á hlaupum',
+        position: 'top',
+        shape: 'wide',
+        rotationGroup: 'top_promo_3',
+        defaultEnabled: false,
+        notes: 'Internal link to the "Mæðgur á hlaupum" podcast on /media (see media.podcasts.mothersRunning in i18n). Rotates with ad_top_promo_3 — shares slot via rotationGroup top_promo_3. defaultEnabled: false until the admin flag is created+toggled on.',
     },
     {
         flag: 'ad_bottom_promo_1',

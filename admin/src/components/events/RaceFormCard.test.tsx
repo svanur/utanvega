@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import RaceFormCard from './RaceFormCard';
-import type { EventEditionDto } from '../../hooks/useEvents';
+import type { EventEditionDto, RaceDto } from '../../hooks/useEvents';
 
 // #960: RaceFormCard -> useTranslate -> api.ts -> supabase.ts, and supabase.ts calls
 // requireEnv('VITE_SUPABASE_URL') at module-evaluation time — in a clean checkout with no
@@ -68,6 +68,62 @@ function renderRaceFormCard() {
   );
 }
 
+// #1628: minimal RaceDto fixture — only registrationOpensMinutesBeforeRace and identity fields
+// vary between tests below, everything else is filler to satisfy the type.
+function makeRace(overrides: Partial<RaceDto> = {}): RaceDto {
+  return {
+    id: 'race-1',
+    eventEditionId: edition.id,
+    trailId: null,
+    trailName: null,
+    trailSlug: null,
+    name: 'Test Race',
+    nameEn: null,
+    distanceLabel: null,
+    distanceLabelEn: null,
+    cutoffMinutes: null,
+    description: null,
+    descriptionEn: null,
+    status: 'Active',
+    sortOrder: 0,
+    ticketStatus: 'NotStarted',
+    resultType: 'Time',
+    maxParticipants: null,
+    itraPoints: null,
+    certifiedBy: null,
+    certifiedByEn: null,
+    prizeMoney: 0,
+    championshipCategory: null,
+    championshipCategoryEn: null,
+    dateOfRace: null,
+    startTime: null,
+    trailDistanceMeters: null,
+    trailElevationGain: null,
+    activityType: null,
+    registrationOpensMinutesBeforeRace: null,
+    ...overrides,
+  };
+}
+
+function renderRaceFormCardWith(race: RaceDto | null, editionRaces: RaceDto[]) {
+  return render(
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <RaceFormCard
+        race={race}
+        edition={{ ...edition, races: editionRaces }}
+        trails={[]}
+        onClose={() => {}}
+        onSaved={() => {}}
+        onDeleted={() => {}}
+        onNotify={() => {}}
+        onCreateRace={async () => ''}
+        onUpdateRace={async () => {}}
+        onDeleteRace={async () => {}}
+      />
+    </LocalizationProvider>,
+  );
+}
+
 describe('RaceFormCard — ITRA points paste wiring', () => {
   afterEach(cleanup);
 
@@ -103,5 +159,54 @@ describe('RaceFormCard — ITRA points drag-and-drop wiring', () => {
     fireEvent.change(input, { target: { value: '1' } });
 
     expect(input.value).toBe('1');
+  });
+});
+
+// #1628: the per-race days/hours-before registration offset only matters once an edition has
+// 2+ races to stagger between — on a single-race edition it duplicates the edition-level
+// RegistrationOpens/Closes fields with no effect. These cover the five acceptance scenarios from
+// the issue: hide when count is 1 (existing or about-to-exist), show once it's 2+, and never hide
+// a field that's already holding a non-null value (regression guard).
+describe('RaceFormCard — registration offset visibility (#1628)', () => {
+  afterEach(cleanup);
+
+  it('hides Days/Hours before and the preview when editing the only existing race', () => {
+    const onlyRace = makeRace({ id: 'race-1' });
+    renderRaceFormCardWith(onlyRace, [onlyRace]);
+
+    expect(screen.queryByLabelText('Days before')).toBeNull();
+    expect(screen.queryByLabelText('Hours before')).toBeNull();
+  });
+
+  it('hides Days/Hours before when creating the first race of a 0-race edition', () => {
+    renderRaceFormCardWith(null, []);
+
+    expect(screen.queryByLabelText('Days before')).toBeNull();
+    expect(screen.queryByLabelText('Hours before')).toBeNull();
+  });
+
+  it('shows Days/Hours before when creating a second race on a 1-race edition', () => {
+    const existingRace = makeRace({ id: 'race-1' });
+    renderRaceFormCardWith(null, [existingRace]);
+
+    expect(screen.getByLabelText('Days before')).not.toBeNull();
+    expect(screen.getByLabelText('Hours before')).not.toBeNull();
+  });
+
+  it('shows Days/Hours before when editing a race in a 2+ race edition (unchanged)', () => {
+    const raceA = makeRace({ id: 'race-1' });
+    const raceB = makeRace({ id: 'race-2' });
+    renderRaceFormCardWith(raceA, [raceA, raceB]);
+
+    expect(screen.getByLabelText('Days before')).not.toBeNull();
+    expect(screen.getByLabelText('Hours before')).not.toBeNull();
+  });
+
+  it('shows Days/Hours before for the only race of a 1-race edition when it already has a non-null offset', () => {
+    const raceWithOffset = makeRace({ id: 'race-1', registrationOpensMinutesBeforeRace: 1440 });
+    renderRaceFormCardWith(raceWithOffset, [raceWithOffset]);
+
+    expect(screen.getByLabelText('Days before')).not.toBeNull();
+    expect(screen.getByLabelText('Hours before')).not.toBeNull();
   });
 });

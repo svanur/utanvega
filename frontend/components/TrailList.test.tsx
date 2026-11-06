@@ -18,6 +18,15 @@ import en from '../i18n/en.json';
 import { createAppTheme } from '../theme';
 import type { Trail } from '../hooks/useTrails';
 
+// #1681: TrailList.tsx imports 29 separate @mui/icons-material/* modules — comparable in shape to
+// RacesPage.tsx's 25+, which needed #1672's testTimeout override. Measured the same way as #1672:
+// this file's own module-graph import (not the test body), isolated, cost ~2.0-2.2s cold on an
+// 8-core dev machine — under half of RacesPage's 4.48s. Running the full suite constrained to 2
+// worker threads (simulating a CPU-starved CI runner, same method #1672 used) left this file's
+// slowest individual it() at 525ms, nowhere near vitest's default 5000ms per-it() testTimeout
+// (vitest.config.ts sets no override). No vi.setConfig() override added here; re-measure if this
+// file's icon-import graph grows materially.
+
 // vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
 // afterEach(cleanup) registration never fires — without this, a later test's screen queries can
 // match leftover DOM nodes still mounted from an earlier test in this file. Mirrors

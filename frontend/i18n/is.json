@@ -452,7 +452,8 @@
         "discover": "Skoða",
         "info": "Upplýsingar",
         "follow": "Fylgstu með",
-        "contact": "Samband"
+        "contact": "Samband",
+        "feedback": "Ábendingar"
     },
     "tip": {
         "button": "Senda ábendingu",
@@ -500,14 +501,12 @@
     },
     "newsletter": {
         "title": "Skráðu þig á póstlistann",
-        "description": "Viltu fá fréttir og upplýsingar? Skráðu þig á póstlista hlaupadagskra.is.",
-        "comingSoon": "Skráning opnar bráðum.",
-        "subscribe": "Skráðu þig á póstlistann"
-    },
-    "announcement": {
-        "text": "Nýr hlaupadagskra.is vefur er enn í þróun. Vertu með okkur og",
-        "href": "/pages/send-comments",
-        "linkText": "sendu inn þínar ábendingar"
+        "description": "Viltu fá fréttir og upplýsingar? Skráðu þig á póstlista {{brandName}}.",
+        "emailLabel": "Netfang",
+        "emailInvalid": "Sláðu inn gilt netfang.",
+        "subscribe": "Skráðu þig á póstlistann",
+        "success": "Athugaðu tölvupóstinn þinn til að staðfesta áskriftina.",
+        "error": "Eitthvað fór úrskeiðis. Vinsamlegast reyndu aftur síðar."
     },
     "sort": {
         "date": "Dagsetning",
@@ -833,6 +832,10 @@
             }
         },
         "changelog": {
+            "v1_17_9": {
+                "title": "Endurhannaður viðburðalisti, fréttabréf tengt og veðurspá viðburða",
+                "description": "Viðburðasíður sýna nú veðurspá í stað veðurfars þegar innan við 7 dagar eru til viðburðar. Uppsetning gagna í viðburðalista breytt fyrir 'list view'. Skráning í fréttabréf er komin í gagnið. Tilkynningaborði 'í þróun' hefur verið fjarlægður og tengill á ábendingar birtur í fótnum í staðinn."
+            },
             "v1_17_8": {
                 "title": "Gagnatap lagað í Translation Health",
                 "description": "Við þýðingu í 'Translation Health' í stjórnborði hreinsaði út önnur gögn, s.s. GPS-punkt viðburðar, skráningarglugga viðburða, skráningartíma hlaupa, YouTube-tengil leiðar og samfélagsmiðlatengla skipuleggjanda. essi gögn varðveitast nú við vistun."
