@@ -172,6 +172,77 @@ public class NewsletterEndpointTests : IDisposable
         handlerMock.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
+    // #1654: a failed MailerLite call must not arm the per-email cooldown — otherwise a legitimate
+    // retry within the 5-minute window would hit the cooldown short-circuit and get a fake 200 OK
+    // without MailerLite ever being called again. First call fails (401), second call (same email,
+    // no cooldown wait needed) must still reach MailerLite and succeed.
+    [Fact]
+    public async Task Subscribe_FirstAttemptFails_RetrySameEmailStillReachesMailerLiteAndSucceeds()
+    {
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .SetupSequence<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.Unauthorized,
+                Content = new StringContent("{\"message\":\"Invalid API key\"}", Encoding.UTF8, "application/json"),
+            })
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.Created,
+                Content = new StringContent("{\"data\":{\"id\":\"1\"}}", Encoding.UTF8, "application/json"),
+            });
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object);
+
+        var first = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "retry-after-failure@example.com" });
+        var second = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "retry-after-failure@example.com" });
+
+        Assert.True((int)first.StatusCode >= 500 || (int)first.StatusCode == 400);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    // #1658 review: moving the cooldown Set to after the MailerLite call (to fix #1654) must not
+    // reopen the rotating-IP "subscription bombing" window for the duration of that round trip. A
+    // second request for the same email that arrives while the first is still in flight (MailerLite
+    // hasn't responded yet) must be short-circuited by the short-lived in-flight marker, not reach
+    // MailerLite a second time.
+    [Fact]
+    public async Task Subscribe_SecondRequestArrivesWhileFirstStillAwaitingMailerLite_IsShortCircuited()
+    {
+        var sendAsyncStarted = new TaskCompletionSource<bool>();
+        var releaseFirstCall = new TaskCompletionSource<HttpResponseMessage>();
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((_, _) =>
+            {
+                sendAsyncStarted.TrySetResult(true);
+                return releaseFirstCall.Task;
+            });
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object);
+
+        var firstTask = client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "inflight@example.com" });
+        // Wait until the first request has actually reached MailerLite — the in-flight marker is
+        // set synchronously before that call, so by this point it is already in the cache.
+        await sendAsyncStarted.Task;
+
+        var second = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "inflight@example.com" });
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+        releaseFirstCall.SetResult(new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.Created,
+            Content = new StringContent("{\"data\":{\"id\":\"1\"}}", Encoding.UTF8, "application/json"),
+        });
+        var first = await firstTask;
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+
+        handlerMock.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
     // Covers the "provider-error-logged-not-leaked" acceptance criterion at the HTTP layer: a
     // MailerLite failure unrelated to "already subscribed" (here, an invalid API key) must come back
     // as a generic problem response — the raw response body MailerLite actually sent must never
