@@ -791,6 +791,24 @@ describe('CompetitionDetailPage live forecast swap (#1670)', () => {
         expect(weatherCardMock).not.toHaveBeenCalled();
     });
 
+    // #1679: showWeatherForecast (CompetitionDetailPage.tsx:592-595) never checks weatherError
+    // itself — it's harmless today only because useTrailWeather leaves weather null on any
+    // failure (useTrails.ts:553-567), so !!weather is already false whenever error is set. This
+    // pins that fallback down for the error case specifically (distinct from the "null weather,
+    // no error" case above), so a future change to useTrailWeather's return shape or the swap
+    // condition can't silently break it.
+    it('still shows ClimateCard when the flag is on and daysUntil is within range but weather errored', () => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'event_weather_forecast']);
+        mockWeatherResult.current = { weather: null, loading: false, error: 'Weather unavailable' };
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
+        const raceDate = dateOffsetFromToday(3);
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 3 }));
+
+        expect(climateCardMock).toHaveBeenCalled();
+        expect(weatherCardMock).not.toHaveBeenCalled();
+    });
+
     // A Series event's own event.daysUntil/displayDate/nextEditionDate are pinned to the season's
     // *first* race (stale for the rest of the season, see climateTarget's comment at
     // CompetitionDetailPage.tsx:550-556) — this leg is mid-season: its first race was 30 days ago,
