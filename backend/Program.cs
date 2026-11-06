@@ -2568,17 +2568,20 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
     // normalized address so case/whitespace variants of the same email collapse to one entry.
     var normalizedEmail = req.Email.Trim().ToLowerInvariant();
     var cooldownKey = $"newsletter-subscribe-cooldown:{normalizedEmail}";
-    if (cache.TryGetValue(cooldownKey, out _))
+    // Check-and-arm a short-lived "in-flight" marker *before* calling MailerLite, as a single
+    // atomic step — a plain TryGetValue-then-Set here is two separate calls, so two
+    // near-simultaneous requests for the same email could both observe "not present" and both
+    // reach MailerLite (#1655). NewsletterCooldownGate.TryArm closes that window. Arming the
+    // marker up front also closes the concurrent-duplicate-request window for the full round trip
+    // (rotating-IP "subscription bombing", #1647/#1658 review), without reintroducing #1654 (a
+    // failed/thrown SubscribeAsync leaving the full 5-minute cooldown in place). On success it's
+    // promoted to the real cooldown; on failure or exception it's removed immediately below so a
+    // legitimate retry isn't blocked.
+    if (!Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryArm(cache, cooldownKey, TimeSpan.FromSeconds(30)))
     {
         // Same shape as the real success path below — no new signal to probe for.
         return Results.Ok();
     }
-    // Arm a short-lived "in-flight" marker *before* calling MailerLite — this closes the
-    // concurrent-duplicate-request window for the full round trip (rotating-IP "subscription
-    // bombing", #1647/#1658 review), without reintroducing #1654 (a failed/thrown SubscribeAsync
-    // leaving the full 5-minute cooldown in place). On success it's promoted to the real cooldown;
-    // on failure or exception it's removed immediately below so a legitimate retry isn't blocked.
-    cache.Set(cooldownKey, true, TimeSpan.FromSeconds(30));
     try
     {
         var result = await mailerLite.SubscribeAsync(req.Email);
