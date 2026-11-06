@@ -82,6 +82,20 @@ describe('NewsletterPage form states (#1645)', () => {
         expect(fetchSpy).not.toHaveBeenCalled();
     });
 
+    it('clears the inline email-invalid error once the address is edited (#1650)', async () => {
+        const fetchSpy = vi.fn();
+        vi.stubGlobal('fetch', fetchSpy);
+        renderNewsletterPage();
+
+        fireEvent.change(getEmailInput(), { target: { value: 'test@localhost' } });
+        submitForm();
+        expect(await screen.findByText(en.newsletter.emailInvalid)).not.toBeNull();
+
+        fireEvent.change(getEmailInput(), { target: { value: 'test@localhost.com' } });
+
+        expect(screen.queryByText(en.newsletter.emailInvalid)).toBeNull();
+    });
+
     it('shows the success message and hides the form when the API call resolves ok', async () => {
         const fetchSpy = vi.fn().mockResolvedValue({ ok: true });
         vi.stubGlobal('fetch', fetchSpy);
