@@ -2,9 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Internal;
 using Moq;
 using Moq.Protected;
 using Utanvega.Backend.Infrastructure.Newsletter;
@@ -42,7 +44,11 @@ public class NewsletterEndpointTests : IDisposable
         return handlerMock;
     }
 
-    private HttpClient CreateClientWithMailerLiteBackedBy(HttpMessageHandler handler)
+    // extraConfigureServices lets a single test layer on an additional service override (e.g. a
+    // fake IMemoryCache clock, see Subscribe_SecondRequestArrivesNearHttpClientTimeoutCeiling_IsStillShortCircuited
+    // below) without every other call site having to know about it.
+    private HttpClient CreateClientWithMailerLiteBackedBy(
+        HttpMessageHandler handler, Action<IServiceCollection>? extraConfigureServices = null)
     {
         var factory = _factory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
         {
@@ -60,9 +66,21 @@ public class NewsletterEndpointTests : IDisposable
                 .Build();
 
             services.AddSingleton(new MailerLiteClientProvider(config, httpClientFactoryMock.Object));
+
+            extraConfigureServices?.Invoke(services);
         }));
 
         return factory.CreateClient();
+    }
+
+    /// <summary>
+    /// A mutable <see cref="ISystemClock"/> so a test can fast-forward the in-flight cooldown
+    /// marker's cache clock without an actual wall-clock wait — see
+    /// <see cref="Subscribe_SecondRequestArrivesNearHttpClientTimeoutCeiling_IsStillShortCircuited"/>.
+    /// </summary>
+    private sealed class FakeSystemClock : ISystemClock
+    {
+        public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
     }
 
     [Fact]
@@ -264,6 +282,65 @@ public class NewsletterEndpointTests : IDisposable
         await sendAsyncStarted.Task;
 
         var second = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "inflight@example.com" });
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+
+        releaseFirstCall.SetResult(new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.Created,
+            Content = new StringContent("{\"data\":{\"id\":\"1\"}}", Encoding.UTF8, "application/json"),
+        });
+        var first = await firstTask;
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+
+        handlerMock.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    // #1659: the "MailerLite" HttpClient has an explicit 20s Timeout (Program.cs, builder.Services
+    // .AddHttpClient("MailerLite")) specifically so it cannot still be outstanding once the 30s
+    // in-flight marker above expires — before this fix the client had no Timeout at all and
+    // defaulted to 100s, so a slow-but-real MailerLite call could outlive the marker and reopen the
+    // #1658 race. The test above only proves the near-instant case (the first call never actually
+    // elapses any time before the second request arrives); this one proves the marker still holds
+    // once the *virtual* clock has advanced all the way to the HttpClient's 20s timeout ceiling — a
+    // fake ISystemClock substituted into the test host's IMemoryCache advances time without an
+    // actual 20-second wall-clock wait.
+    [Fact]
+    public async Task Subscribe_SecondRequestArrivesNearHttpClientTimeoutCeiling_IsStillShortCircuited()
+    {
+        var fakeClock = new FakeSystemClock();
+        var sendAsyncStarted = new TaskCompletionSource<bool>();
+        var releaseFirstCall = new TaskCompletionSource<HttpResponseMessage>();
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((_, _) =>
+            {
+                sendAsyncStarted.TrySetResult(true);
+                return releaseFirstCall.Task;
+            });
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object, services =>
+        {
+            // Obsolete, but still the only hook IMemoryCache exposes for substituting its clock —
+            // see FakeSystemClock's doc comment. Configuring it here (rather than replacing
+            // IMemoryCache outright) lets AddMemoryCache() build the real MemoryCache the endpoint
+            // resolves, just reading time from fakeClock instead of the system clock.
+#pragma warning disable CS0618 // MemoryCacheOptions.Clock is obsolete in favor of TimeProvider, not yet available in this package version.
+            services.Configure<MemoryCacheOptions>(o => o.Clock = fakeClock);
+#pragma warning restore CS0618
+        });
+
+        var firstTask = client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "near-ceiling@example.com" });
+        // Wait until the first request has actually armed the marker and reached MailerLite, same
+        // as the near-instant test above.
+        await sendAsyncStarted.Task;
+
+        // Advance the cache's clock to exactly the HttpClient's configured Timeout (20s) — the
+        // latest moment a well-behaved MailerLite call could still be outstanding. The marker's 30s
+        // TTL must still cover this point for the fix to hold.
+        fakeClock.UtcNow += TimeSpan.FromSeconds(20);
+
+        var second = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "near-ceiling@example.com" });
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
 
         releaseFirstCall.SetResult(new HttpResponseMessage
