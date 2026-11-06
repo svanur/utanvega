@@ -1461,27 +1461,30 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         {/* Name + countdown */}
                                                         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
-                                                            <Stack direction="row" alignItems="flex-start" gap={1} sx={{ minWidth: 0, width: '100%' }}>
-                                                                <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
-                                                                <Box sx={{ minWidth: 0 }}>
-                                                                    <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
-                                                                        {loc(comp.name, comp.nameEn) ?? comp.name}
-                                                                        {' '}
-                                                                        <svg width="8" height="8" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 2, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
-                                                                        {' '}
-                                                                        {loc(race.raceName, race.raceNameEn) ?? race.raceName}
-                                                                    </Typography>
-                                                                    {race.dateOfRace && (
-                                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                                            <EventDateBadge dateStr={race.dateOfRace} />
-                                                                            <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                            <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
-                                                                            {raceDaysUntil != null && (
-                                                                                <Chip label={getCountdownLabel(raceDaysUntil, t)} color={getCountdownColor(raceDaysUntil)} size="small" sx={{ fontWeight: 700 }} />
-                                                                            )}
-                                                                        </Stack>
-                                                                    )}
-                                                                </Box>
+                                                            <Stack direction="column" gap={0} sx={{ minWidth: 0, width: '100%' }}>
+                                                                <Stack direction="row" alignItems="flex-start" gap={1}>
+                                                                    <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
+                                                                    <Box sx={{ minWidth: 0 }}>
+                                                                        <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
+                                                                            {loc(comp.name, comp.nameEn) ?? comp.name}
+                                                                            {' '}
+                                                                            <svg width="8" height="8" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 2, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
+                                                                            {' '}
+                                                                            {loc(race.raceName, race.raceNameEn) ?? race.raceName}
+                                                                        </Typography>
+                                                                    </Box>
+                                                                </Stack>
+                                                                {/* Date + countdown — sibling of icon+title row, not nested inside it, so it stays flush-left */}
+                                                                {race.dateOfRace && (
+                                                                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
+                                                                        <EventDateBadge dateStr={race.dateOfRace} />
+                                                                        <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
+                                                                        {raceDaysUntil != null && (
+                                                                            <Chip label={getCountdownLabel(raceDaysUntil, t)} color={getCountdownColor(raceDaysUntil)} size="small" sx={{ fontWeight: 700 }} />
+                                                                        )}
+                                                                    </Stack>
+                                                                )}
                                                             </Stack>
                                                             {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
                                                                 <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
