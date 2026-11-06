@@ -832,6 +832,10 @@
             }
         },
         "changelog": {
+            "v1_17_9": {
+                "title": "Endurhannaður viðburðalisti, fréttabréf tengt og veðurspá viðburða",
+                "description": "Viðburðasíður sýna nú veðurspá í stað veðurfars þegar innan við 7 dagar eru til viðburðar. Uppsetning gagna í viðburðalista breytt fyrir 'list view'. Skráning í fréttabréf er komin í gagnið. Tilkynningaborði 'í þróun' hefur verið fjarlægður og tengill á ábendingar birtur í fótnum í staðinn."
+            },
             "v1_17_8": {
                 "title": "Gagnatap lagað í Translation Health",
                 "description": "Við þýðingu í 'Translation Health' í stjórnborði hreinsaði út önnur gögn, s.s. GPS-punkt viðburðar, skráningarglugga viðburða, skráningartíma hlaupa, YouTube-tengil leiðar og samfélagsmiðlatengla skipuleggjanda. essi gögn varðveitast nú við vistun."

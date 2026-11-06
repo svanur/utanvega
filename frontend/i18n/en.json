@@ -832,6 +832,10 @@
             }
         },
         "changelog": {
+            "v1_17_9": {
+                "title": "Live weather forecasts, newsletter signup, and a redesigned events list",
+                "description": "Event pages now show a real short-range weather forecast in place of historical climate data within 7 days of the event, and the countdown chip has moved to sit beside the date. The events list card now leads with the event name and includes a description preview. Newsletter signup is live, wired to MailerLite with per-email safeguards against duplicate sends. The in-development announcement banner has been removed in favor of a Feedback link in the footer."
+            },
             "v1_17_8": {
                 "title": "Fixed data loss in Translation Health saves",
                 "description": "Saving a translation edit in admin's Translation Health page no longer clears unrelated fields. Event GPX pin locations, edition registration windows, race registration-open timing, trail YouTube links, and organizer social links are now preserved on save."
