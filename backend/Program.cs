@@ -320,7 +320,14 @@ builder.Services.AddScoped<LocationDetector>();
 builder.Services.AddSingleton<IScheduleRuleEngine, ScheduleRuleEngine>();
 builder.Services.AddSingleton<ICacheInvalidator, CacheInvalidator>();
 builder.Services.AddHttpClient("OpenMeteo");
-builder.Services.AddHttpClient("MailerLite");
+// #1659: the newsletter subscribe endpoint arms a short-lived in-flight cooldown marker
+// (TimeSpan.FromSeconds(30), see the "/api/v1/newsletter/subscribe" handler below) *before*
+// awaiting this client's call — left at its HttpClient default (100s), that call could still be
+// outstanding after the marker expires, reopening the #1658 concurrent-duplicate-request race the
+// marker exists to close. 20s is comfortably under the marker's 30s TTL while still well above
+// MailerLite's typical response time; if that TTL ever changes, this Timeout must stay below it.
+builder.Services.AddHttpClient("MailerLite")
+    .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<Utanvega.Backend.Infrastructure.Translation.DeepLTranslatorProvider>();
 builder.Services.AddSingleton<Utanvega.Backend.Infrastructure.Newsletter.MailerLiteClientProvider>();
@@ -2576,7 +2583,10 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
     // (rotating-IP "subscription bombing", #1647/#1658 review), without reintroducing #1654 (a
     // failed/thrown SubscribeAsync leaving the full 5-minute cooldown in place). On success it's
     // promoted to the real cooldown; on failure or exception it's removed immediately below so a
-    // legitimate retry isn't blocked.
+    // legitimate retry isn't blocked. This 30s TTL must stay above the "MailerLite" HttpClient's
+    // configured Timeout (builder.Services.AddHttpClient("MailerLite") above, 20s, #1659) — a
+    // marker that could expire while SubscribeAsync is still outstanding would reopen the exact
+    // race this in-flight marker exists to close.
     if (!Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryArm(cache, cooldownKey, TimeSpan.FromSeconds(30)))
     {
         // Same shape as the real success path below — no new signal to probe for.
