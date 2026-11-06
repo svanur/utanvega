@@ -75,7 +75,7 @@ import { downloadIcs } from '../utils/calendarLinks';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { toUserFriendlyFetchError } from '../utils/apiErrors';
 import { getRecentRaceDistanceDisplay, getTicketStatusColor, groupDistances, isAllUnavailableForRegistration, hasRaceStarted, hasRegistrationClosed, isRegistrationRequired, isRegistrationRequiredForRace } from '../utils/ticketStatus';
-import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, type FlattenedEventRow } from '../utils/eventUtils';
+import { formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, getEffectiveDaysUntil, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, isOngoingPastDayTwo, flattenEventRows, filterRowsByMonths, filterRowsByWeekRange, getRowDaysUntil, getWeekRange, sortByRecentlyCompletedDate, truncateWords, type FlattenedEventRow } from '../utils/eventUtils';
 import { toCopyableEventRows, formatEventListForClipboard, formatListHeading, formatActiveFiltersSummary } from '../utils/copyListToClipboard';
 import type { ActiveFilterLine } from '../utils/copyListToClipboard';
 import { applyFilters, eventFiltersEqual, eventMonths, type EventFilters, type RaceDistanceBucket } from '../utils/eventFilters';
@@ -1459,35 +1459,30 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                             >
                                                 <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
-                                                        {/* Name + countdown */}
-                                                        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
-                                                            <Stack direction="column" gap={0} sx={{ minWidth: 0, width: '100%' }}>
-                                                                <Stack direction="row" alignItems="flex-start" gap={1}>
-                                                                    <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
-                                                                    <Box sx={{ minWidth: 0 }}>
-                                                                        <Typography variant="subtitle1" fontWeight={700} sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
-                                                                            {loc(comp.name, comp.nameEn) ?? comp.name}
-                                                                            {' '}
-                                                                            <svg width="8" height="8" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 2, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
-                                                                            {' '}
-                                                                            {loc(race.raceName, race.raceNameEn) ?? race.raceName}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                </Stack>
-                                                                {/* Date + countdown — sibling of icon+title row, not nested inside it, so it stays flush-left */}
-                                                                {race.dateOfRace && (
-                                                                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                                        <EventDateBadge dateStr={race.dateOfRace} />
-                                                                        <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                        <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
-                                                                        {raceDaysUntil != null && (
-                                                                            <Chip label={getCountdownLabel(raceDaysUntil, t)} color={getCountdownColor(raceDaysUntil)} size="small" sx={{ fontWeight: 700 }} />
-                                                                        )}
-                                                                    </Stack>
+                                                        {/* Row 1: race name — full width, no chips/buttons */}
+                                                        <Stack direction="row" alignItems="flex-start" gap={1}>
+                                                            <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
+                                                            <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal' }}>
+                                                                {loc(race.raceName, race.raceNameEn) ?? race.raceName}
+                                                            </Typography>
+                                                        </Stack>
+                                                        {/* Row 1b: series name — secondary line directly below, no bullet separator */}
+                                                        <Typography variant="caption" color="text.secondary" sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}) }}>
+                                                            {loc(comp.name, comp.nameEn)}
+                                                        </Typography>
+                                                        {/* Row 2: type("Series")/status chips + action buttons — xs: column / sm: row */}
+                                                        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" gap={0.5} sx={{ mt: 0.5 }}>
+                                                            <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
+                                                                <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                                {isEffectivelyCancelled(comp) && (
+                                                                    <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                                )}
+                                                                {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
+                                                                    <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                                 )}
                                                             </Stack>
                                                             {(race.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
-                                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
+                                                                <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="flex-end">
                                                                     {race.registrationUrl && !hasRaceStarted(race.dateOfRace, race.startTime, new Date(nowMs)) && isRegistrationRequiredForRace(race.ticketStatus) && (
                                                                         <Button size="small" variant="contained" href={race.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                             {t('races.register', 'Register')}
@@ -1512,29 +1507,43 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                                 </Stack>
                                                             )}
                                                         </Stack>
-                                                        {/* Series type · name · location · km away */}
-                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                            <Chip label={t('races.eventTypes.Series', 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                            <Typography variant="caption" color="text.secondary" noWrap sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}) }}>{loc(comp.name, comp.nameEn)}</Typography>
-                                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
-                                                                <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />
-                                                            )}
-                                                            {comp.locationName && (
-                                                                <>
-                                                                    <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                    <Typography variant="body2" color="text.secondary" noWrap>{comp.locationName}</Typography>
-                                                                </>
-                                                            )}
-                                                            {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
-                                                                <>
-                                                                    {comp.locationName && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
-                                                                    <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-                                                                    <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>
-                                                                        {formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))}
-                                                                    </Typography>
-                                                                </>
-                                                            )}
-                                                        </Stack>
+                                                        {/* Row 3: date + countdown */}
+                                                        {race.dateOfRace && (
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
+                                                                <EventDateBadge dateStr={race.dateOfRace} />
+                                                                <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                <Typography variant="body2" color="text.secondary" noWrap>{formatNextDate(race.dateOfRace, t)}</Typography>
+                                                                {raceDaysUntil != null && (
+                                                                    <Chip label={getCountdownLabel(raceDaysUntil, t)} color={getCountdownColor(raceDaysUntil)} size="small" sx={{ fontWeight: 700 }} />
+                                                                )}
+                                                            </Stack>
+                                                        )}
+                                                        {/* Announcement */}
+                                                        {(comp.alertMessage || comp.alertMessageEn) && (
+                                                            <Alert severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'} sx={{ mt: 0.75, borderRadius: 1.5, py: 0, alignItems: 'center', '& .MuiAlert-message': { py: 0.5 } }}>
+                                                                <Typography variant="body2">{loc(comp.alertMessage, comp.alertMessageEn)}</Typography>
+                                                            </Alert>
+                                                        )}
+                                                        {/* Row 4: location · km away */}
+                                                        {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
+                                                            <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
+                                                                {comp.locationName && (
+                                                                    <>
+                                                                        <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                                        <Typography variant="body2" color="text.secondary" noWrap>{comp.locationName}</Typography>
+                                                                    </>
+                                                                )}
+                                                                {userLocation && comp.gpxPointLat != null && comp.gpxPointLng != null && (
+                                                                    <>
+                                                                        {comp.locationName && <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />}
+                                                                        <NearMeIcon sx={{ fontSize: 13, color: 'primary.main' }} />
+                                                                        <Typography variant="body2" color="primary.main" fontWeight={500} noWrap>
+                                                                            {formatDistanceKm(haversineKm(userLocation.lat, userLocation.lng, comp.gpxPointLat, comp.gpxPointLng))}
+                                                                        </Typography>
+                                                                    </>
+                                                                )}
+                                                            </Stack>
+                                                        )}
                                                         {/* Distance chip */}
                                                         {race.distanceLabel && (
                                                             <Box sx={{ mt: 0.75 }}>
@@ -1692,60 +1701,31 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                 >
                                     <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                         <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
-                                            {/* Row 1: activity icon + name + status chips + countdown */}
-                                            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'flex-start' }} justifyContent="space-between" gap={0.5}>
-                                                <Stack direction="column" gap={0} sx={{ minWidth: 0, width: '100%' }}>
-                                                    <Stack direction="row" alignItems="flex-start" gap={1}>
-                                                        <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
-                                                        <Box sx={{ minWidth: 0 }}>
-                                                            <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
-                                                                <Typography variant="subtitle1" fontWeight={700} sx={{ ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', sm: 'nowrap' } }}>
-                                                                    {loc(comp.name, comp.nameEn)}
-                                                                </Typography>
-                                                                {comp.type === 'Advertisement' && (
-                                                                    <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                                )}
-                                                                {isEffectivelyCancelled(comp) && (
-                                                                    <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                                )}
-                                                                {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
-                                                                    <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
-                                                                )}
-                                                            </Stack>
-                                                        </Box>
-                                                    </Stack>
-                                                    {/* Row 2: date + countdown — sibling of icon+title row, not nested inside it, so it stays flush-left */}
-                                                    {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
-                                                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                            <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
-                                                            <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                            <Typography variant="body2" color="text.secondary" noWrap>
-                                                                {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
-                                                            </Typography>
-                                                            {comp.daysUntil != null && (
-                                                                <Chip
-                                                                    label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
-                                                                        ? t('races.ongoing')
-                                                                        : getCountdownLabel(comp.daysUntil, t)}
-                                                                    color={getCountdownColor(comp.daysUntil)}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        fontWeight: 700,
-                                                                        ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
-                                                                            animation: 'pulseToday 1.5s ease-in-out infinite',
-                                                                            '@keyframes pulseToday': {
-                                                                                '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
-                                                                                '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
-                                                                            },
-                                                                        }),
-                                                                    }}
-                                                                />
-                                                            )}
-                                                        </Stack>
+                                            {/* Row 1: name — full width, no chips/buttons */}
+                                            <Stack direction="row" alignItems="flex-start" gap={1}>
+                                                <ActivityIcons activityTypes={comp.activityTypes} activityType={comp.activityType} />
+                                                <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0, ...(isEffectivelyCancelled(comp) ? { textDecoration: 'line-through' } : {}), overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'normal' }}>
+                                                    {loc(comp.name, comp.nameEn)}
+                                                </Typography>
+                                            </Stack>
+                                            {/* Row 2: type/status chips + action buttons — xs: column / sm: row */}
+                                            <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" gap={0.5} sx={{ mt: 0.5 }}>
+                                                <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
+                                                    {comp.type !== 'Advertisement' && (
+                                                        <Chip label={t(`races.eventTypes.${comp.type}`, comp.type)} size="small" color={getEventTypeColor(comp.type)} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    )}
+                                                    {comp.type === 'Advertisement' && (
+                                                        <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    )}
+                                                    {isEffectivelyCancelled(comp) && (
+                                                        <Chip label={t('races.statusCancelled')} size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                                    )}
+                                                    {!isEffectivelyCancelled(comp) && isEffectivelyUnconfirmed(comp) && (
+                                                        <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                     )}
                                                 </Stack>
                                                 {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
-                                                    <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }} flexWrap="wrap" justifyContent="flex-end">
+                                                    <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="flex-end">
                                                         {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllUnavailableForRegistration(comp.distances) && isRegistrationRequired(comp.registrationStatus) && (
                                                             <Button size="small" variant="contained" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
                                                                 {t('races.register', 'Register')}
@@ -1770,16 +1750,44 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     </Stack>
                                                 )}
                                             </Stack>
-
-                                            {/* type · location · km away */}
-                                            {(comp.type !== 'Advertisement' || comp.locationName || (userLocation && comp.gpxPointLat != null)) && !isEffectivelyCancelled(comp) && (
-                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }} flexWrap="wrap">
-                                                    {comp.type !== 'Advertisement' && (
-                                                        <Chip label={t(`races.eventTypes.${comp.type}`, comp.type)} size="small" color={getEventTypeColor(comp.type)} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                                            {/* Row 3: date + countdown */}
+                                            {!isEffectivelyCancelled(comp) && (comp.displayDate ?? comp.nextEditionDate) && (
+                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
+                                                    <EventDateBadge dateStr={(comp.displayDate ?? comp.nextEditionDate)!} endDateStr={comp.endDisplayDate} />
+                                                    <CalendarMonthIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
+                                                    <Typography variant="body2" color="text.secondary" noWrap>
+                                                        {formatDateRange((comp.displayDate ?? comp.nextEditionDate)!, comp.endDisplayDate, t)}
+                                                    </Typography>
+                                                    {comp.daysUntil != null && (
+                                                        <Chip
+                                                            label={isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate)
+                                                                ? t('races.ongoing')
+                                                                : getCountdownLabel(comp.daysUntil, t)}
+                                                            color={getCountdownColor(comp.daysUntil)}
+                                                            size="small"
+                                                            sx={{
+                                                                fontWeight: 700,
+                                                                ...(comp.daysUntil === 0 && !isOngoingPastDayTwo(comp.daysUntil, comp.displayDate, comp.endDisplayDate) && {
+                                                                    animation: 'pulseToday 1.5s ease-in-out infinite',
+                                                                    '@keyframes pulseToday': {
+                                                                        '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                                                                        '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                                                                    },
+                                                                }),
+                                                            }}
+                                                        />
                                                     )}
-                                                    {comp.type !== 'Advertisement' && (comp.locationName || (userLocation && comp.gpxPointLat != null)) && (
-                                                        <FiberManualRecordIcon sx={{ fontSize: 5, color: 'text.disabled' }} />
-                                                    )}
+                                                </Stack>
+                                            )}
+                                            {/* Announcement */}
+                                            {(comp.alertMessage || comp.alertMessageEn) && (
+                                                <Alert severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'} sx={{ mt: 0.75, borderRadius: 1.5, py: 0, alignItems: 'center', '& .MuiAlert-message': { py: 0.5 } }}>
+                                                    <Typography variant="body2">{loc(comp.alertMessage, comp.alertMessageEn)}</Typography>
+                                                </Alert>
+                                            )}
+                                            {/* Row 4: location · km away */}
+                                            {(comp.locationName || (userLocation && comp.gpxPointLat != null)) && !isEffectivelyCancelled(comp) && (
+                                                <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.5 }} flexWrap="wrap">
                                                     {comp.locationName && (
                                                         <>
                                                             <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
@@ -1797,14 +1805,8 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     )}
                                                 </Stack>
                                             )}
-                                            {/* Alert */}
-                                            {(comp.alertMessage || comp.alertMessageEn) && (
-                                                <Alert severity={(comp.alertSeverity as 'info' | 'success' | 'warning' | 'error') ?? 'info'} sx={{ mt: 0.75, borderRadius: 1.5, py: 0, alignItems: 'center', '& .MuiAlert-message': { py: 0.5 } }}>
-                                                    <Typography variant="body2">{loc(comp.alertMessage, comp.alertMessageEn)}</Typography>
-                                                </Alert>
-                                            )}
 
-                                            {/* Row 3: distances */}
+                                            {/* Row 5: distances */}
                                             {comp.distances && comp.distances.length > 0 && (
                                                 <Stack direction="row" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }} alignItems="center">
                                                     {groupDistances(comp.distances).map((d, i) => (
@@ -1840,9 +1842,10 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                 </Box>
                                             )}
 
-                                            {comp.description && (
-                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                                    {loc(comp.description, comp.descriptionEn)}
+                                            {/* Row 6: truncated description preview */}
+                                            {(comp.description || comp.descriptionEn) && (
+                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                                                    {truncateWords(loc(comp.description, comp.descriptionEn) ?? '', 20)}
                                                 </Typography>
                                             )}
                                             <Typography variant="caption" color="primary" sx={{ mt: 0.75, display: 'block', fontWeight: 500, textAlign: 'right' }}>
