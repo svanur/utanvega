@@ -110,6 +110,14 @@ export function getCountdownLabel(daysUntil: number | null, t: TFunc): string {
     return t('races.daysUntil', { count: daysUntil });
 }
 
+// Word-count truncation for card description previews — not character-based, so it doesn't cut
+// mid-word. Trailing whitespace from the split is trimmed before the ellipsis is appended.
+export function truncateWords(text: string, maxWords: number): string {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    if (words.length <= maxWords) return text;
+    return `${words.slice(0, maxWords).join(' ')}…`;
+}
+
 export function toDateOnlyString(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveCarouselSortDate, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveCarouselSortDate, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString, truncateWords } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -247,6 +247,29 @@ describe('getCountdownLabel', () => {
 
     it('returns races.daysUntil with the count for 5', () => {
         expect(getCountdownLabel(5, t)).toBe('races.daysUntil:{"count":5}');
+    });
+});
+
+describe('truncateWords', () => {
+    it('returns text unchanged when it has exactly maxWords words', () => {
+        const text = Array.from({ length: 20 }, (_, i) => `word${i}`).join(' ');
+        expect(truncateWords(text, 20)).toBe(text);
+    });
+
+    it('returns text unchanged when it has fewer than maxWords words', () => {
+        expect(truncateWords('short description here', 20)).toBe('short description here');
+    });
+
+    it('truncates to the first maxWords words and appends an ellipsis when over the limit', () => {
+        const words = Array.from({ length: 25 }, (_, i) => `word${i}`);
+        const text = words.join(' ');
+        expect(truncateWords(text, 20)).toBe(`${words.slice(0, 20).join(' ')}…`);
+    });
+
+    it('collapses extra whitespace between words when truncating', () => {
+        const words = Array.from({ length: 22 }, (_, i) => `word${i}`);
+        const text = words.join('   ');
+        expect(truncateWords(text, 20)).toBe(`${words.slice(0, 20).join(' ')}…`);
     });
 });
 
