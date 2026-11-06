@@ -354,6 +354,98 @@ public class NewsletterEndpointTests : IDisposable
         handlerMock.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
+    // #1667: TryArm's old cleanup path (Program.cs, pre-fix) was an unconditional
+    // cache.Remove(cooldownKey) — it had no way to tell "the marker I armed" from "whatever marker
+    // happens to be at this key right now". Request A arms, then its in-flight marker's 30s TTL
+    // elapses (fast-forwarded via FakeSystemClock, same mechanism as the #1659 test above) while A
+    // is still awaiting MailerLite. Request B for the *same* email then arms a fresh marker of its
+    // own and also starts awaiting MailerLite. When A finally fails and runs its failure-path
+    // cleanup, that cleanup must remove only the token A itself armed — not B's still-live marker —
+    // or B's in-flight protection (and the #1647/#1655 subscription-bombing guard it provides) is
+    // gone for the rest of B's round trip. A third request C, arriving while B is still in flight,
+    // proves which happened: it is short-circuited (no third call to MailerLite) only if B's marker
+    // survived A's cleanup.
+    [Fact]
+    public async Task Subscribe_DelayedFailureCleanupAfterMarkerExpiredAndReArmed_DoesNotClobberNewerMarker()
+    {
+        var fakeClock = new FakeSystemClock();
+        var callCount = 0;
+        var aStarted = new TaskCompletionSource<bool>();
+        var releaseA = new TaskCompletionSource<HttpResponseMessage>();
+        var bStarted = new TaskCompletionSource<bool>();
+        var releaseB = new TaskCompletionSource<HttpResponseMessage>();
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((_, _) =>
+            {
+                var callIndex = Interlocked.Increment(ref callCount);
+                if (callIndex == 1)
+                {
+                    aStarted.TrySetResult(true);
+                    return releaseA.Task;
+                }
+                if (callIndex == 2)
+                {
+                    bStarted.TrySetResult(true);
+                    return releaseB.Task;
+                }
+
+                // Only reached if the bug reopens the race and a third request reaches MailerLite —
+                // callCount below is what the assertions actually key off.
+                return Task.FromResult(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.Created,
+                    Content = new StringContent("{\"data\":{\"id\":\"1\"}}", Encoding.UTF8, "application/json"),
+                });
+            });
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object, services =>
+        {
+#pragma warning disable CS0618 // MemoryCacheOptions.Clock is obsolete in favor of TimeProvider, not yet available in this package version.
+            services.Configure<MemoryCacheOptions>(o => o.Clock = fakeClock);
+#pragma warning restore CS0618
+        });
+        const string email = "token-race@example.com";
+
+        var aTask = client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = email });
+        await aStarted.Task; // A has armed its own marker and reached MailerLite.
+
+        // Fast-forward past A's 30s in-flight TTL so its marker is now expired on the next lookup —
+        // the window #1667 describes: B is free to arm a fresh marker for the same email while A is
+        // still outstanding.
+        fakeClock.UtcNow += TimeSpan.FromSeconds(31);
+
+        var bTask = client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = email });
+        await bStarted.Task; // B armed its own (different) marker and reached MailerLite; A is still in flight too.
+
+        // A now fails. Program.cs's failure-path cleanup runs with the token A itself armed — not B's.
+        releaseA.SetResult(new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.Unauthorized,
+            Content = new StringContent("{\"message\":\"Invalid API key\"}", Encoding.UTF8, "application/json"),
+        });
+        var aResponse = await aTask;
+        Assert.True((int)aResponse.StatusCode >= 500 || (int)aResponse.StatusCode == 400);
+
+        // The crux of the fix: a third request for the same email, arriving while B is still in
+        // flight, must still be short-circuited — meaning A's cleanup did not clobber B's marker.
+        var cResponse = await client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = email });
+        Assert.Equal(HttpStatusCode.OK, cResponse.StatusCode);
+        Assert.Equal(2, callCount);
+
+        releaseB.SetResult(new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.Created,
+            Content = new StringContent("{\"data\":{\"id\":\"1\"}}", Encoding.UTF8, "application/json"),
+        });
+        var bResponse = await bTask;
+        Assert.Equal(HttpStatusCode.OK, bResponse.StatusCode);
+
+        handlerMock.Protected().Verify("SendAsync", Times.Exactly(2), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
     // Covers the "provider-error-logged-not-leaked" acceptance criterion at the HTTP layer: a
     // MailerLite failure unrelated to "already subscribed" (here, an invalid API key) must come back
     // as a generic problem response — the raw response body MailerLite actually sent must never

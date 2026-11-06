@@ -9,6 +9,10 @@ namespace Utanvega.Backend.Tests.Services;
 // (reference-counted lock entries, removed once the last waiter leaves) must preserve: the
 // dictionary does not grow with the number of distinct keys ever seen, and the atomic
 // check-and-arm guarantee from #1655 still holds for concurrent callers on the same key.
+//
+// #1667 adds TryRelease, a compare-and-remove counterpart to TryArm: a few unit-level tests below
+// cover it directly (the end-to-end "two concurrent subscribe requests" version of this race lives
+// in Endpoints/NewsletterEndpointTests.cs).
 public class NewsletterCooldownGateTests
 {
     private static IMemoryCache NewCache() => new MemoryCache(new MemoryCacheOptions());
@@ -23,7 +27,7 @@ public class NewsletterCooldownGateTests
         for (var i = 0; i < 500; i++)
         {
             var armed = NewsletterCooldownGate.TryArm(cache, $"cooldown-key-{i}", TimeSpan.FromMinutes(5));
-            Assert.True(armed);
+            Assert.NotNull(armed);
         }
 
         // Each call above both enters and fully exits its own critical section synchronously, with
@@ -43,8 +47,8 @@ public class NewsletterCooldownGateTests
         for (var i = 0; i < 50; i++)
         {
             var key = $"repeat-key-{i}";
-            Assert.True(NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5)));
-            Assert.False(NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5)));
+            Assert.NotNull(NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5)));
+            Assert.Null(NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5)));
         }
 
         Assert.Equal(0, NewsletterCooldownGate.LockCountForTests);
@@ -61,7 +65,7 @@ public class NewsletterCooldownGateTests
         const string key = "race-key";
         var barrier = new Barrier(2);
 
-        Func<Task<bool>> run = () => Task.Run(() =>
+        Func<Task<Guid?>> run = () => Task.Run(() =>
         {
             barrier.SignalAndWait();
             return NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5));
@@ -69,8 +73,8 @@ public class NewsletterCooldownGateTests
 
         var results = await Task.WhenAll(run(), run());
 
-        Assert.Equal(1, results.Count(r => r));
-        Assert.Equal(1, results.Count(r => !r));
+        Assert.Equal(1, results.Count(r => r is not null));
+        Assert.Equal(1, results.Count(r => r is null));
         // Both callers are done, neither left anything behind for this key.
         Assert.Equal(0, NewsletterCooldownGate.LockCountForTests);
     }
@@ -85,7 +89,7 @@ public class NewsletterCooldownGateTests
         const int keyCount = 20;
         const int callersPerKey = 10;
 
-        var tasks = new List<Task<bool>>();
+        var tasks = new List<Task<Guid?>>();
         foreach (var keyIndex in Enumerable.Range(0, keyCount))
         {
             var key = $"stress-key-{keyIndex}";
@@ -95,8 +99,62 @@ public class NewsletterCooldownGateTests
 
         var results = await Task.WhenAll(tasks);
 
-        Assert.Equal(keyCount, results.Count(r => r));
-        Assert.Equal(keyCount * (callersPerKey - 1), results.Count(r => !r));
+        Assert.Equal(keyCount, results.Count(r => r is not null));
+        Assert.Equal(keyCount * (callersPerKey - 1), results.Count(r => r is null));
+        Assert.Equal(0, NewsletterCooldownGate.LockCountForTests);
+    }
+
+    // #1667 acceptance criterion: releasing with the token this caller itself received removes the
+    // entry it armed.
+    [Fact]
+    public void TryRelease_TokenMatchesCurrentValue_RemovesEntry()
+    {
+        var cache = NewCache();
+        const string key = "release-match-key";
+        var token = NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5));
+        Assert.NotNull(token);
+
+        var released = NewsletterCooldownGate.TryRelease(cache, key, token.Value);
+
+        Assert.True(released);
+        Assert.False(cache.TryGetValue(key, out _));
+        Assert.Equal(0, NewsletterCooldownGate.LockCountForTests);
+    }
+
+    // #1667's actual fix: a caller releasing with a token that no longer matches what's in the
+    // cache — because the entry expired or was re-armed by a different request in the meantime —
+    // must not remove it. Simulated here directly (no need for the full concurrent-request
+    // choreography the endpoint-level test uses) by re-arming the key under a fresh token before
+    // releasing with the stale one.
+    [Fact]
+    public void TryRelease_TokenDoesNotMatchCurrentValue_LeavesEntryInPlace()
+    {
+        var cache = NewCache();
+        const string key = "release-mismatch-key";
+        var staleToken = NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5));
+        Assert.NotNull(staleToken);
+        cache.Remove(key); // stand in for the stale marker expiring/clearing before re-arm
+        var freshToken = NewsletterCooldownGate.TryArm(cache, key, TimeSpan.FromMinutes(5));
+        Assert.NotNull(freshToken);
+
+        var released = NewsletterCooldownGate.TryRelease(cache, key, staleToken.Value);
+
+        Assert.False(released);
+        Assert.True(cache.TryGetValue(key, out var current));
+        Assert.Equal(freshToken.Value, current);
+        Assert.Equal(0, NewsletterCooldownGate.LockCountForTests);
+    }
+
+    // Releasing a key that was never armed (or already fully released) must be a safe no-op, not
+    // throw or leave a stray lock entry behind.
+    [Fact]
+    public void TryRelease_KeyNotPresent_ReturnsFalseAndLeavesNoLockEntry()
+    {
+        var cache = NewCache();
+
+        var released = NewsletterCooldownGate.TryRelease(cache, "never-armed-key", Guid.NewGuid());
+
+        Assert.False(released);
         Assert.Equal(0, NewsletterCooldownGate.LockCountForTests);
     }
 }
