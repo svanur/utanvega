@@ -2573,14 +2573,16 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
         // Same shape as the real success path below — no new signal to probe for.
         return Results.Ok();
     }
-    cache.Set(cooldownKey, true, TimeSpan.FromMinutes(5));
-
     try
     {
         var result = await mailerLite.SubscribeAsync(req.Email);
         if (result.Outcome is Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.Subscribed
             or Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.AlreadySubscribed)
         {
+            // Only arm the cooldown once MailerLite has actually confirmed the subscription —
+            // setting it before this call would let a failed attempt masquerade as success on
+            // any retry within the cooldown window (see #1654).
+            cache.Set(cooldownKey, true, TimeSpan.FromMinutes(5));
             return Results.Ok();
         }
 
