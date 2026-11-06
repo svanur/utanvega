@@ -147,6 +147,42 @@ public class MailerLiteClientProviderTests
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.SubscribeAsync("someone@example.com"));
     }
 
+    // #1647: ErrorDetail ends up verbatim in server logs (Program.cs's
+    // logger.LogError("... {Detail}", result.ErrorDetail)), and MailerLite's error bodies commonly
+    // echo the submitted address back in their diagnostic text — so the submitted email must not
+    // survive into ErrorDetail, case-insensitively.
+    [Fact]
+    public async Task SubscribeAsync_FailureBodyContainsSubmittedEmail_RedactsItInErrorDetail()
+    {
+        const string email = "someone@example.com";
+        var handlerMock = MockHandlerReturning(
+            HttpStatusCode.UnprocessableEntity, $"{{\"message\":\"{email} is not a valid address.\"}}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync(email);
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+        Assert.NotNull(result.ErrorDetail);
+        Assert.DoesNotContain(email, result.ErrorDetail, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("[redacted]", result.ErrorDetail);
+        Assert.Contains("is not a valid address", result.ErrorDetail);
+    }
+
+    // Redaction is a targeted substring replace, not a blanket suppression: a failure body that
+    // never mentions the submitted email must be logged unchanged.
+    [Fact]
+    public async Task SubscribeAsync_FailureBodyWithoutSubmittedEmail_IsLoggedUnchanged()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Unauthorized, "{\"message\":\"Invalid API key.\"}");
+        var provider = BuildProvider(handlerMock.Object);
+
+        var result = await provider.SubscribeAsync("someone-else@example.com");
+
+        Assert.Equal(MailerLiteSubscribeOutcome.Failed, result.Outcome);
+        Assert.Contains("Invalid API key.", result.ErrorDetail);
+        Assert.DoesNotContain("[redacted]", result.ErrorDetail);
+    }
+
     [Fact]
     public async Task SubscribeAsync_ApiKeyNotConfigured_ReturnsFailedWithoutMakingAnHttpCall()
     {

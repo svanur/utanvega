@@ -2549,6 +2549,7 @@ app.MapPost("/api/v1/feedback", async (SubmitFeedbackRequest req, IMediator medi
 app.MapPost("/api/v1/newsletter/subscribe", async (
     NewsletterSubscribeRequest req,
     Utanvega.Backend.Infrastructure.Newsletter.MailerLiteClientProvider mailerLite,
+    IMemoryCache cache,
     ILogger<Program> logger) =>
 {
     if (string.IsNullOrWhiteSpace(req.Email))
@@ -2559,6 +2560,20 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
         return Results.BadRequest("Email is too long.");
     try { _ = new System.Net.Mail.MailAddress(req.Email); }
     catch { return Results.BadRequest("Email format is invalid."); }
+
+    // Per-email cooldown, independent of and on top of the per-IP "newsletter-subscribe" rate
+    // limit above: MailerLite's double opt-in means every accepted submission sends a
+    // confirmation email to the submitted address, so repeating the same address from rotating
+    // IPs could otherwise spam a third party ("subscription bombing" — see #1647). Keyed on the
+    // normalized address so case/whitespace variants of the same email collapse to one entry.
+    var normalizedEmail = req.Email.Trim().ToLowerInvariant();
+    var cooldownKey = $"newsletter-subscribe-cooldown:{normalizedEmail}";
+    if (cache.TryGetValue(cooldownKey, out _))
+    {
+        // Same shape as the real success path below — no new signal to probe for.
+        return Results.Ok();
+    }
+    cache.Set(cooldownKey, true, TimeSpan.FromMinutes(5));
 
     try
     {
