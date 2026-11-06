@@ -21,7 +21,7 @@ import { initReactI18next } from 'react-i18next';
 import en from '../i18n/en.json';
 import { createAppTheme } from '../theme';
 import type { EventDetail, EventEditionDto, RaceDto } from '../hooks/useEvents';
-import type { EventClimate } from '../hooks/useTrails';
+import type { EventClimate, TrailWeather } from '../hooks/useTrails';
 
 // Mirrors RacesPage.test.tsx:20-24 — vitest.config.ts doesn't set `globals: true`, so RTL's
 // automatic afterEach(cleanup) never registers.
@@ -59,8 +59,13 @@ const { mockClimateResult } = vi.hoisted(() => ({
 const { mockTrails } = vi.hoisted(() => ({
     mockTrails: { current: [] as import('../hooks/useTrails').Trail[] },
 }));
+// #1670: defaults to the old hardcoded { weather: null, loading: false, error: null } so every
+// pre-existing test above is unaffected; only the #1670 live-forecast-swap suite below overrides it.
+const { mockWeatherResult } = vi.hoisted(() => ({
+    mockWeatherResult: { current: { weather: null as import('../hooks/useTrails').TrailWeather | null, loading: false, error: null as string | null } },
+}));
 vi.mock('../hooks/useTrails', () => ({
-    useTrailWeather: () => ({ weather: null, loading: false, error: null }),
+    useTrailWeather: () => mockWeatherResult.current,
     useEventClimate: () => mockClimateResult.current,
     useTrailsBySlugs: () => ({ trails: mockTrails.current, loading: false, error: null }),
     // SendTipButton (rendered unconditionally at CompetitionDetailPage.tsx:1276) imports API_URL
@@ -77,17 +82,24 @@ vi.mock('../hooks/useLocations', () => ({
     useLocations: () => ({ locations: [], loading: false, error: null }),
 }));
 
-// Only climate_normals needs to read true to reach the ClimateCard section; every other flag
+// Only climate_normals reads true by default, reaching the ClimateCard section; every other flag
 // (share_trail, calendar_integration, directions_to_trailhead, tool_trail_predictor,
-// locations_page, ...) defaults false here, which is also what keeps the rest of the page's
-// optional sections — irrelevant to #1299/#1438 — from rendering at all.
+// locations_page, event_weather_forecast, ...) defaults false here, which is also what keeps the
+// rest of the page's optional sections — irrelevant to #1299/#1438 — from rendering at all.
+// #1670: mockEnabledFlags is a mutable Set (not a hardcoded name check) so the live-forecast-swap
+// suite below can flip event_weather_forecast on per-test without touching every other flag's
+// default-false behavior the rest of this file already relies on.
+const { mockEnabledFlags } = vi.hoisted(() => ({
+    mockEnabledFlags: { current: new Set<string>(['climate_normals']) },
+}));
 vi.mock('../hooks/useFeatureFlags', () => ({
-    useFeatureFlags: () => ({ flags: {}, loaded: true, isEnabled: (name: string) => name === 'climate_normals' }),
+    useFeatureFlags: () => ({ flags: {}, loaded: true, isEnabled: (name: string) => mockEnabledFlags.current.has(name) }),
 }));
 
-const { trailMapViewMock, climateCardMock, eventTrailLegendMock } = vi.hoisted(() => ({
+const { trailMapViewMock, climateCardMock, weatherCardMock, eventTrailLegendMock } = vi.hoisted(() => ({
     trailMapViewMock: vi.fn(),
     climateCardMock: vi.fn(),
+    weatherCardMock: vi.fn(),
     eventTrailLegendMock: vi.fn(),
 }));
 vi.mock('../components/TrailMapView', () => ({
@@ -95,6 +107,9 @@ vi.mock('../components/TrailMapView', () => ({
 }));
 vi.mock('../components/ClimateCard', () => ({
     default: (props: unknown) => { climateCardMock(props); return null; },
+}));
+vi.mock('../components/WeatherCard', () => ({
+    default: (props: unknown) => { weatherCardMock(props); return null; },
 }));
 // #1585: captures the `entries` prop CompetitionDetailPage builds, rather than asserting on
 // EventTrailLegend's own rendering (unchanged, already covered by its own render — it just
@@ -162,6 +177,41 @@ function makeEvent(overrides: Partial<EventDetail> = {}): EventDetail {
         editions: [],
         ...overrides,
     };
+}
+
+// #1670: minimal TrailWeather fixture for the live-forecast-swap suite below — only the fields
+// WeatherCard's props/raceDate wiring actually touches at the mocked (prop-capture) level matter
+// here; WeatherCard's own internal rendering (daily highlight, hourly strip, etc.) is covered
+// directly by WeatherCard.test.tsx instead.
+function makeWeather(overrides: Partial<TrailWeather> = {}): TrailWeather {
+    return {
+        current: {
+            latitude: 64.25,
+            longitude: -21.13,
+            elevation: 50,
+            temperature: 8,
+            apparentTemperature: 6,
+            windSpeed: 4,
+            windGusts: 7,
+            precipitation: 0,
+            weatherCode: 1,
+            cloudCover: 30,
+            label: 'Trailhead',
+        },
+        hourly: [],
+        daily: [],
+        summit: null,
+        condition: 'Good',
+        ...overrides,
+    };
+}
+
+// Offsets from "today" the same way #1533's checklist suite does — dynamic rather than a fixed
+// literal date, so these tests don't bit-rot as the system clock moves forward.
+function dateOffsetFromToday(days: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
 }
 
 function makeClimate(overrides: Partial<EventClimate> = {}): EventClimate {
@@ -295,9 +345,12 @@ function renderCompetitionDetailPage(event: EventDetail) {
 beforeEach(() => {
     trailMapViewMock.mockClear();
     climateCardMock.mockClear();
+    weatherCardMock.mockClear();
     eventTrailLegendMock.mockClear();
     mockClimateResult.current = { climate: null, loading: false, error: null };
     mockTrails.current = [];
+    mockWeatherResult.current = { weather: null, loading: false, error: null };
+    mockEnabledFlags.current = new Set(['climate_normals']);
 });
 
 // #1299: PR #1298 removed CompetitionDetailPage's own `userLocation` state and the
@@ -675,5 +728,110 @@ describe('CompetitionDetailPage register button vs sold-out races (#1587)', () =
         renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
 
         expect(screen.getByText('Register')).not.toBeNull();
+    });
+});
+
+// #1670: WeatherCard mounts in ClimateCard's exact slot (same Box sx={{ mt: 3 }}) once the
+// event_weather_forecast flag is on, the (Series-aware) race date is within 7 days, and the
+// existing useTrailWeather result has resolved — otherwise ClimateCard renders exactly as before.
+// Never both, never neither.
+describe('CompetitionDetailPage live forecast swap (#1670)', () => {
+    it('shows ClimateCard, not WeatherCard, when event_weather_forecast is off (regression guard) even with daysUntil and weather both in range', () => {
+        mockWeatherResult.current = { weather: makeWeather(), loading: false, error: null };
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
+        // mockEnabledFlags defaults to climate_normals only (set in beforeEach) — event_weather_forecast stays off.
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: dateOffsetFromToday(3), nextEditionDate: dateOffsetFromToday(3), daysUntil: 3 }));
+
+        expect(climateCardMock).toHaveBeenCalled();
+        expect(weatherCardMock).not.toHaveBeenCalled();
+    });
+
+    it('shows WeatherCard, not ClimateCard, when the flag is on, daysUntil is within 0-7, and weather has resolved', () => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'event_weather_forecast']);
+        mockWeatherResult.current = { weather: makeWeather(), loading: false, error: null };
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
+        const raceDate = dateOffsetFromToday(3);
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 3 }));
+
+        expect(weatherCardMock).toHaveBeenCalled();
+        expect(climateCardMock).not.toHaveBeenCalled();
+        const props = weatherCardMock.mock.calls.at(-1)![0] as { raceDate: unknown };
+        expect(props.raceDate).toBe(raceDate);
+    });
+
+    it('still shows ClimateCard when the flag is on and weather is within range but daysUntil is outside 0-7', () => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'event_weather_forecast']);
+        mockWeatherResult.current = { weather: makeWeather(), loading: false, error: null };
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
+        const raceDate = dateOffsetFromToday(14);
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 14 }));
+
+        expect(climateCardMock).toHaveBeenCalled();
+        expect(weatherCardMock).not.toHaveBeenCalled();
+    });
+
+    it('still shows ClimateCard when the flag is on and daysUntil is within range but weather never resolved (no trail in the fallback chain)', () => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'event_weather_forecast']);
+        mockWeatherResult.current = { weather: null, loading: false, error: null };
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
+        const raceDate = dateOffsetFromToday(3);
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 3 }));
+
+        expect(climateCardMock).toHaveBeenCalled();
+        expect(weatherCardMock).not.toHaveBeenCalled();
+    });
+
+    // A Series event's own event.daysUntil/displayDate/nextEditionDate are pinned to the season's
+    // *first* race (stale for the rest of the season, see climateTarget's comment at
+    // CompetitionDetailPage.tsx:550-556) — this leg is mid-season: its first race was 30 days ago,
+    // its next leg is 3 days away. The swap (and raceDate) must key off that next leg's own date,
+    // resolved the same Series-aware way climateTarget already does, not off nextRaceDate or the
+    // stale event-level fields.
+    it('keys the swap and raceDate off a Series event\'s next upcoming leg, not its season-start fields', () => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'event_weather_forecast']);
+        mockWeatherResult.current = { weather: makeWeather(), loading: false, error: null };
+        mockClimateResult.current = { climate: makeClimate(), loading: false, error: null };
+        const firstLegDate = dateOffsetFromToday(-30);
+        const nextLegDate = dateOffsetFromToday(3);
+        const edition = makeEdition({
+            races: [
+                makeRace({ id: 'race-first', dateOfRace: firstLegDate }),
+                makeRace({ id: 'race-next', dateOfRace: nextLegDate }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({
+            type: 'Series',
+            displayDate: firstLegDate,
+            nextEditionDate: firstLegDate,
+            daysUntil: 0,
+            editions: [edition],
+        }));
+
+        expect(weatherCardMock).toHaveBeenCalled();
+        expect(climateCardMock).not.toHaveBeenCalled();
+        const props = weatherCardMock.mock.calls.at(-1)![0] as { raceDate: unknown };
+        expect(props.raceDate).toBe(nextLegDate);
+    });
+
+    // Checklist weather line (CompetitionDetailPage.tsx:1087-1092) reads the same weather/
+    // weatherLoading state the swap above now also feeds — unchanged by this feature, regardless
+    // of whether the flag is on or the swap fires.
+    it('leaves the checklist weather line reading the same weather/weatherLoading state regardless of the flag', () => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'event_weather_forecast']);
+        mockWeatherResult.current = {
+            weather: makeWeather({ current: { ...makeWeather().current, temperature: 11.6, windSpeed: 5.4 } }),
+            loading: false,
+            error: null,
+        };
+        const raceDate = dateOffsetFromToday(3);
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Race', displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 3 }));
+
+        expect(screen.getByText('Current snapshot: 12 °C and 5 m/s wind.')).not.toBeNull();
     });
 });

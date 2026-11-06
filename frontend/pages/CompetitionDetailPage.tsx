@@ -65,6 +65,7 @@ import Layout from '../components/Layout';
 import RunningLoader from '../components/RunningLoader';
 import LostRunner from '../components/LostRunner';
 import ClimateCard from '../components/ClimateCard';
+import WeatherCard from '../components/WeatherCard';
 import GalleryLinks from '../components/GalleryLinks';
 import GalleryCompact from '../components/GalleryCompact';
 import LinkifiedText from '../components/LinkifiedText';
@@ -96,7 +97,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday, daysBetween } from '../utils/eventUtils';
 import { getTicketStatusColor, isAllSoldOut, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -538,7 +539,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
             ?? undefined;
     }, [event, primaryEdition, visibleRaces]);
 
-    const { weather, loading: weatherLoading } = useTrailWeather(weatherTrailSlug);
+    const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
 
     // #1335: climate is event data, not trail data — the backend resolves the coordinate from the
     // event's own GpxPointLat/Lng, falling back to its Location, so this needs only the event's
@@ -553,21 +554,37 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // season is "ongoing" (e.g. Powerade Vetrarhlaupin's whole Oct-Mar span), the same staleness
     // computeRaceDayFlags above already works around — so climate would otherwise show October's
     // normals in February. Use the specific current/next individual race's own date instead.
-    const climateTarget = useMemo(() => {
-        const dateStr = event?.type === 'Series'
+    // #1670: shared between climateTarget (month/day, below) and the live-forecast swap further
+    // down (full date string, for raceDate and its own daysUntil gate) — the Series branch must
+    // only be computed once, not re-derived separately by each consumer.
+    const raceDateStr = useMemo(() => (
+        event?.type === 'Series'
             ? resolveSeriesClimateDate(seriesRaceDates)
-            : (event?.displayDate ?? event?.nextEditionDate);
-        if (!dateStr) return null;
-        const date = new Date(dateStr + 'T00:00:00');
+            : (event?.displayDate ?? event?.nextEditionDate ?? null)
+    ), [event, seriesRaceDates]);
+
+    const climateTarget = useMemo(() => {
+        if (!raceDateStr) return null;
+        const date = new Date(raceDateStr + 'T00:00:00');
         if (Number.isNaN(date.getTime())) return null;
         return { month: date.getMonth() + 1, day: date.getDate() };
-    }, [event, seriesRaceDates]);
+    }, [raceDateStr]);
 
     const { climate, loading: climateLoading, error: climateError } = useEventClimate(
         climateEventSlug,
         climateTarget?.month,
         climateTarget?.day,
     );
+
+    // #1670: live forecast only ever makes sense this close to the event — Open-Meteo's own
+    // forecast horizon is 7 days (GetTrailWeatherQuery.cs) — and must use the same Series-aware
+    // date raceDateStr already resolves above, not event.daysUntil (pinned to 0 for a Series
+    // event's whole season, per computeRaceDayFlags) or nextRaceDate (stale mid-season for the
+    // same reason climateTarget's comment explains).
+    const weatherDaysUntil = raceDateStr ? daysBetween(raceDateStr) : null;
+    const showWeatherForecast = isEnabled('event_weather_forecast')
+        && weatherDaysUntil !== null && weatherDaysUntil >= 0 && weatherDaysUntil <= 7
+        && !weatherLoading && !!weather;
 
     // Collects every distinct trail referenced by the current edition — mirroring weatherTrailSlug's
     // fallback tiers above (edition-level trailSlug, then primaryEdition's races, then the broader
@@ -1240,23 +1257,38 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                     </Box>
                 )}
 
-                {/* Mount whenever loading, data arrived, or the backend came back with neither
-                    data nor an error (#1355) — that's the "no usable climate data" case,
-                    which ClimateCard renders as an explicit unavailable message rather than
-                    nothing. A real fetch error still suppresses the card, same as before.
-                    #1460: the backend only ever resolves climate from event.Location.Center now
-                    (no GPS-pin fallback, no point-to-point split), so an event with no linked
-                    Location can never produce usable climate data — event?.locationName gates the
-                    card out entirely for that case rather than mounting it to show "unavailable". */}
-                {isEnabled('climate_normals') && climateEventSlug && climateTarget && event?.locationName && (climateLoading || climate || !climateError) && (
+                {/* #1670: within 7 days of the (Series-aware) race date, with a resolvable live
+                    forecast and the flag on, WeatherCard replaces ClimateCard outright at this
+                    same mount point — never both, never neither. Outside that window, or with no
+                    resolvable forecast, or the flag off, ClimateCard renders exactly as before. */}
+                {showWeatherForecast ? (
                     <Box sx={{ mt: 3 }}>
-                        <ClimateCard
-                            climate={climate}
-                            loading={climateLoading}
-                            error={climateError}
-                            locationName={event?.locationName}
+                        <WeatherCard
+                            weather={weather}
+                            loading={weatherLoading}
+                            error={weatherError}
+                            raceDate={raceDateStr}
                         />
                     </Box>
+                ) : (
+                    /* Mount whenever loading, data arrived, or the backend came back with neither
+                        data nor an error (#1355) — that's the "no usable climate data" case,
+                        which ClimateCard renders as an explicit unavailable message rather than
+                        nothing. A real fetch error still suppresses the card, same as before.
+                        #1460: the backend only ever resolves climate from event.Location.Center now
+                        (no GPS-pin fallback, no point-to-point split), so an event with no linked
+                        Location can never produce usable climate data — event?.locationName gates the
+                        card out entirely for that case rather than mounting it to show "unavailable". */
+                    isEnabled('climate_normals') && climateEventSlug && climateTarget && event?.locationName && (climateLoading || climate || !climateError) && (
+                        <Box sx={{ mt: 3 }}>
+                            <ClimateCard
+                                climate={climate}
+                                loading={climateLoading}
+                                error={climateError}
+                                locationName={event?.locationName}
+                            />
+                        </Box>
+                    )
                 )}
 
                 {pastEditions.length > 0 && (
