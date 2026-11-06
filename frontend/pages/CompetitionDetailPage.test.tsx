@@ -61,11 +61,16 @@ const { mockTrails } = vi.hoisted(() => ({
 }));
 // #1670: defaults to the old hardcoded { weather: null, loading: false, error: null } so every
 // pre-existing test above is unaffected; only the #1670 live-forecast-swap suite below overrides it.
-const { mockWeatherResult } = vi.hoisted(() => ({
+const { mockWeatherResult, useTrailWeatherMock } = vi.hoisted(() => ({
     mockWeatherResult: { current: { weather: null as import('../hooks/useTrails').TrailWeather | null, loading: false, error: null as string | null } },
+    // #1678: wraps the hook in a vi.fn() so the weatherTrailSlug gate tests below can assert on
+    // the slug argument itself (a string = gate open; undefined = gate closed) — the return value
+    // (mockWeatherResult.current) is untouched, so every pre-existing test that only cares about
+    // weather/loading/error keeps working unchanged.
+    useTrailWeatherMock: vi.fn((_slug: string | undefined) => mockWeatherResult.current),
 }));
 vi.mock('../hooks/useTrails', () => ({
-    useTrailWeather: () => mockWeatherResult.current,
+    useTrailWeather: useTrailWeatherMock,
     useEventClimate: () => mockClimateResult.current,
     useTrailsBySlugs: () => ({ trails: mockTrails.current, loading: false, error: null }),
     // SendTipButton (rendered unconditionally at CompetitionDetailPage.tsx:1276) imports API_URL
@@ -347,6 +352,7 @@ beforeEach(() => {
     climateCardMock.mockClear();
     weatherCardMock.mockClear();
     eventTrailLegendMock.mockClear();
+    useTrailWeatherMock.mockClear();
     mockClimateResult.current = { climate: null, loading: false, error: null };
     mockTrails.current = [];
     mockWeatherResult.current = { weather: null, loading: false, error: null };
@@ -833,6 +839,106 @@ describe('CompetitionDetailPage live forecast swap (#1670)', () => {
         renderCompetitionDetailPage(makeEvent({ type: 'Race', displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 3 }));
 
         expect(screen.getByText('Current snapshot: 12 °C and 5 m/s wind.')).not.toBeNull();
+    });
+});
+
+// #1678: weatherTrailSlug's own 7-day gate used to read raw event.daysUntil — pinned to 0 for a
+// Series event's whole season (see seriesRaceDates' comment above) — so it stayed open the entire
+// season instead of closing outside 7 days of the next individual leg. It must now read the same
+// Series-aware weatherDaysUntil (derived from raceDateStr) the #1670 live-forecast swap above
+// already uses. Asserts on the slug argument useTrailWeather is actually called with, via
+// useTrailWeatherMock, rather than on WeatherCard/ClimateCard (which also depend on weather having
+// resolved and the feature flag — neither relevant to this gate itself).
+describe('CompetitionDetailPage weatherTrailSlug gate (#1678)', () => {
+    it('Single event: still passes a slug when within 0-7 days (gate unchanged)', () => {
+        const raceDate = dateOffsetFromToday(3);
+        const edition = makeEdition({ date: raceDate, trailSlug: 'midnight-sun-10k' });
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 3, editions: [edition] }));
+
+        expect(useTrailWeatherMock).toHaveBeenCalled();
+        expect(useTrailWeatherMock.mock.calls.at(-1)![0]).toBe('midnight-sun-10k');
+    });
+
+    it('Single event: still passes undefined outside 0-7 days (gate unchanged)', () => {
+        const raceDate = dateOffsetFromToday(10);
+        const edition = makeEdition({ date: raceDate, trailSlug: 'midnight-sun-10k' });
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 10, editions: [edition] }));
+
+        expect(useTrailWeatherMock).toHaveBeenCalled();
+        expect(useTrailWeatherMock.mock.calls.at(-1)![0]).toBeUndefined();
+    });
+
+    // Mirrors the #1670 mid-season fixture: a Series event's own daysUntil/displayDate/
+    // nextEditionDate stay pinned to the season's first race (30 days ago), while the next leg is
+    // 20 days away — still outside the 7-day forecast horizon. The old event.daysUntil-based gate
+    // would have stayed open the whole season (daysUntil pinned to 0); this must close it.
+    it('Series event mid-season, next leg more than 7 days out: passes undefined (gate closed)', () => {
+        const firstLegDate = dateOffsetFromToday(-30);
+        const nextLegDate = dateOffsetFromToday(20);
+        const edition = makeEdition({
+            trailSlug: 'season-trail',
+            races: [
+                makeRace({ id: 'race-first', dateOfRace: firstLegDate }),
+                makeRace({ id: 'race-next', dateOfRace: nextLegDate }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({
+            type: 'Series',
+            displayDate: firstLegDate,
+            nextEditionDate: firstLegDate,
+            daysUntil: 0,
+            editions: [edition],
+        }));
+
+        expect(useTrailWeatherMock).toHaveBeenCalled();
+        expect(useTrailWeatherMock.mock.calls.at(-1)![0]).toBeUndefined();
+    });
+
+    // Same season-start staleness, but the next leg is now 3 days out — inside the forecast
+    // horizon. The gate must open keyed off that next leg's own date, not the season-start fields
+    // event.daysUntil/displayDate/nextEditionDate are pinned to.
+    it('Series event within 7 days of its next leg: passes a slug (gate open), keyed off the next leg', () => {
+        const firstLegDate = dateOffsetFromToday(-30);
+        const nextLegDate = dateOffsetFromToday(3);
+        const edition = makeEdition({
+            trailSlug: 'season-trail',
+            races: [
+                makeRace({ id: 'race-first', dateOfRace: firstLegDate }),
+                makeRace({ id: 'race-next', dateOfRace: nextLegDate }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({
+            type: 'Series',
+            displayDate: firstLegDate,
+            nextEditionDate: firstLegDate,
+            daysUntil: 0,
+            editions: [edition],
+        }));
+
+        expect(useTrailWeatherMock).toHaveBeenCalled();
+        expect(useTrailWeatherMock.mock.calls.at(-1)![0]).toBe('season-trail');
+    });
+
+    // Gate open (daysUntil 3, in range) but the edition itself has no trailSlug — exercises the
+    // second fallback tier (a race's own trailSlug) to prove the resolution chain itself
+    // (unchanged by this issue — only the daysUntil comparison moved) still works once the gate
+    // reads weatherDaysUntil instead of event.daysUntil.
+    it('falls back to a race-level trailSlug when the edition itself has none, with the gate open', () => {
+        const raceDate = dateOffsetFromToday(3);
+        const edition = makeEdition({
+            date: raceDate,
+            trailSlug: null,
+            races: [makeRace({ trailSlug: 'race-level-trail' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ displayDate: raceDate, nextEditionDate: raceDate, daysUntil: 3, editions: [edition] }));
+
+        expect(useTrailWeatherMock).toHaveBeenCalled();
+        expect(useTrailWeatherMock.mock.calls.at(-1)![0]).toBe('race-level-trail');
     });
 });
 

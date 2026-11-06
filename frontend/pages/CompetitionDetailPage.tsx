@@ -539,13 +539,42 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     const nextRaceDate = primaryEdition?.date ?? event?.nextEditionDate ?? null;
 
+    // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
+    // ScheduleRule client-side (that's the backend's job). For a Series event, displayDate/
+    // nextEditionDate is the season's min(raceDates) — its *first* race — for as long as the
+    // season is "ongoing" (e.g. Powerade Vetrarhlaupin's whole Oct-Mar span), the same staleness
+    // computeRaceDayFlags above already works around — so climate would otherwise show October's
+    // normals in February. Use the specific current/next individual race's own date instead.
+    // #1670/#1678: shared across three consumers below — climateTarget (month/day), the
+    // weatherTrailSlug 7-day gate, and the live-forecast swap's own daysUntil gate (weatherDaysUntil,
+    // full date string) — the Series branch must only be computed once, not re-derived separately
+    // by each consumer. Hoisted above weatherTrailSlug (rather than left where #1670 computed it,
+    // right before climateTarget) specifically so weatherTrailSlug can consume it too.
+    const raceDateStr = useMemo(() => (
+        event?.type === 'Series'
+            ? resolveSeriesClimateDate(seriesRaceDates)
+            : (event?.displayDate ?? event?.nextEditionDate ?? null)
+    ), [event, seriesRaceDates]);
+
+    // #1678: weatherDaysUntil is hoisted alongside raceDateStr (rather than computed inline both
+    // here and again next to showWeatherForecast, as #1670 originally left it) so weatherTrailSlug
+    // and showWeatherForecast share one Series-aware daysUntil instead of weatherTrailSlug drifting
+    // back to event.daysUntil — which stays pinned to 0 for a Series event's whole season
+    // (computeRaceDayFlags) and would keep this gate open all season instead of closing it outside
+    // 7 days of the next individual leg.
+    const weatherDaysUntil = raceDateStr ? daysBetween(raceDateStr) : null;
+
+    // #1678: gated on weatherDaysUntil (raceDateStr-derived), not event.daysUntil — see the
+    // weatherDaysUntil comment above for why event.daysUntil is unusable here for a Series event.
+    // Fallback chain (edition's own trailSlug → primaryEdition's races → any visible race) is
+    // unchanged from #1252/#1670 — only the daysUntil comparison moved.
     const weatherTrailSlug = useMemo(() => {
-        if (!event || event.daysUntil === null || event.daysUntil > 7 || event.daysUntil < 0) return undefined;
+        if (weatherDaysUntil === null || weatherDaysUntil > 7 || weatherDaysUntil < 0) return undefined;
         return primaryEdition?.trailSlug
             ?? primaryEdition?.visibleRaces.find(race => race.trailSlug)?.trailSlug
             ?? visibleRaces.find(race => race.trailSlug)?.trailSlug
             ?? undefined;
-    }, [event, primaryEdition, visibleRaces]);
+    }, [weatherDaysUntil, primaryEdition, visibleRaces]);
 
     const { weather, loading: weatherLoading, error: weatherError } = useTrailWeather(weatherTrailSlug);
 
@@ -555,21 +584,6 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     // attached trail at all. Historical averages are also useful at any distance from the event
     // date, unlike a live forecast, so there's no daysUntil gate either.
     const climateEventSlug = event?.slug;
-
-    // Derived from the already-resolved displayDate/nextEditionDate — never re-interpreted from
-    // ScheduleRule client-side (that's the backend's job). For a Series event, displayDate/
-    // nextEditionDate is the season's min(raceDates) — its *first* race — for as long as the
-    // season is "ongoing" (e.g. Powerade Vetrarhlaupin's whole Oct-Mar span), the same staleness
-    // computeRaceDayFlags above already works around — so climate would otherwise show October's
-    // normals in February. Use the specific current/next individual race's own date instead.
-    // #1670: shared between climateTarget (month/day, below) and the live-forecast swap further
-    // down (full date string, for raceDate and its own daysUntil gate) — the Series branch must
-    // only be computed once, not re-derived separately by each consumer.
-    const raceDateStr = useMemo(() => (
-        event?.type === 'Series'
-            ? resolveSeriesClimateDate(seriesRaceDates)
-            : (event?.displayDate ?? event?.nextEditionDate ?? null)
-    ), [event, seriesRaceDates]);
 
     const climateTarget = useMemo(() => {
         if (!raceDateStr) return null;
@@ -586,10 +600,10 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
 
     // #1670: live forecast only ever makes sense this close to the event — Open-Meteo's own
     // forecast horizon is 7 days (GetTrailWeatherQuery.cs) — and must use the same Series-aware
-    // date raceDateStr already resolves above, not event.daysUntil (pinned to 0 for a Series
-    // event's whole season, per computeRaceDayFlags) or nextRaceDate (stale mid-season for the
-    // same reason climateTarget's comment explains).
-    const weatherDaysUntil = raceDateStr ? daysBetween(raceDateStr) : null;
+    // weatherDaysUntil (derived from raceDateStr, hoisted above) that weatherTrailSlug's gate now
+    // also shares, not event.daysUntil (pinned to 0 for a Series event's whole season, per
+    // computeRaceDayFlags) or nextRaceDate (stale mid-season for the same reason climateTarget's
+    // comment explains).
     const showWeatherForecast = isEnabled('event_weather_forecast')
         && weatherDaysUntil !== null && weatherDaysUntil >= 0 && weatherDaysUntil <= 7
         && !weatherLoading && !!weather;
