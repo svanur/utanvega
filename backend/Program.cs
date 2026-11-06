@@ -2587,7 +2587,8 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
     // configured Timeout (builder.Services.AddHttpClient("MailerLite") above, 20s, #1659) — a
     // marker that could expire while SubscribeAsync is still outstanding would reopen the exact
     // race this in-flight marker exists to close.
-    if (!Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryArm(cache, cooldownKey, TimeSpan.FromSeconds(30)))
+    var armToken = Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryArm(cache, cooldownKey, TimeSpan.FromSeconds(30));
+    if (armToken is null)
     {
         // Same shape as the real success path below — no new signal to probe for.
         return Results.Ok();
@@ -2602,14 +2603,19 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
             return Results.Ok();
         }
 
-        // ErrorDetail may carry MailerLite's raw response body — log it, never return it.
-        cache.Remove(cooldownKey);
+        // ErrorDetail may carry MailerLite's raw response body — log it, never return it. Release
+        // only the marker this request itself armed: if it already expired or was re-armed/promoted
+        // by a different request for the same (normalized) email while this one was in flight, an
+        // unconditional cache.Remove(cooldownKey) here would delete that other request's marker
+        // instead, reopening the #1647/#1655 race (#1667).
+        Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryRelease(cache, cooldownKey, armToken.Value);
         logger.LogError("Failed to subscribe to newsletter via MailerLite: {Detail}", result.ErrorDetail);
         return Results.Problem("Failed to subscribe. Please try again later.");
     }
     catch (Exception ex)
     {
-        cache.Remove(cooldownKey);
+        // Same compare-and-remove rationale as the failure branch above — see #1667.
+        Utanvega.Backend.Infrastructure.Newsletter.NewsletterCooldownGate.TryRelease(cache, cooldownKey, armToken.Value);
         logger.LogError(ex, "Failed to subscribe to newsletter via MailerLite");
         return Results.Problem("Failed to subscribe. Please try again later.");
     }

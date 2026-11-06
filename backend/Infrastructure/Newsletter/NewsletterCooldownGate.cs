@@ -34,12 +34,57 @@ public static class NewsletterCooldownGate
 
     /// <summary>
     /// Atomically checks whether <paramref name="key"/> is already present in <paramref name="cache"/>
-    /// and, if not, sets it (value <c>true</c>, expiring after <paramref name="ttl"/>) within the
-    /// same critical section. Returns <c>true</c> if this call armed the marker — the key was not
-    /// already present — or <c>false</c> if the key was already present, meaning the caller is
-    /// inside an existing cooldown/in-flight window and must not proceed.
+    /// and, if not, sets it (a freshly minted <see cref="Guid"/> token, expiring after
+    /// <paramref name="ttl"/>) within the same critical section. Returns that token if this call
+    /// armed the marker — the key was not already present — or <c>null</c> if the key was already
+    /// present, meaning the caller is inside an existing cooldown/in-flight window and must not
+    /// proceed.
+    /// <para>
+    /// The token exists so a caller's own cleanup can later prove it is removing the marker it
+    /// itself armed, not some other request's — see <see cref="TryRelease"/>. Before #1667, cleanup
+    /// was an unconditional <c>cache.Remove(key)</c>: if this marker expired or was legitimately
+    /// promoted/replaced while this caller was still awaiting MailerLite, that unconditional remove
+    /// could delete a different, still-in-flight request's marker for the same key, reopening the
+    /// #1647/#1655 subscription-bombing window.
+    /// </para>
     /// </summary>
-    public static bool TryArm(IMemoryCache cache, string key, TimeSpan ttl)
+    public static Guid? TryArm(IMemoryCache cache, string key, TimeSpan ttl) =>
+        WithKeyLock(key, () =>
+        {
+            if (cache.TryGetValue(key, out _))
+                return (Guid?)null;
+
+            var token = Guid.NewGuid();
+            cache.Set(key, token, ttl);
+            return token;
+        });
+
+    /// <summary>
+    /// Compare-and-remove counterpart to <see cref="TryArm"/>: removes <paramref name="key"/> from
+    /// <paramref name="cache"/> only if its current value is still exactly <paramref name="token"/> —
+    /// the token this same caller received from the <see cref="TryArm"/> call it is now cleaning up
+    /// after. If the entry has since expired, been released, or been re-armed/promoted by another
+    /// request, its current value will not match and this is a no-op, leaving that other request's
+    /// marker intact (#1667). Takes the same per-key lock as <see cref="TryArm"/> so a release and a
+    /// concurrent re-arm of the same key can never race each other.
+    /// </summary>
+    /// <returns><c>true</c> if the entry was removed, <c>false</c> if it was left alone.</returns>
+    public static bool TryRelease(IMemoryCache cache, string key, Guid token) =>
+        WithKeyLock(key, () =>
+        {
+            if (!cache.TryGetValue(key, out var current) || current is not Guid currentToken || currentToken != token)
+                return false;
+
+            cache.Remove(key);
+            return true;
+        });
+
+    /// <summary>
+    /// Shared critical-section plumbing for <see cref="TryArm"/> and <see cref="TryRelease"/>: takes
+    /// the reference-counted per-key lock (#1666), runs <paramref name="criticalSection"/> while
+    /// holding it, and releases/retires the lock entry afterward.
+    /// </summary>
+    private static T WithKeyLock<T>(string key, Func<T> criticalSection)
     {
         while (true)
         {
@@ -63,11 +108,7 @@ public static class NewsletterCooldownGate
             {
                 lock (entry)
                 {
-                    if (cache.TryGetValue(key, out _))
-                        return false;
-
-                    cache.Set(key, true, ttl);
-                    return true;
+                    return criticalSection();
                 }
             }
             finally
