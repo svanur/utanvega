@@ -15,8 +15,22 @@ namespace Utanvega.Backend.Infrastructure.Newsletter;
 public static class NewsletterCooldownGate
 {
     // Per-key lock, not one lock shared by every cooldown key — arming "a@example.com" must never
-    // block arming an unrelated "b@example.com".
-    private static readonly ConcurrentDictionary<string, object> Locks = new();
+    // block arming an unrelated "b@example.com". Unlike CacheVersionBumper's CreationLocks (a small
+    // bounded set of cache-version tokens, intentionally kept forever), this dictionary's keys are
+    // every distinct subscriber email ever submitted — unbounded over a process lifetime — so each
+    // entry is reference-counted and removed once the last caller waiting on it leaves (#1666).
+    private static readonly ConcurrentDictionary<string, RefCountedLock> Locks = new();
+
+    // Test-only hook (backend.Tests has InternalsVisibleTo) proving Locks does not grow with the
+    // number of distinct keys ever seen — see NewsletterCooldownGateTests.
+    internal static int LockCountForTests => Locks.Count;
+
+    private sealed class RefCountedLock
+    {
+        // Guarded by `lock (this)` — every read/write of RefCount below happens inside a lock on
+        // the same instance, so plain int (no Interlocked) is enough.
+        public int RefCount;
+    }
 
     /// <summary>
     /// Atomically checks whether <paramref name="key"/> is already present in <paramref name="cache"/>
@@ -27,13 +41,51 @@ public static class NewsletterCooldownGate
     /// </summary>
     public static bool TryArm(IMemoryCache cache, string key, TimeSpan ttl)
     {
-        lock (Locks.GetOrAdd(key, static _ => new object()))
+        while (true)
         {
-            if (cache.TryGetValue(key, out _))
-                return false;
+            var entry = Locks.GetOrAdd(key, static _ => new RefCountedLock());
 
-            cache.Set(key, true, ttl);
-            return true;
+            lock (entry)
+            {
+                // Another thread may have already decremented this exact entry to zero and
+                // removed it from Locks (see the finally block below) between our GetOrAdd call
+                // and acquiring the lock on it — RefCount is left at -1 as the tombstone marker
+                // for that case. Retrying re-reads Locks, which by now either holds a fresh entry
+                // or lets us create one, so we never register our wait against a lock object that
+                // has already been retired.
+                if (entry.RefCount < 0)
+                    continue;
+
+                entry.RefCount++;
+            }
+
+            try
+            {
+                lock (entry)
+                {
+                    if (cache.TryGetValue(key, out _))
+                        return false;
+
+                    cache.Set(key, true, ttl);
+                    return true;
+                }
+            }
+            finally
+            {
+                lock (entry)
+                {
+                    entry.RefCount--;
+                    if (entry.RefCount == 0)
+                    {
+                        // Safe to drop: still holding entry's lock, so no other thread can be
+                        // mid-GetOrAdd-then-increment on this same entry right now — any thread
+                        // that already has a reference to it is blocked on this lock, and will see
+                        // the -1 tombstone below and retry with a fresh entry once we release it.
+                        Locks.TryRemove(key, out _);
+                        entry.RefCount = -1;
+                    }
+                }
+            }
         }
     }
 }
