@@ -17,6 +17,17 @@ import en from '../i18n/en.json';
 import { createAppTheme } from '../theme';
 import type { EventSummary } from '../hooks/useEvents';
 
+// #1672: RacesPage.tsx pulls in 25+ separate @mui/icons-material/* modules plus MUI core,
+// react-query, react-i18next, and qrcode.react — isolated, this file's own module-graph import
+// (not the test body) measured 4.48s cold on an 8-core dev machine; constraining the suite to 2
+// worker threads (simulating a CPU-starved CI runner) pushed individual it()s in this file up to
+// ~1.4s and PR #1671 observed this file's import step alone cost 10-28s in a real full-suite CI
+// run. vitest's default per-it() testTimeout is 5000ms (vitest.config.ts sets no override), so
+// under enough contention any test here — not just the slow one spotted in #1671 — can trip it.
+// vi.setConfig() only touches this file's own isolated test context (vitest.config.ts doesn't set
+// `isolate: false`), so this doesn't loosen the 5000ms budget anywhere else in the suite.
+vi.setConfig({ testTimeout: 20000 });
+
 // vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
 // afterEach(cleanup) registration never fires — without this, a later test's screen queries can
 // match leftover DOM nodes still mounted from an earlier test in this file. Mirrors
