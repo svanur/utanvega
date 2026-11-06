@@ -2573,25 +2573,30 @@ app.MapPost("/api/v1/newsletter/subscribe", async (
         // Same shape as the real success path below — no new signal to probe for.
         return Results.Ok();
     }
+    // Arm a short-lived "in-flight" marker *before* calling MailerLite — this closes the
+    // concurrent-duplicate-request window for the full round trip (rotating-IP "subscription
+    // bombing", #1647/#1658 review), without reintroducing #1654 (a failed/thrown SubscribeAsync
+    // leaving the full 5-minute cooldown in place). On success it's promoted to the real cooldown;
+    // on failure or exception it's removed immediately below so a legitimate retry isn't blocked.
+    cache.Set(cooldownKey, true, TimeSpan.FromSeconds(30));
     try
     {
         var result = await mailerLite.SubscribeAsync(req.Email);
         if (result.Outcome is Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.Subscribed
             or Utanvega.Backend.Infrastructure.Newsletter.MailerLiteSubscribeOutcome.AlreadySubscribed)
         {
-            // Only arm the cooldown once MailerLite has actually confirmed the subscription —
-            // setting it before this call would let a failed attempt masquerade as success on
-            // any retry within the cooldown window (see #1654).
             cache.Set(cooldownKey, true, TimeSpan.FromMinutes(5));
             return Results.Ok();
         }
 
         // ErrorDetail may carry MailerLite's raw response body — log it, never return it.
+        cache.Remove(cooldownKey);
         logger.LogError("Failed to subscribe to newsletter via MailerLite: {Detail}", result.ErrorDetail);
         return Results.Problem("Failed to subscribe. Please try again later.");
     }
     catch (Exception ex)
     {
+        cache.Remove(cooldownKey);
         logger.LogError(ex, "Failed to subscribe to newsletter via MailerLite");
         return Results.Problem("Failed to subscribe. Please try again later.");
     }
