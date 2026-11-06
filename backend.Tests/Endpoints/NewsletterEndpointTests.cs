@@ -138,6 +138,40 @@ public class NewsletterEndpointTests : IDisposable
         handlerMock.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
+    // #1655: the cooldown's check-then-set was two separate IMemoryCache calls (TryGetValue, then
+    // a later Set), so two requests for the same normalized email arriving close enough together
+    // could both observe "not present" and both reach MailerLite before either Set landed. Firing
+    // both via Task.WhenAll (rather than awaiting one before starting the other, as the in-flight
+    // test below does) exercises that race directly — with NewsletterCooldownGate.TryArm making
+    // the check-and-arm a single atomic step, exactly one of the two may ever win it.
+    [Fact]
+    public async Task Subscribe_TwoConcurrentRequestsSameEmail_OnlyOneReachesMailerLite()
+    {
+        var callCount = 0;
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>((_, _) =>
+            {
+                Interlocked.Increment(ref callCount);
+                return Task.FromResult(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.Created,
+                    Content = new StringContent("{\"data\":{\"id\":\"1\"}}", Encoding.UTF8, "application/json"),
+                });
+            });
+        var client = CreateClientWithMailerLiteBackedBy(handlerMock.Object);
+
+        var firstTask = client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "race@example.com" });
+        var secondTask = client.PostAsJsonAsync("/api/v1/newsletter/subscribe", new { Email = "race@example.com" });
+        var responses = await Task.WhenAll(firstTask, secondTask);
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+        Assert.Equal(1, callCount);
+        handlerMock.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
     // #1647 acceptance criterion: the cooldown check normalizes (trim + lowercase) before keying
     // the cache, so case/whitespace variants of the same address collapse to one entry rather than
     // each getting their own cooldown slot.
