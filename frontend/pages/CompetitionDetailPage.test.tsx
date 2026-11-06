@@ -835,3 +835,48 @@ describe('CompetitionDetailPage live forecast swap (#1670)', () => {
         expect(screen.getByText('Current snapshot: 12 °C and 5 m/s wind.')).not.toBeNull();
     });
 });
+
+// #1673: the fallback countdown chip (none of isPostRace/isRaceDay/heroCancelled/
+// Upcoming-or-heroUnconfirmed apply) used to render in the hero name row; it now renders on the
+// "next race" date line instead, same label/color/pulse logic, to stop it crowding long event
+// names. A heading element query (not getByText) distinguishes "not in the name row" from "not
+// rendered anywhere", since the date-line copy is the relocation target, not a removal.
+describe('CompetitionDetailPage hero countdown chip relocation (#1673)', () => {
+    it('does not render the countdown chip inside the name-row heading, but does render it on the date line', () => {
+        renderCompetitionDetailPage(makeEvent({ status: 'Confirmed', daysUntil: 26, displayDate: dateOffsetFromToday(26), nextEditionDate: dateOffsetFromToday(26) }));
+
+        const heading = screen.getByRole('heading', { level: 4 });
+        expect(heading.textContent).not.toContain('In 26 days');
+        expect(screen.getByText('In 26 days')).not.toBeNull();
+    });
+
+    it('still shows the plain Upcoming/unconfirmed chip in the name row, unaffected by the relocation', () => {
+        renderCompetitionDetailPage(makeEvent({ status: 'Upcoming', daysUntil: 26, displayDate: dateOffsetFromToday(26), nextEditionDate: dateOffsetFromToday(26) }));
+
+        expect(screen.getByText('Date is unconfirmed')).not.toBeNull();
+        expect(screen.queryByText('In 26 days')).toBeNull();
+    });
+
+    // Edge case called out in #1673: a Series event whose whole season has finished, with no next
+    // season scheduled yet, has displayDate/nextEditionDate both null (so the date line itself
+    // doesn't render) while resolveHeroDaysUntil still falls back to the season's last individual
+    // race date (eventUtils.ts resolveSeriesClimateDate) — not null. The chip must still render
+    // somewhere rather than disappear.
+    it('renders the chip in a standalone fallback container when the season has ended and no date line renders', () => {
+        const lastRaceDate = dateOffsetFromToday(-200);
+        const edition = makeEdition({ date: null, races: [makeRace({ dateOfRace: lastRaceDate })] });
+
+        renderCompetitionDetailPage(makeEvent({
+            type: 'Series',
+            status: 'Confirmed',
+            daysUntil: null,
+            displayDate: null,
+            nextEditionDate: null,
+            editions: [edition],
+        }));
+
+        expect(screen.queryByText('Next:')).toBeNull();
+        expect(screen.queryByText('Last:')).toBeNull();
+        expect(screen.getByText('200 days ago')).not.toBeNull();
+    });
+});

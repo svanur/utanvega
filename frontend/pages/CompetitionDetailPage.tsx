@@ -511,6 +511,14 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     const heroCancelled = !!event && isEffectivelyCancelled({ status: event.status, effectiveCancelled: primaryEdition?.effectiveCancelled });
     const heroUnconfirmed = !!event && isEffectivelyUnconfirmed({ status: event.status, editionStatus: primaryEdition?.status });
 
+    // #1673: the fallback countdown chip used to live in the hero name row — the widest
+    // variable-width item there, and the one that forced long event names to wrap. It now renders
+    // on the date line instead (mirroring the Events list cards, #1637/#1652), so this condition
+    // must exactly mirror the final `else` branch it replaces: none of the four higher-priority
+    // chip variants apply.
+    const showPlainCountdownChip = !isPostRace && !isRaceDay && !heroCancelled
+        && event?.status !== 'Upcoming' && !heroUnconfirmed;
+
     const racesWithAnchors = useMemo(() => {
         const seen = new Map<string, number>();
         return visibleRaces.map((race) => {
@@ -738,6 +746,32 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         );
     }
 
+    // #1673: same chip, same getCountdownLabel/getCountdownColor/pulse-at-0 logic the hero name
+    // row used to render inline — extracted so both the date-line placement below and its
+    // no-date-line fallback render the identical element rather than drifting apart.
+    const plainCountdownChip = showPlainCountdownChip ? (
+        <Chip
+            label={getCountdownLabel(heroDaysUntil, t)}
+            color={getCountdownColor(heroDaysUntil)}
+            variant="filled"
+            sx={{
+                fontWeight: 700,
+                fontSize: '1rem',
+                px: 1.5,
+                py: 0.5,
+                height: 'auto',
+                flexShrink: 0,
+                ...(heroDaysUntil === 0 && {
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    '@keyframes pulse': {
+                        '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
+                        '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
+                    },
+                }),
+            }}
+        />
+    ) : null;
+
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={[{ label: t('nav.events'), to: '/events' }, { label: loc(event.name, event.nameEn) ?? event.name }]}>
             <Container maxWidth="md" sx={{ py: 3 }}>
@@ -793,28 +827,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 <Chip label={t('races.statusCancelled')} color="error" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
                             ) : (event.status === 'Upcoming' || heroUnconfirmed) ? (
                                 <Chip label={t('races.statusUpcoming')} color="info" sx={{ fontWeight: 700, fontSize: '1rem', px: 1.5, py: 0.5, height: 'auto', flexShrink: 0 }} />
-                            ) : (
-                                <Chip
-                                    label={getCountdownLabel(heroDaysUntil, t)}
-                                    color={getCountdownColor(heroDaysUntil)}
-                                    variant="filled"
-                                    sx={{
-                                        fontWeight: 700,
-                                        fontSize: '1rem',
-                                        px: 1.5,
-                                        py: 0.5,
-                                        height: 'auto',
-                                        flexShrink: 0,
-                                        ...(heroDaysUntil === 0 && {
-                                            animation: 'pulse 1.5s ease-in-out infinite',
-                                            '@keyframes pulse': {
-                                                '0%, 100%': { transform: 'scale(1)', boxShadow: 'none' },
-                                                '50%': { transform: 'scale(1.06)', boxShadow: `0 0 8px ${alpha(theme.palette.error.main, 0.6)}` },
-                                            },
-                                        }),
-                                    }}
-                                />
-                            )}
+                            ) : null}
                             {isEnabled('share_trail') && <ShareButtons title={loc(event.name, event.nameEn) ?? event.name} />}
                             <Tooltip title={isFavoriteEvent(slug ?? '') ? t('races.removeFavorite') : t('races.addFavorite')}>
                                 <IconButton size="small" onClick={() => toggleFavoriteEvent(slug ?? '')} color={isFavoriteEvent(slug ?? '') ? 'warning' : 'default'}>
@@ -895,6 +908,18 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             <Typography variant="body1">
                                 {formatDateRange((event.displayDate ?? event.nextEditionDate)!, primaryEdition?.endDate ?? event.endDisplayDate, t)}
                             </Typography>
+                            {plainCountdownChip}
+                        </Box>
+                    )}
+
+                    {/* #1673 edge case: a Series event whose season has fully ended, with no next
+                        edition scheduled yet, has displayDate/nextEditionDate both null (the date
+                        line above doesn't render) while resolveHeroDaysUntil still falls back to its
+                        last individual race date — so showPlainCountdownChip can be true here with
+                        nothing to attach to. Render the chip alone rather than drop it silently. */}
+                    {!(event.displayDate ?? event.nextEditionDate) && plainCountdownChip && (
+                        <Box sx={{ display: 'flex', mt: 2 }}>
+                            {plainCountdownChip}
                         </Box>
                     )}
 
