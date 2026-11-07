@@ -97,7 +97,7 @@ type PreparedEdition = EventEditionDto & {
 import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
-import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday, daysBetween } from '../utils/eventUtils';
+import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday, isRaceWithinShareWindow, daysBetween } from '../utils/eventUtils';
 import { getTicketStatusColor, isAllSoldOut, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
@@ -1199,7 +1199,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                                 competitionName={loc(event.name, event.nameEn) ?? event.name}
                                                 t={t}
                                                 showPredict={isEnabled('tool_trail_predictor')}
-                                                showShareCard={isRaceWeek && isEnabled('share_trail')}
+                                                showShareCard={isRaceWithinShareWindow(race.dateOfRace, currentTime) && isEnabled('share_trail')}
                                                 showFinishCard={isPostRace && isEnabled('share_trail') && edition.date === event.displayDate}
                                                 daysUntil={event.daysUntil}
                                                 activityType={event.activityType}
@@ -1226,7 +1226,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 competitionName={loc(event.name, event.nameEn) ?? event.name}
                                 t={t}
                                 showPredict={isEnabled('tool_trail_predictor')}
-                                showShareCard={isRaceWeek && isEnabled('share_trail')}
+                                showShareCard={isRaceWithinShareWindow(race.dateOfRace, currentTime) && isEnabled('share_trail')}
                                 showFinishCard={isPostRace && isEnabled('share_trail') && primaryEdition?.date === event.displayDate}
                                 daysUntil={event.daysUntil}
                                 activityType={event.activityType}

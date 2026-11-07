@@ -519,6 +519,21 @@ export function isRaceHappeningToday(
     return daysUntil === 0 && (!isMultiDayOngoingEdition || isLiveStageToday);
 }
 
+// #1693: the "I'm participating" share card must be scoped to this individual race's own 7-day
+// window, not the Series-wide isRaceWeek (computeRaceDayFlags above), which is true for the whole
+// event once ANY race in the series enters its window — showing the card on finished and
+// months-away legs alike. Mirrors isRaceHappeningToday's shape (a per-race-date sibling check) but
+// reuses daysBetween's 7-day range rather than an exact-today match.
+export function isRaceWithinShareWindow(
+    dateOfRace: string | null | undefined,
+    now: Date = new Date(),
+    days: number = 7,
+): boolean {
+    if (!dateOfRace) return false;
+    const diff = daysBetween(dateOfRace, now);
+    return diff >= 0 && diff <= days;
+}
+
 export function formatRaceDateTime(
     dateOfRace: string | null,
     startTime: string | null,
