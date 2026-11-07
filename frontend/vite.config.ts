@@ -26,6 +26,13 @@ export default defineConfig({
       // mask-icon.svg) don't exist in frontend/public — there's nothing
       // real to precache beyond Workbox's own default glob patterns.
       workbox: {
+        // Without this, Workbox's default navigateFallback swallows every
+        // top-level navigation — including direct/target="_blank" links to
+        // static assets like /images/*.avif — and serves index.html instead,
+        // which React Router's catch-all then bounces to "/" (#1687).
+        // Denylist any path with a file extension so only extension-less
+        // app routes fall back to the SPA shell.
+        navigateFallbackDenylist: [/\.[a-zA-Z0-9]+$/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/[abc]\.tile\.openstreetmap\.org\/.*/i,
