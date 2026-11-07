@@ -390,6 +390,9 @@ builder.Services.AddHostedService<TrailViewRetentionService>();
 builder.Services.AddSingleton(new EditionCompletionSweepOptions());
 builder.Services.AddHostedService<EditionCompletionSweepService>();
 
+builder.Services.AddSingleton(new FeedbackRetentionOptions());
+builder.Services.AddHostedService<FeedbackRetentionService>();
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("trail-view", httpContext =>
