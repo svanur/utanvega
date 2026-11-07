@@ -1,0 +1,11 @@
+{
+  "name": "shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./sponsors": "./sponsors.ts",
+    "./heroThemes": "./heroThemes.ts",
+    "./pools.json": "./pools.json"
+  }
+}

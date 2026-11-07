@@ -3,7 +3,7 @@ import type { PaletteMode } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import Layout from '../components/Layout';
-import { HERO_THEMES, type HeroTheme } from '../data/heroThemes';
+import { HERO_THEMES, type HeroTheme } from 'shared/heroThemes';
 import { useHeroTheme } from '../hooks/useHeroTheme';
 
 interface Props {

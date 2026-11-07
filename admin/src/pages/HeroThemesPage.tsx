@@ -18,7 +18,7 @@ import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { HERO_THEMES, type HeroTheme } from '../data/heroThemes';
+import { HERO_THEMES, type HeroTheme } from 'shared/heroThemes';
 
 function formatDates(theme: HeroTheme): string {
     if (theme.holidayKey) {

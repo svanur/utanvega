@@ -18,7 +18,7 @@ import PoolIcon from '@mui/icons-material/Pool';
 import SearchIcon from '@mui/icons-material/Search';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useState, useMemo } from 'react';
-import poolsData from '../data/pools.json';
+import poolsData from 'shared/pools.json';
 
 interface Pool {
     id: string;

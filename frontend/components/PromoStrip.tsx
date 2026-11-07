@@ -2,7 +2,7 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { PROMO_SLOTS, isExternalHref, type PromoSlot } from '../data/sponsors';
+import { PROMO_SLOTS, isExternalHref, type PromoSlot } from 'shared/sponsors';
 
 // Slots sharing a rotationGroup occupy one physical slot — pick exactly one at random
 // per render (re-rolled on every page load/navigation, never persisted). Slots without a

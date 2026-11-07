@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { HERO_THEMES, type HeroTheme } from '../data/heroThemes';
+import { HERO_THEMES, type HeroTheme } from 'shared/heroThemes';
 
 type HolidayMap = Record<string, { date: string; name: string }[]>;
 

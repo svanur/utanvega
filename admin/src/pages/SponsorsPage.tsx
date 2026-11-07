@@ -16,7 +16,7 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
-import { SPONSOR_ADS } from '../data/sponsors';
+import { SPONSOR_ADS } from 'shared/sponsors';
 
 export default function SponsorsPage() {
     return (
