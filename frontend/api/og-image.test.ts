@@ -85,7 +85,9 @@ async function render(request: Request): Promise<{ text: string[]; imgSrcs: stri
 function stubFetch(responder: (url: string, init?: RequestInit) => Promise<Response> | Response) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    // RequestInfo is a "dom" lib alias not available under api/tsconfig.json's
+    // "types": ["node"] — inline the same union (fetch's actual first-arg type).
+    vi.fn(async (input: Request | string | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       return responder(url, init);
     })
