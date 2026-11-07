@@ -1,4 +1,4 @@
-import poolsData from './pools.json';
+import poolsData from 'shared/pools.json';
 import { haversineKm } from '../utils/geo';
 
 export type PoolType = 'municipal' | 'spa' | 'natural';

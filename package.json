@@ -1,6 +1,11 @@
 {
   "private": true,
   "name": "hlaupaleidir",
+  "workspaces": [
+    "frontend",
+    "admin",
+    "packages/shared"
+  ],
   "scripts": {
     "dev:admin": "npm --prefix admin run dev",
     "dev:backend": "dotnet watch --project backend/backend.csproj run",
@@ -16,5 +21,9 @@
   },
   "dependencies": {
     "recharts": "^3.8.1"
+  },
+  "overrides": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

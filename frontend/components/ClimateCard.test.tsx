@@ -145,10 +145,10 @@ describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
         const sunshineBox = screen.getByTestId('sunshine-tile');
         const sunshineStack = sunshineBox.parentElement!;
 
-        // jsdom's getComputedStyle normalizes MUI's `minWidth: 0` sx value (a bare number,
-        // serialized to the unitless CSS string "0") rather than adding a "px" suffix.
-        expect(getComputedStyle(sunshineBox).minWidth).toBe('0');
-        expect(getComputedStyle(sunshineStack).minWidth).toBe('0');
+        // jsdom (28.x, shared with admin via the npm workspace) normalizes MUI's `minWidth: 0`
+        // sx value (a bare number) to the CSS string "0px" rather than leaving it unitless.
+        expect(getComputedStyle(sunshineBox).minWidth).toBe('0px');
+        expect(getComputedStyle(sunshineStack).minWidth).toBe('0px');
     });
 
     it('applies minWidth: 0 to the precipitation-chance tile Stack and Box with the longest Icelandic label', () => {
@@ -167,8 +167,8 @@ describe('ClimateCard sunshine/precipitation tiles minWidth: 0 (#1451)', () => {
         const precipitationBox = screen.getByTestId('precipitation-tile');
         const precipitationStack = precipitationBox.parentElement!;
 
-        expect(getComputedStyle(precipitationBox).minWidth).toBe('0');
-        expect(getComputedStyle(precipitationStack).minWidth).toBe('0');
+        expect(getComputedStyle(precipitationBox).minWidth).toBe('0px');
+        expect(getComputedStyle(precipitationStack).minWidth).toBe('0px');
     });
 });
 

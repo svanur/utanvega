@@ -1,6 +1,6 @@
 import { Box, Link, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import type { HeroTheme } from '../data/heroThemes';
+import type { HeroTheme } from 'shared/heroThemes';
 
 interface HeroBandProps {
     theme: HeroTheme;
