@@ -20,7 +20,8 @@
     "concurrently": "^9.1.2"
   },
   "dependencies": {
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "@vercel/og": "^1.0.0"
   },
   "overrides": {
     "react": "^18.3.1",
