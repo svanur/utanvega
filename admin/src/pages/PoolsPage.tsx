@@ -73,7 +73,7 @@ export default function PoolsPage() {
             </Stack>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Read-only reference for all pools in the dataset. To add or edit pools, update{' '}
-                <code>frontend/data/pools.json</code>.
+                <code>packages/shared/pools.json</code>.
             </Typography>
             <Alert severity="info" variant="outlined" sx={{ mb: 3 }}>
                 Pools are shown on trail and location pages when the feature flag <strong>pools</strong> is enabled. Toggle it on the <strong>Features</strong> page.
