@@ -55,6 +55,14 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
+      # Node 20's bundled npm (10.8.2) fails "npm ci" against a lockfile written by npm 11 with
+      # a root "overrides" entry — npm 10's ci validator expects a redundant unselected-version
+      # lockfile entry that npm 11 doesn't write, and errors "Missing: X from lock file" even
+      # though the tree it would produce is identical. Pin npm to the version package-lock.json
+      # was generated with so "npm ci" validates cleanly.
+      - name: Use npm 11
+        run: npm install -g npm@11.10.1
+
       # Installs from the repo root, not ${{ inputs.working-directory }}: frontend and admin are
       # npm workspace members sharing the one root package-lock.json (see packages/shared) — a
       # per-directory install can no longer resolve the "shared" workspace dependency on its own.
