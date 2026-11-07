@@ -34,7 +34,9 @@ interface ManifestTestShape {
 }
 
 async function json(res: Response): Promise<ManifestTestShape> {
-  return res.json();
+  // res.json() is typed Promise<unknown> under api/tsconfig.json's "types": ["node"]
+  // (no "dom" lib) — assert the known shape rather than widen the return type.
+  return res.json() as Promise<ManifestTestShape>;
 }
 
 describe('manifest.ts per-host PWA identity', () => {

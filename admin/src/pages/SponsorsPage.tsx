@@ -16,7 +16,7 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined';
-import { SPONSOR_ADS } from '../data/sponsors';
+import { SPONSOR_ADS } from 'shared/sponsors';
 
 export default function SponsorsPage() {
     return (
@@ -155,13 +155,13 @@ export default function SponsorsPage() {
                                 <Box>
                                     <Typography variant="caption" color="text.secondary" display="block">Logo bar (small external sponsors):</Typography>
                                     <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                        frontend/data/sponsors.ts → add entry to SPONSORS array
+                                        packages/shared/sponsors.ts → add entry to SPONSORS array
                                     </Box>
                                 </Box>
                                 <Box>
                                     <Typography variant="caption" color="text.secondary" display="block">Promo cards (50/50 internal promos):</Typography>
                                     <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                        frontend/data/sponsors.ts → add entry to PROMO_SLOTS array
+                                        packages/shared/sponsors.ts → add entry to PROMO_SLOTS array
                                     </Box>
                                 </Box>
                             </Stack>
@@ -188,22 +188,6 @@ export default function SponsorsPage() {
                                     frontend/i18n/is.json → same keys in Icelandic
                                 </Box>
                             </Stack>
-                        </Box>
-                    </Stack>
-                </Paper>
-
-                {/* Step 5 */}
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Stack direction="row" spacing={1.5} alignItems="flex-start">
-                        <Chip label="5" size="small" color="primary" sx={{ fontWeight: 700, mt: 0.25, flexShrink: 0 }} />
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight={700} gutterBottom>Sync the admin page</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Run the sync script from the repo root — it copies the data file to the admin app so this page stays up to date automatically:
-                            </Typography>
-                            <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                                .\scripts\sync-sponsors.ps1
-                            </Box>
                         </Box>
                     </Stack>
                 </Paper>

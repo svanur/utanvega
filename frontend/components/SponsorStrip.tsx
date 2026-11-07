@@ -1,6 +1,6 @@
 import { Box, Stack } from '@mui/material';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
-import { SPONSORS } from '../data/sponsors';
+import { SPONSORS } from 'shared/sponsors';
 
 export default function SponsorStrip({ position }: { position: 'top' | 'bottom' }) {
     const { isEnabled } = useFeatureFlags();

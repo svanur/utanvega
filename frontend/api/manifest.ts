@@ -1,6 +1,6 @@
 export const config = { runtime: 'edge' };
 
-import { resolveLocale, BRAND_NAME, TAGLINE, type Locale } from './_site';
+import { resolveLocale, BRAND_NAME, TAGLINE, type Locale } from './_manifest-site';
 import { PWA_MANIFEST_STATIC_FIELDS, PWA_MANIFEST_BRAND_FIELDS } from '../pwaManifestFields';
 
 /**

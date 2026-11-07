@@ -1,7 +1,10 @@
-// KEEP IN SYNC with frontend/data/sponsors.ts
-// This is a read-only mirror for display in the admin UI.
-// To add or change sponsors/promos, edit the frontend file and run:
-//   .\scripts\sync-sponsors.ps1
+// ─────────────────────────────────────────────────────────────────────────────
+// Single source of truth for all sponsor logos and promo slot content.
+//
+// frontend: SponsorStrip  → imports SPONSORS
+// frontend: PromoStrip    → imports PROMO_SLOTS
+// admin:    SponsorsPage  → imports SPONSOR_ADS
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface Sponsor {
     flag: string;
