@@ -12,8 +12,8 @@ export interface IdFocusableRow {
  * plain index there would silently shift focus onto the wrong row; tracking the row's id
  * instead survives those inserts/removals, and survives a `refresh()` after an edit too, as
  * long as the same row is still present in `rows`.
- * Clamps at both ends (no wraparound): j/k with no current focus starts at the first/last
- * row respectively. Same Escape-blurs-input and dialog-backoff behaviour as `useRowFocus`.
+ * Clamps at both ends (no wraparound): j/k with no current focus both start at the first
+ * row (index 0). Same Escape-blurs-input and dialog-backoff behaviour as `useRowFocus`.
  */
 export function useIdRowFocus<T extends IdFocusableRow>(rows: T[], onOpen: (row: T) => void) {
   const [focusedId, setFocusedId] = useState<string | null>(null);
