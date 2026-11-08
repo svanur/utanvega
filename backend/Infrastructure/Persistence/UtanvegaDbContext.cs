@@ -74,6 +74,11 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.Center).HasColumnType("geometry(Point, 4326)"); // Using 4326 (WGS 84) for PostGIS
             entity.HasIndex(e => e.Center).HasMethod("GIST");
 
+            // #1705: optional real boundary polygon, imported from IS 50V — same 4326/GIST
+            // pattern as Center above.
+            entity.Property(e => e.Boundary).HasColumnType("geometry(Polygon, 4326)");
+            entity.HasIndex(e => e.Boundary).HasMethod("GIST");
+
             entity.Property(e => e.Type).HasConversion<string>();
 
             // Self-referencing relationship

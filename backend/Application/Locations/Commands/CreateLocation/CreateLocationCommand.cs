@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Npgsql;
 using Utanvega.Backend.Application.Caching;
+using Utanvega.Backend.Application.Locations;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Core.Services;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -21,7 +22,10 @@ public record CreateLocationCommand(
     string? CreatedBy,
     string? NameEn = null,
     string? DescriptionEn = null,
-    string? ActorUserId = null
+    string? ActorUserId = null,
+    // #1705: one-time IS 50V import payload. When set, overrides Center with the polygon's
+    // centroid — see CreateLocationCommandHandler.
+    string? BoundaryGeoJson = null
 ) : IRequest<Guid>;
 
 public class CreateLocationCommandHandler : IRequestHandler<CreateLocationCommand, Guid>
@@ -57,6 +61,19 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
             center = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 };
         }
 
+        // #1705: a provided boundary wins over Lat/Lon — Center becomes the polygon's centroid so
+        // every existing Center consumer (e.g. GetEventClimateQuery) keeps working unchanged.
+        // The validator has already rejected a malformed/non-Polygon/self-intersecting value by
+        // the time the handler runs, so TryParse here is only expected to fail on a null input.
+        Polygon? boundary = null;
+        if (request.BoundaryGeoJson != null &&
+            LocationBoundaryParser.TryParse(request.BoundaryGeoJson, out var parsedBoundary, out _))
+        {
+            boundary = parsedBoundary;
+            center = (Point)boundary!.Centroid;
+            center.SRID = 4326;
+        }
+
         var location = new Utanvega.Backend.Core.Entities.Location
         {
             Name = request.Name,
@@ -68,6 +85,7 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
             ParentId = request.ParentId,
             Center = center,
             Radius = request.Radius,
+            Boundary = boundary,
             CreatedBy = request.CreatedBy,
             CreatedAt = DateTime.UtcNow
         };

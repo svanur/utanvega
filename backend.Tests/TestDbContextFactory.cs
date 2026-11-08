@@ -113,6 +113,13 @@ internal class TestDbContext : UtanvegaDbContext
                 v => v == null ? null : new WKBWriter { HandleOrdinates = Ordinates.XY }.Write(v),
                 v => v == null ? null : (Point)new WKBReader { HandleOrdinates = Ordinates.XY }.Read(v)
             );
+            // #1705: same WKB round-trip as Center above, so tests exercising LocationDetector's
+            // Boundary-mode (GetAllLocationCenters) see real geometry instead of it silently
+            // vanishing to null.
+            entity.Property(e => e.Boundary).HasConversion(
+                v => v == null ? null : new WKBWriter { HandleOrdinates = Ordinates.XY }.Write(v),
+                v => v == null ? null : (Polygon)new WKBReader { HandleOrdinates = Ordinates.XY }.Read(v)
+            );
             entity.Property(e => e.Type).HasConversion<string>();
             entity.HasOne(e => e.Parent)
                   .WithMany(e => e.Children)
