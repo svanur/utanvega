@@ -88,12 +88,15 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
                 l.Radius,
                 ChildrenCount = l.Children.Count,
                 TrailsCount = l.TrailLocations.Count,
+                l.Boundary,
             })
             .ToListAsync(cancellationToken);
+        // Boundary is a Polygon — same two-pass GeoJSON conversion as the primary location above.
         var childDtos = childRaw.Select(l => new LocationDto(
             l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
             l.Type, l.ParentId, location.Name, location.NameEn, l.Latitude, l.Longitude, l.Radius,
-            l.ChildrenCount, l.TrailsCount
+            l.ChildrenCount, l.TrailsCount,
+            BoundaryGeoJson: l.Boundary == null ? null : new GeoJsonWriter().Write(l.Boundary)
         )).ToList();
 
         // Collect all descendant location IDs for ancestor-aware trail query
