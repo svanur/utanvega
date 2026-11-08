@@ -42,6 +42,12 @@ const mockState = vi.hoisted(() => ({
   // #1627: records every PUT body sent to /api/v1/admin/editions/:id so the chip-handler tests
   // below can assert on exactly what was sent, not just on success/failure.
   editionPutBodies: [] as Record<string, unknown>[],
+  // #1692: when true, the races PUT branch below never resolves — lets the drag-reorder
+  // regression test assert while handleRaceDragEnd's own localRaceOrder override is still the
+  // live source of the race order (its real await Promise.all(...)/refresh() round-trip would
+  // otherwise race the assertions and intermittently resolve+clear it first), which is the exact
+  // window #566/#1690's single-sourced getOrderedRaces matters for.
+  raceReorderPutPending: false,
 }));
 
 vi.mock('../hooks/api', () => ({
@@ -75,6 +81,13 @@ vi.mock('../hooks/api', () => ({
       return mockState.editionCompleteShouldFail
         ? Promise.reject(new Error('Failed to complete edition'))
         : Promise.resolve({});
+    }
+    // #1692: handleRaceDragEnd (EventDetailPage.tsx:1326) PUTs each reordered race's new
+    // sortOrder, then calls refresh(). The drag-reorder regression test below sets
+    // raceReorderPutPending so this never resolves — see that flag's own comment for why.
+    if (method === 'PUT' && /^\/api\/v1\/admin\/races\/[^/]+$/.test(endpoint)) {
+      if (mockState.raceReorderPutPending) return new Promise(() => { /* never resolves */ });
+      return Promise.resolve({});
     }
     return Promise.resolve([]);
   }),
@@ -990,4 +1003,173 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
     // left.
     expect(computed.margin).toBe('0px 0px 0px 4px');
   });
+});
+
+// #1692: regression guard for the #566 scenario that PR #1690 (e5ab871b) fixed by extracting
+// getOrderedRaces (EventDetailPage.tsx:158) as the single place focusRows (:1049, feeding
+// useIdRowFocus's j/k walk), the SortableContext items (:2079) and the table render (:2081) all
+// derive their race ordering from. Before that refactor the same derivation was duplicated three
+// times; an edit landing in only one copy would have let the keyboard focus order and the visible
+// row order silently disagree after a drag-reorder. This test drives an actual drag through
+// @dnd-kit's own PointerSensor pipeline (see simulateRaceDrag below for why — not a shortcut
+// around it) and then asserts the j/k walk visits rows in the resulting order, not the original
+// fixture order, so a future re-duplication of getOrderedRaces's logic would fail this test
+// rather than passing CI silently.
+describe('EventDetailPage — j/k focus order matches the post-drag-reorder race order (#566, #1690 regression)', () => {
+  // jsdom doesn't implement scrollIntoView at all — EventDetailPage.tsx:1071's focusedId effect
+  // calls it unconditionally once useIdRowFocus reports a focused row, which every other describe
+  // block in this file avoids simply by never pressing j/k. Stubbing it here is a jsdom-gap
+  // workaround, not a behavioural mock: the effect's actual argument/call is never asserted on.
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockState.editionPutBodies = [];
+    mockState.raceReorderPutPending = false;
+  });
+
+  // @dnd-kit/sortable's useSortable measures each row via plain Element.getBoundingClientRect
+  // (confirmed by reading the vendored core.cjs.development.js — this version's droppable/
+  // draggable rect measuring has no ResizeObserver dependency, only a guarded, feature-detected
+  // one for *re*-measuring on resize, which jsdom's lack of ResizeObserver here just skips), so
+  // stubbing that per-row is enough to make closestCenter's collision detection deterministic.
+  // The exact pixel values don't matter, only that row 2 sits below row 1.
+  function stubRowRect(row: HTMLElement, top: number) {
+    vi.spyOn(row, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: top, top, left: 0, right: 300, bottom: top + 40, width: 300, height: 40,
+      toJSON() { return this; },
+    } as DOMRect);
+  }
+
+  function getRaceRow(raceName: string): HTMLElement {
+    const row = screen.getByText(raceName).closest('tr');
+    if (!row) throw new Error(`row for "${raceName}" not found`);
+    return row;
+  }
+
+  // The race rows in their current *visual* (DOM) order — as opposed to getRaceRow's lookup by
+  // name, this is what lets the assertions below also catch a #566 divergence sitting in the
+  // table/SortableContext render instead of in focusRows: if the render still showed the stale
+  // pre-drag order while focusRows alone had the reordered one, getRaceRow('Leg 2') would still
+  // correctly report itself focused (isFocused matches by race id, wherever its row ends up in
+  // the DOM) — only checking *position* 0 against the race actually rendered there exposes that.
+  function getRaceRowsInDomOrder(): HTMLElement[] {
+    return screen.getAllByText(/^Leg [12]$/).map(cell => {
+      const row = cell.closest('tr');
+      if (!row) throw new Error('race row not found');
+      return row;
+    });
+  }
+
+  function getDragHandleCell(row: HTMLElement): HTMLElement {
+    const cell = within(row).getByTestId('DragIndicatorIcon').closest('td');
+    if (!cell) throw new Error('drag handle cell not found');
+    return cell;
+  }
+
+  // isFocused (EventDetailPage.tsx:2089/:800) sets the row's `outline` as a shorthand
+  // (`2px solid ${theme.palette.primary.main}`), not individual longhand properties — jsdom's
+  // CSSOM doesn't expand that shorthand into a readable `outlineStyle` (that longhand always
+  // comes back empty here, shorthand or not), so this reads the shorthand's own computed value
+  // instead of the longhand.
+  function isRowFocused(row: HTMLElement): boolean {
+    return getComputedStyle(row).outline.includes('solid');
+  }
+
+  // Drives the exact sequence @dnd-kit/core's PointerSensor itself listens for (see
+  // AbstractPointerSensor.attach/handleStart/handleMove in core.cjs.development.js), rather than
+  // reaching into EventDetailPage to call handleRaceDragEnd directly — it's a local closure, not
+  // exported, and the point of this test is to prove the real DndContext → onDragEnd →
+  // handleRaceDragEnd wiring stays correct, not just the handler in isolation. The issue allows
+  // skipping literal @dnd-kit pointer-drag simulation if impractical; this one pans out (see the
+  // rect-stubbing comment above for the one piece that made it practical here), so no fallback
+  // approximation is needed.
+  function simulateRaceDrag(activeHandle: HTMLElement) {
+    // pointerdown on the drag handle — PointerSensor.activators requires isPrimary/button:0.
+    fireEvent.pointerDown(activeHandle, { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 20 });
+    // A first pointermove past the 5px activationConstraint (EventDetailPage.tsx:1324) only
+    // activates the drag (AbstractPointerSensor.handleMove's hasExceededDistance branch calls
+    // handleStart and returns without reporting a position yet).
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 10, clientY: 30, cancelable: true });
+    // A second pointermove, now activated, reports the current position — translating row 1's
+    // collision rect down to row 2's stubbed center and making it the closestCenter match.
+    fireEvent.pointerMove(document, { pointerId: 1, clientX: 10, clientY: 60, cancelable: true });
+    // pointerup is what actually fires DndContext's onDragEnd with the over id collision
+    // detection most recently settled on.
+    fireEvent.pointerUp(document, { pointerId: 1, clientX: 10, clientY: 60 });
+  }
+
+  // 10s rather than this file's default 5s test timeout — mounting the full page plus driving
+  // @dnd-kit's real PointerSensor pipeline (see simulateRaceDrag) is slower than this suite's
+  // otherwise-synchronous tests, especially under CI load.
+  it('drag-reorders two races, then j/k visits them in the new order, not the original fixture order', async () => {
+    // Left pending for this whole test (see the flag's own comment) — handleRaceDragEnd's real
+    // await Promise.all(...)/refresh() round-trip clears its optimistic localRaceOrder override
+    // as soon as it resolves, and once that happens getOrderedRaces' plain sortRaces fallback
+    // alone decides the order for every caller, masking exactly the divergence #566/#1690 is
+    // about: *while the override is live*, focusRows, the SortableContext items and the table
+    // render must all read that same override, or a future edit duplicating getOrderedRaces's
+    // logic into only one of those three call sites would show the old order in the other two
+    // without this test ever noticing.
+    mockState.raceReorderPutPending = true;
+
+    mockState.eventDetail = buildEventDetailFixture({
+      editions: [buildEditionFixture({
+        title: 'Reorder Test Edition',
+        races: [
+          buildRaceFixture({ id: 'race-1', name: 'Leg 1', sortOrder: 0 }),
+          buildRaceFixture({ id: 'race-2', name: 'Leg 2', sortOrder: 1 }),
+        ],
+      })],
+    });
+
+    renderEventDetailPage(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+    await findEditionStatusChip();
+
+    // Expand the edition so its races (and their DndContext/SortableContext) actually mount —
+    // collapsed editions render neither.
+    fireEvent.click(screen.getByText('Reorder Test Edition'));
+
+    const row1 = getRaceRow('Leg 1');
+    const row2 = getRaceRow('Leg 2');
+    stubRowRect(row1, 0);
+    stubRowRect(row2, 40);
+
+    // Drag "Leg 1" down past "Leg 2". handleRaceDragEnd's setLocalRaceOrder call happens
+    // synchronously, before its first await, so the table/SortableContext already show the
+    // reordered rows by the time simulateRaceDrag's pointerup event handler returns — no
+    // waitFor needed, and none would help anyway since the PUT this would otherwise wait on
+    // never resolves in this test.
+    simulateRaceDrag(getDragHandleCell(row1));
+
+    const raceNameCells = screen.getAllByText(/^Leg [12]$/);
+    expect(raceNameCells.map(c => c.textContent)).toEqual(['Leg 2', 'Leg 1']);
+
+    // j/k starts at index 0 with no prior focus (useIdRowFocus's own clamp-at-both-ends
+    // behaviour) — first 'j' focuses the edition row, the second focuses the first race row,
+    // which must be "Leg 2" to match the reordered table above, not "Leg 1" (the original
+    // fixture order, and what a reintroduced #566 divergence in focusRows alone would still
+    // report here).
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+    expect(isRowFocused(getRaceRow('Leg 2'))).toBe(true);
+    expect(isRowFocused(getRaceRow('Leg 1'))).toBe(false);
+    // Ties the above to *visual* position too (see getRaceRowsInDomOrder's own comment) — the
+    // focused row must be whichever one is actually rendered first, not just "Leg 2"'s row
+    // wherever that ends up.
+    expect(isRowFocused(getRaceRowsInDomOrder()[0]!)).toBe(true);
+
+    // A third 'j' moves on to "Leg 1", now the *second* race row.
+    fireEvent.keyDown(window, { key: 'j' });
+    expect(isRowFocused(getRaceRow('Leg 1'))).toBe(true);
+    expect(isRowFocused(getRaceRow('Leg 2'))).toBe(false);
+
+    // 'k' walks back the same (reordered) path, not the original fixture order.
+    fireEvent.keyDown(window, { key: 'k' });
+    expect(isRowFocused(getRaceRow('Leg 2'))).toBe(true);
+    expect(isRowFocused(getRaceRow('Leg 1'))).toBe(false);
+  }, 10000);
 });
