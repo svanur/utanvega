@@ -55,7 +55,7 @@ interface TrailMapViewProps {
 
 // GeoJSON Polygon coordinates are rings of [lng, lat] tuples (exterior ring first, then holes);
 // Leaflet's <Polygon positions> expects the opposite order, [lat, lng], as the same ring shape.
-function geoJsonPolygonToLatLngs(geoJson: string): L.LatLngExpression[][] | null {
+export function geoJsonPolygonToLatLngs(geoJson: string): L.LatLngExpression[][] | null {
     try {
         const parsed = JSON.parse(geoJson) as GeoJSON.Polygon;
         if (parsed?.type !== 'Polygon' || !Array.isArray(parsed.coordinates)) return null;
