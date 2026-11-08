@@ -72,8 +72,6 @@ Two hard rules:
   control and confirm it — click-to-arm with a tooltip naming the effect for narrow-scope actions
   (see Cancel/Delete edition), a dialog when the blast radius is wide enough to need itemising.
 
-Existing code does not fully follow this. `LocationDialog` (12 fields) is a known exception awaiting
-conversion; smaller dialogs like `CreateEventDialog` (4 fields) are correct as they are.
 **Follow this rule for new work rather than matching the nearest existing dialog** — the convention is
 the target, not the current average.
 
