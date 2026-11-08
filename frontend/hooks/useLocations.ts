@@ -17,6 +17,9 @@ export interface Location {
     radius?: number;
     childrenCount: number;
     trailsCount: number;
+    // #1707: GeoJSON Polygon string for the location's saved boundary (#1705), null/omitted for
+    // the vast majority of locations that don't have one yet.
+    boundaryGeoJson?: string | null;
 }
 
 export interface LocationTreeNode {

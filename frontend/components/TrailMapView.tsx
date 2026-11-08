@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, useMap, useMapEvents, LayersControl } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import { Box, Typography, Button, IconButton, Paper, Tooltip, useTheme } from '@mui/material';
@@ -46,6 +46,23 @@ interface TrailMapViewProps {
     // bottom-anchored selected-track info chip isn't clipped by an outer container shorter than
     // the default 70vh. Omitted by TrailList, which keeps today's 70vh behavior unchanged.
     height?: string;
+    // #1707: optional municipality boundary outline (Location.Boundary, #1705), rendered as a
+    // Polygon layer beneath the trail routes/selected-track highlight so it reads as context, not
+    // as another route. Omitted (undefined/null) by TrailList and CompetitionDetailPage, which
+    // have no location boundary to show.
+    locationBoundary?: { geoJson: string; color?: string } | null;
+}
+
+// GeoJSON Polygon coordinates are rings of [lng, lat] tuples (exterior ring first, then holes);
+// Leaflet's <Polygon positions> expects the opposite order, [lat, lng], as the same ring shape.
+function geoJsonPolygonToLatLngs(geoJson: string): L.LatLngExpression[][] | null {
+    try {
+        const parsed = JSON.parse(geoJson) as GeoJSON.Polygon;
+        if (parsed?.type !== 'Polygon' || !Array.isArray(parsed.coordinates)) return null;
+        return parsed.coordinates.map(ring => ring.map(([lng, lat]) => [lat, lng] as L.LatLngExpression));
+    } catch {
+        return null;
+    }
 }
 
 function ChangeView({ bounds, followMe, userLocation, containerReady }: {
@@ -124,6 +141,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
     selectionSource: selectionSourceProp,
     onSelectionChange,
     height = '70vh',
+    locationBoundary = null,
 }) => {
     const { t } = useTranslation();
     const theme = useTheme();
@@ -200,6 +218,17 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
         const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter);
         return corners ? L.latLngBounds(corners[0], corners[1]) : null;
     }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter]);
+
+    // #1707: parsed once per geoJson string, not per render — the boundary itself never changes
+    // while a location detail page is mounted.
+    const boundaryPositions = useMemo(
+        () => (locationBoundary ? geoJsonPolygonToLatLngs(locationBoundary.geoJson) : null),
+        [locationBoundary],
+    );
+    // Theme-driven default (secondary.main) rather than a hardcoded hex, per #1707 — must stay
+    // legible in dark mode. Visually distinct from both TRAIL_ROUTE_PALETTE and the selected-track
+    // highlight red by the dashed stroke + low fill opacity below, not by color alone.
+    const boundaryColor = locationBoundary?.color ?? theme.palette.secondary.main;
 
     const userLocationIcon = useMemo(() => new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -390,6 +419,23 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                         </LayersControl.BaseLayer>
                     </LayersControl>
                 
+                {/* #1707: location boundary outline — rendered first so it sits below the trail
+                    routes/highlight in z-order; dashed + lightly filled so it reads as context,
+                    not as another route competing with TRAIL_ROUTE_PALETTE. */}
+                {boundaryPositions && (
+                    <Polygon
+                        positions={boundaryPositions}
+                        pathOptions={{
+                            color: boundaryColor,
+                            weight: 2,
+                            dashArray: '6 6',
+                            fillColor: boundaryColor,
+                            fillOpacity: 0.08,
+                        }}
+                        interactive={false}
+                    />
+                )}
+
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
                         <Popup>
