@@ -415,6 +415,32 @@ public class LocationQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLocationBySlug_ChildLocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var parent = CreateLocation("Sudurland", LocationType.Region);
+        var child = CreateLocation("Vik", LocationType.Municipality, parent.Id);
+        child.Boundary = SimpleSquare();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.AddRange(parent, child);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationBySlugQueryHandler(ctx);
+            var result = await handler.Handle(
+                new GetLocationBySlugQuery("sudurland"), CancellationToken.None);
+
+            Assert.NotNull(result);
+            var childDto = result.ChildLocations.Single(l => l.Name == "Vik");
+            Assert.NotNull(childDto.BoundaryGeoJson);
+            Assert.Contains("\"type\":\"Polygon\"", childDto.BoundaryGeoJson);
+        }
+    }
+
+    [Fact]
     public async Task GetLocations_LocationWithBoundary_ReturnsBoundaryGeoJson()
     {
         var withBoundary = CreateLocation("Kopavogur", LocationType.Municipality);
