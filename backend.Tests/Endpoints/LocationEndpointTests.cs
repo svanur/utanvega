@@ -467,7 +467,60 @@ public class LocationEndpointTests : IDisposable
         Assert.NotNull(location!.Boundary);
     }
 
+    /// <summary>
+    /// Endpoint-level test for <c>GET /api/v1/admin/locations/{id:guid}</c> (#1729) — resolves one
+    /// Location without the client having to fetch the entire unfiltered admin locations list.
+    /// </summary>
+    [Fact]
+    public async Task GetLocationById_LocationExists_ReturnsLocation()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<LocationResponse>();
+        Assert.NotNull(body);
+        Assert.Equal(locationId, body!.Id);
+        Assert.Equal("Test Location", body.Name);
+    }
+
+    [Fact]
+    public async Task GetLocationById_UnknownId_ReturnsNotFound()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLocationById_AnonymousRequest_IsRejected()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLocationById_NonAdminRole_IsForbidden()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("some-user", role: "member");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private record BoundaryResponse(string? BoundaryGeoJson);
 
     private record CreatedLocationResponse(Guid Id);
+
+    private record LocationResponse(Guid Id, string Name);
 }

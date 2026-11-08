@@ -6,6 +6,7 @@ using PrecisionModel = NetTopologySuite.Geometries.PrecisionModel;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
+using Utanvega.Backend.Application.Locations.Queries.GetLocationById;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Tests.Handlers;
@@ -464,6 +465,63 @@ public class LocationQueryHandlerTests : IDisposable
             Assert.NotNull(kopavogur.BoundaryGeoJson);
             Assert.Contains("\"type\":\"Polygon\"", kopavogur.BoundaryGeoJson);
             Assert.Null(vik.BoundaryGeoJson);
+        }
+    }
+
+    // --- #1729: GetLocationById ---
+
+    [Fact]
+    public async Task GetLocationById_ReturnsLocation_WhenFound()
+    {
+        var location = CreateLocation("Vik", LocationType.Place);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationByIdQueryHandler(ctx);
+            var result = await handler.Handle(new GetLocationByIdQuery(location.Id), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.Equal(location.Id, result.Id);
+            Assert.Equal("Vik", result.Name);
+        }
+    }
+
+    [Fact]
+    public async Task GetLocationById_ReturnsNull_WhenNotFound()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new GetLocationByIdQueryHandler(ctx);
+        var result = await handler.Handle(new GetLocationByIdQuery(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetLocationById_LocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var location = CreateLocation("Reykjavik", LocationType.Municipality);
+        location.Boundary = SimpleSquare();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationByIdQueryHandler(ctx);
+            var result = await handler.Handle(new GetLocationByIdQuery(location.Id), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.NotNull(result.BoundaryGeoJson);
+            Assert.Contains("\"type\":\"Polygon\"", result.BoundaryGeoJson);
         }
     }
 }
