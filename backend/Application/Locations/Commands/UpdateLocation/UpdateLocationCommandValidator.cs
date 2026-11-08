@@ -1,4 +1,5 @@
 using FluentValidation;
+using Utanvega.Backend.Application.Locations;
 using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 
@@ -40,5 +41,17 @@ public class UpdateLocationCommandValidator : AbstractValidator<UpdateLocationCo
         RuleFor(x => x.Description)
             .MaximumLength(5000)
             .When(x => x.Description is not null);
+
+        // #1705: same rule as CreateLocationCommandValidator — see LocationBoundaryParser.
+        RuleFor(x => x.BoundaryGeoJson)
+            .Must(json => LocationBoundaryParser.TryParse(json!, out _, out _))
+            .WithMessage(x => GetBoundaryError(x.BoundaryGeoJson))
+            .When(x => x.BoundaryGeoJson is not null);
+    }
+
+    private static string GetBoundaryError(string? boundaryGeoJson)
+    {
+        LocationBoundaryParser.TryParse(boundaryGeoJson!, out _, out var error);
+        return error ?? "BoundaryGeoJson is invalid.";
     }
 }

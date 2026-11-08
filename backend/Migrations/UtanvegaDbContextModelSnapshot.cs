@@ -360,6 +360,9 @@ namespace Utanvega.Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Polygon>("Boundary")
+                        .HasColumnType("geometry(Polygon, 4326)");
+
                     b.Property<Point>("Center")
                         .HasColumnType("geometry(Point, 4326)");
 
@@ -408,6 +411,10 @@ namespace Utanvega.Backend.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Boundary");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Boundary"), "GIST");
 
                     b.HasIndex("Center");
 

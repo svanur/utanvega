@@ -111,4 +111,60 @@ public class CreateLocationCommandValidatorTests
         var result = _validator.TestValidate(cmd);
         result.ShouldHaveValidationErrorFor(x => x.Slug);
     }
+
+    // ─── BoundaryGeoJson (#1705) ───
+
+    [Fact]
+    public void NullBoundaryGeoJson_Passes()
+    {
+        var cmd = ValidCommand with { BoundaryGeoJson = null };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public void ValidPolygonBoundaryGeoJson_Passes()
+    {
+        var cmd = ValidCommand with
+        {
+            BoundaryGeoJson = """
+                {"type":"Polygon","coordinates":[[[-21.95,64.10],[-21.90,64.10],[-21.90,64.15],[-21.95,64.15],[-21.95,64.10]]]}
+                """
+        };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public void NotValidGeoJson_Fails()
+    {
+        var cmd = ValidCommand with { BoundaryGeoJson = "this is not geojson" };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public void WrongGeometryType_Point_Fails()
+    {
+        var cmd = ValidCommand with
+        {
+            BoundaryGeoJson = """{"type":"Point","coordinates":[-21.9426,64.1466]}"""
+        };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public void SelfIntersectingRing_Fails()
+    {
+        // Bowtie quad — the two diagonals cross, so the ring is not simple.
+        var cmd = ValidCommand with
+        {
+            BoundaryGeoJson = """
+                {"type":"Polygon","coordinates":[[[0,0],[1,1],[1,0],[0,1],[0,0]]]}
+                """
+        };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
 }

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Utanvega.Backend.Application.Caching;
+using Utanvega.Backend.Application.Locations;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -21,7 +22,10 @@ public record UpdateLocationCommand(
     string? UpdatedBy,
     string? NameEn = null,
     string? DescriptionEn = null,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    // #1705: patch-if-provided, unlike Center/Radius above — omitting it must leave an
+    // already-set Boundary untouched (see UpdateLocationCommandHandler), not null it out.
+    string? BoundaryGeoJson = null
 ) : IRequest;
 
 public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationCommand>
@@ -64,6 +68,18 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
         location.ParentId = request.ParentId;
         location.Center = center;
         location.Radius = request.Radius;
+        // #1705: patch-if-provided — a request that omits BoundaryGeoJson must leave an
+        // already-set Boundary alone, unlike Center/Radius above which are always recomputed from
+        // Lat/Lon. The validator has already rejected a malformed/non-Polygon/self-intersecting
+        // value by the time the handler runs, so TryParse here is only expected to fail on null.
+        if (request.BoundaryGeoJson != null &&
+            LocationBoundaryParser.TryParse(request.BoundaryGeoJson, out var parsedBoundary, out _))
+        {
+            location.Boundary = parsedBoundary;
+            var centroid = (Point)parsedBoundary!.Centroid;
+            centroid.SRID = 4326;
+            location.Center = centroid;
+        }
         if (request.TranslationHashes != null)
             location.TranslationHashes = JsonSerializer.Serialize(request.TranslationHashes);
         location.UpdatedAt = DateTime.UtcNow;

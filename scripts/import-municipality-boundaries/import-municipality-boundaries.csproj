@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Utanvega.Scripts.ImportMunicipalityBoundaries</RootNamespace>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- Same versions as backend/backend.csproj — this tool parses/validates the exact
+             GeoJSON shape Location.Boundary expects. -->
+        <PackageReference Include="NetTopologySuite" Version="2.*" />
+        <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.*" />
+    </ItemGroup>
+</Project>

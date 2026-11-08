@@ -1,4 +1,5 @@
 using FluentValidation;
+using Utanvega.Backend.Application.Locations;
 using Utanvega.Backend.Application.Validation;
 using Utanvega.Backend.Core.Entities;
 
@@ -38,5 +39,20 @@ public class CreateLocationCommandValidator : AbstractValidator<CreateLocationCo
         RuleFor(x => x.Description)
             .MaximumLength(5000)
             .When(x => x.Description is not null);
+
+        // #1705: reject bad GeoJSON up front — not valid GeoJSON, not a Polygon, or a
+        // self-intersecting ring are all rejected with a validation error rather than silently
+        // accepted/ignored. See LocationBoundaryParser for the shared parse/validate logic also
+        // used by the handler.
+        RuleFor(x => x.BoundaryGeoJson)
+            .Must(json => LocationBoundaryParser.TryParse(json!, out _, out _))
+            .WithMessage(x => GetBoundaryError(x.BoundaryGeoJson))
+            .When(x => x.BoundaryGeoJson is not null);
+    }
+
+    private static string GetBoundaryError(string? boundaryGeoJson)
+    {
+        LocationBoundaryParser.TryParse(boundaryGeoJson!, out _, out var error);
+        return error ?? "BoundaryGeoJson is invalid.";
     }
 }
