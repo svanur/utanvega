@@ -44,10 +44,13 @@ public class CreateLocationCommandValidator : AbstractValidator<CreateLocationCo
         // self-intersecting ring are all rejected with a validation error rather than silently
         // accepted/ignored. See LocationBoundaryParser for the shared parse/validate logic also
         // used by the handler.
+        // #1706: "" is treated the same as null here (skip parsing) — it's only a meaningful
+        // "clear the boundary" sentinel on UpdateLocationCommand, where there's an existing
+        // Boundary to clear; a brand-new Location never has one.
         RuleFor(x => x.BoundaryGeoJson)
             .Must(json => LocationBoundaryParser.TryParse(json!, out _, out _))
             .WithMessage(x => GetBoundaryError(x.BoundaryGeoJson))
-            .When(x => x.BoundaryGeoJson is not null);
+            .When(x => !string.IsNullOrEmpty(x.BoundaryGeoJson));
     }
 
     private static string GetBoundaryError(string? boundaryGeoJson)

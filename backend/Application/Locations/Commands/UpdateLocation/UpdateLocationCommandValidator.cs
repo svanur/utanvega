@@ -43,10 +43,13 @@ public class UpdateLocationCommandValidator : AbstractValidator<UpdateLocationCo
             .When(x => x.Description is not null);
 
         // #1705: same rule as CreateLocationCommandValidator — see LocationBoundaryParser.
+        // #1706: "" (empty string) is the explicit "clear the boundary" sentinel (see
+        // UpdateLocationCommandHandler) and is never run through the GeoJSON parser — only a
+        // genuinely non-empty, presumably-GeoJSON value is.
         RuleFor(x => x.BoundaryGeoJson)
             .Must(json => LocationBoundaryParser.TryParse(json!, out _, out _))
             .WithMessage(x => GetBoundaryError(x.BoundaryGeoJson))
-            .When(x => x.BoundaryGeoJson is not null);
+            .When(x => !string.IsNullOrEmpty(x.BoundaryGeoJson));
     }
 
     private static string GetBoundaryError(string? boundaryGeoJson)

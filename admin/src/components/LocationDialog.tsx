@@ -222,10 +222,12 @@ function BoundaryEditor({
     boundaryGeoJson,
     onBoundaryChange,
     onUserDrewNewShape,
+    onBoundaryRemoved,
 }: {
     boundaryGeoJson: string | null;
     onBoundaryChange: (geoJson: string | null) => void;
     onUserDrewNewShape: () => void;
+    onBoundaryRemoved: () => void;
 }) {
     const map = useMap();
     const layerRef = useRef<L.Polygon | null>(null);
@@ -292,6 +294,11 @@ function BoundaryEditor({
                 layerRef.current = null;
                 loadedRef.current = null;
                 onBoundaryChange(null);
+                // Distinct from onBoundaryChange(null) above: that also fires on first mount with
+                // nothing loaded, which must never be mistaken for "the user explicitly deleted a
+                // previously-saved boundary" (the save path turns that into the "" clear sentinel
+                // UpdateLocationCommand expects — see the #1706 review fix in handleSave).
+                onBoundaryRemoved();
             }
         };
         map.on('pm:create', handleCreate);
@@ -300,7 +307,7 @@ function BoundaryEditor({
             map.off('pm:create', handleCreate);
             map.off('pm:remove', handleRemove);
         };
-    }, [map, captureGeometry, onBoundaryChange, onUserDrewNewShape]);
+    }, [map, captureGeometry, onBoundaryChange, onUserDrewNewShape, onBoundaryRemoved]);
 
     useEffect(() => {
         if (boundaryGeoJson === loadedRef.current) return;
@@ -373,6 +380,14 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
     // from scratch or removes the layer entirely (see the effects below).
     const [officialBoundaryDisplayed, setOfficialBoundaryDisplayed] = useState(false);
     const [boundaryIntersectWarning, setBoundaryIntersectWarning] = useState(false);
+    // True only when the user explicitly deleted a previously-saved boundary via Geoman's removal
+    // tool this session — distinct from boundaryGeoJson simply being null (which is also true for
+    // a Location that never had one, or before the fetch below resolves). handleSave uses this to
+    // choose between omitting BoundaryGeoJson (leave an untouched Boundary alone) and sending the
+    // "" clear sentinel UpdateLocationCommand needs to actually delete it (#1706 review fix —
+    // previously this dialog always sent null after a removal, which UpdateLocationCommandHandler
+    // reads as "field omitted" and silently kept the stale Boundary in the DB).
+    const [boundaryRemoved, setBoundaryRemoved] = useState(false);
 
     // Loaded once per dialog instance — a small static asset (~17KB), not worth refetching per
     // Location opened.
@@ -415,9 +430,15 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
         if (!matchedMunicipalityBoundary) return;
         setBoundaryGeoJson(JSON.stringify(matchedMunicipalityBoundary.geometry));
         setOfficialBoundaryDisplayed(true);
+        setBoundaryRemoved(false);
     }, [matchedMunicipalityBoundary]);
 
-    const handleUserDrewNewShape = useCallback(() => setOfficialBoundaryDisplayed(false), []);
+    const handleUserDrewNewShape = useCallback(() => {
+        setOfficialBoundaryDisplayed(false);
+        setBoundaryRemoved(false);
+    }, []);
+
+    const handleBoundaryRemoved = useCallback(() => setBoundaryRemoved(true), []);
 
     const lookupWikipedia = async () => {
         if (!name.trim()) return;
@@ -452,6 +473,7 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
         // carries over to the next location edited.
         setSlugUnlocked(location === undefined);
         setOfficialBoundaryDisplayed(false);
+        setBoundaryRemoved(false);
         if (location) {
             setName(location.name);
             setNameEn(location.nameEn || '');
@@ -525,7 +547,11 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null,
                 radius: radius ? parseFloat(radius) : null,
-                boundaryGeoJson,
+                // null = "untouched, leave an existing saved Boundary alone"; "" = the explicit
+                // clear sentinel UpdateLocationCommand needs after a Geoman removal (#1706 review
+                // fix) — boundaryGeoJson itself is also null in that case, so boundaryRemoved is
+                // what tells the two apart.
+                boundaryGeoJson: boundaryRemoved ? '' : boundaryGeoJson,
             };
 
             if (location) {
@@ -794,6 +820,7 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                                             boundaryGeoJson={boundaryGeoJson}
                                             onBoundaryChange={setBoundaryGeoJson}
                                             onUserDrewNewShape={handleUserDrewNewShape}
+                                            onBoundaryRemoved={handleBoundaryRemoved}
                                         />
                                     </MapContainer>
                                 </Box>

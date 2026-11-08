@@ -23,8 +23,12 @@ public record UpdateLocationCommand(
     string? NameEn = null,
     string? DescriptionEn = null,
     Dictionary<string, string>? TranslationHashes = null,
-    // #1705: patch-if-provided, unlike Center/Radius above — omitting it must leave an
-    // already-set Boundary untouched (see UpdateLocationCommandHandler), not null it out.
+    // #1705/#1706: three-state, unlike Center/Radius above — null means "field omitted", and must
+    // leave an already-set Boundary untouched (see UpdateLocationCommandHandler); "" (empty
+    // string, not null) is the explicit "clear it" sentinel the admin UI sends after removing a
+    // previously-saved boundary via Geoman's removal tool (#1706 review fix — the admin dialog
+    // always sent boundaryGeoJson: null on removal, which was indistinguishable from "untouched"
+    // and silently failed to delete the boundary); anything else is parsed and replaces Boundary.
     string? BoundaryGeoJson = null
 ) : IRequest;
 
@@ -68,11 +72,18 @@ public class UpdateLocationCommandHandler : IRequestHandler<UpdateLocationComman
         location.ParentId = request.ParentId;
         location.Center = center;
         location.Radius = request.Radius;
-        // #1705: patch-if-provided — a request that omits BoundaryGeoJson must leave an
-        // already-set Boundary alone, unlike Center/Radius above which are always recomputed from
-        // Lat/Lon. The validator has already rejected a malformed/non-Polygon/self-intersecting
-        // value by the time the handler runs, so TryParse here is only expected to fail on null.
-        if (request.BoundaryGeoJson != null &&
+        // #1705/#1706: patch-if-provided — null omits the field and leaves an already-set
+        // Boundary alone, unlike Center/Radius above which are always recomputed from Lat/Lon.
+        // "" (empty string) is the explicit clear sentinel: the admin UI sends it after a Geoman
+        // removal, and a null Lat/Lon-derived Center from earlier in this method is left as-is
+        // (the user's pin/radius inputs, not recomputed from the now-gone boundary). The validator
+        // has already rejected a malformed/non-Polygon/self-intersecting non-empty value by the
+        // time the handler runs, so TryParse here is only expected to fail on "".
+        if (request.BoundaryGeoJson == string.Empty)
+        {
+            location.Boundary = null;
+        }
+        else if (!string.IsNullOrEmpty(request.BoundaryGeoJson) &&
             LocationBoundaryParser.TryParse(request.BoundaryGeoJson, out var parsedBoundary, out _))
         {
             location.Boundary = parsedBoundary;

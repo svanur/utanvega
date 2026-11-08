@@ -32,6 +32,17 @@ public class UpdateLocationCommandValidatorTests
         result.ShouldNotHaveValidationErrorFor(x => x.BoundaryGeoJson);
     }
 
+    // #1706 review fix: "" is the explicit "clear the boundary" sentinel the admin UI sends after
+    // a Geoman removal — unlike every other malformed non-null value, it must not be run through
+    // LocationBoundaryParser (which would reject it as "not valid GeoJSON").
+    [Fact]
+    public void EmptyStringBoundaryGeoJson_Passes()
+    {
+        var cmd = ValidCommand with { BoundaryGeoJson = "" };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
+
     [Fact]
     public void ValidPolygonBoundaryGeoJson_Passes()
     {

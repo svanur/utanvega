@@ -122,6 +122,18 @@ public class CreateLocationCommandValidatorTests
         result.ShouldNotHaveValidationErrorFor(x => x.BoundaryGeoJson);
     }
 
+    // #1706 review fix: "" is UpdateLocationCommand's explicit "clear the boundary" sentinel — a
+    // brand-new Location never has a Boundary to clear, but the admin dialog can still send "" for
+    // one (e.g. loaded then removed an official boundary before first save), so Create must accept
+    // it the same as null rather than reject it as invalid GeoJSON.
+    [Fact]
+    public void EmptyStringBoundaryGeoJson_Passes()
+    {
+        var cmd = ValidCommand with { BoundaryGeoJson = "" };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldNotHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
+
     [Fact]
     public void ValidPolygonBoundaryGeoJson_Passes()
     {
