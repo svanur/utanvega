@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -18,6 +18,8 @@ import { useLocations, LocationDto } from '../hooks/useLocations';
 import { apiFetch } from '../hooks/api';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { useRowFocus } from '../hooks/useRowFocus';
+import { useUrlFilterState } from '../hooks/useUrlFilterState';
+import { useDebouncedUrlSearch } from '../hooks/useDebouncedUrlSearch';
 
 interface LocationListProps {
     onNotify: (message: string, severity: 'success' | 'error') => void;
@@ -65,6 +67,22 @@ function flattenVisibleRows(nodes: TreeNode[], expanded: Set<string>): TreeNode[
         }
     }
     return result;
+}
+
+// Both fields are freeform: `search` is free text, and `expanded` has no finite domain (it's
+// a comma-separated list of location ids, decoded into a Set by the component) — neither fits
+// useUrlFilterState's `allowed` validation, so both are passed through unvalidated.
+const LOCATIONS_URL_SCHEMA = {
+    search: { default: '' },
+    expanded: { default: '' },
+} as const;
+
+function decodeExpanded(raw: string): Set<string> {
+    return new Set(raw ? raw.split(',').filter(Boolean) : []);
+}
+
+function encodeExpanded(ids: Set<string>): string {
+    return [...ids].join(',');
 }
 
 const typeColors: Record<string, 'error' | 'warning' | 'info' | 'success' | 'primary' | 'secondary'> = {
@@ -185,8 +203,10 @@ const LocationTreeRow = React.memo(function LocationTreeRow({ node, depth, onEdi
 export function LocationList({ onNotify }: LocationListProps) {
     const navigate = useNavigate();
     const { locations, loading, error: _error, refresh } = useLocations();
-    const [expanded, setExpanded] = useState<Set<string>>(new Set());
-    const [searchQuery, setSearchQuery] = useState('');
+    const { values, setValue } = useUrlFilterState(LOCATIONS_URL_SCHEMA);
+    const setSearchUrl = useCallback((v: string) => setValue('search', v), [setValue]);
+    const { value: searchQuery, onChange: onSearchQueryChange, clear: clearSearchQuery } = useDebouncedUrlSearch(values.search, setSearchUrl);
+    const expanded = useMemo(() => decodeExpanded(values.expanded), [values.expanded]);
 
     const tree = useMemo(() => buildTree(locations), [locations]);
 
@@ -214,18 +234,17 @@ export function LocationList({ onNotify }: LocationListProps) {
     const isSearching = searchQuery.trim().length > 0;
 
     const toggleExpand = useCallback((id: string) => {
-        setExpanded(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id); else next.add(id);
-            return next;
-        });
-    }, []);
+        const next = new Set(expanded);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        setValue('expanded', encodeExpanded(next));
+    }, [expanded, setValue]);
 
     const expandAll = useCallback(() => {
-        setExpanded(new Set(locations.filter(l => l.childrenCount > 0).map(l => l.id)));
-    }, [locations]);
+        const next = new Set(locations.filter(l => l.childrenCount > 0).map(l => l.id));
+        setValue('expanded', encodeExpanded(next));
+    }, [locations, setValue]);
 
-    const collapseAll = useCallback(() => setExpanded(new Set()), []);
+    const collapseAll = useCallback(() => setValue('expanded', ''), [setValue]);
 
     const handleEdit = useCallback((location: LocationDto) => {
         navigate(`/locations/${location.id}`);
@@ -286,7 +305,7 @@ export function LocationList({ onNotify }: LocationListProps) {
                     size="small"
                     placeholder="Search locations…"
                     value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
+                    onChange={e => onSearchQueryChange(e.target.value)}
                     sx={{ minWidth: 200, flexGrow: 1, maxWidth: 300 }}
                     InputProps={{
                         startAdornment: (
@@ -296,7 +315,7 @@ export function LocationList({ onNotify }: LocationListProps) {
                         ),
                         endAdornment: searchQuery ? (
                             <InputAdornment position="end">
-                                <IconButton size="small" aria-label="Clear search" onClick={() => setSearchQuery('')}>
+                                <IconButton size="small" aria-label="Clear search" onClick={clearSearchQuery}>
                                     <ClearIcon fontSize="small" />
                                 </IconButton>
                             </InputAdornment>
