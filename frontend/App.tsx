@@ -45,7 +45,6 @@ const ScratchCardPage = lazy(() => import('./pages/ScratchCardPage'));
 const RunningTripsPage = lazy(() => import('./pages/RunningTripsPage'));
 const RunningTrip2026Switzerland = lazy(() => import('./pages/RunningTrip2026Switzerland'));
 const ServicesPage = lazy(() => import('./pages/ServicesPage'));
-const ChallengePage = lazy(() => import('./pages/ChallengePage'));
 const AnnualReportPage = lazy(() => import('./pages/AnnualReportPage'));
 const NewsletterPage = lazy(() => import('./pages/NewsletterPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -260,7 +259,6 @@ export default function App() {
                     <Route path="/shop/running-trip" element={<RunningTripsPage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/shop/running-trip/2026/switzerland" element={<RunningTrip2026Switzerland mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/services" element={<ServicesPage mode={mode} onToggleMode={handleToggleMode} />} />
-                    <Route path="/challenge/2026" element={<ChallengePage mode={mode} onToggleMode={handleToggleMode} />} />
                     <Route path="/askorun" element={<ExternalRedirect to="https://passportage.com/p/utivistaaskorun" />} />
                     <Route path="/about-us" element={<Navigate to="/about" replace />} />
                     <Route path="/annual-report/2025" element={<AnnualReportPage mode={mode} onToggleMode={handleToggleMode} />} />

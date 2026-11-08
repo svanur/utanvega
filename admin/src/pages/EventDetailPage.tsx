@@ -151,6 +151,16 @@ function sortRaces(a: RaceDto, b: RaceDto): number {
   return a.name.localeCompare(b.name);
 }
 
+// Single source of the expanded-race ordering: a local drag-reorder override (ids) for this
+// edition if one exists, falling back to the stable sortRaces order. Both the j/k focus list and
+// the table render (and its SortableContext items) must derive from this exact function, or they
+// drift out of sync with each other — see #566.
+function getOrderedRaces(edition: EventEditionDto, localRaceOrder: Map<string, string[]>): RaceDto[] {
+  const order = localRaceOrder.get(edition.id);
+  if (!order) return [...edition.races].sort(sortRaces);
+  return order.map(id => edition.races.find(r => r.id === id)).filter((r): r is RaceDto => !!r);
+}
+
 function isTxStale(isText: string | null | undefined, enText: string | null | undefined, hash: string | undefined): boolean {
   if (!isText?.trim() || !enText?.trim() || !hash) return false;
   return hashText(isText.trim()) !== hash;
@@ -1036,9 +1046,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     for (const edition of editionsByYear.visible) {
       rows.push({ kind: 'edition', id: `edition:${edition.id}`, edition });
       if (expandedEditionIds.has(edition.id)) {
-        const races = localRaceOrder.get(edition.id)
-          ? localRaceOrder.get(edition.id)!.map(id => edition.races.find(r => r.id === id)).filter((r): r is RaceDto => !!r)
-          : [...edition.races].sort(sortRaces);
+        const races = getOrderedRaces(edition, localRaceOrder);
         for (const race of races) rows.push({ kind: 'race', id: `race:${race.id}`, race, edition });
       }
     }
@@ -1318,7 +1326,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const handleRaceDragEnd = async (event: DragEndEvent, edition: EventEditionDto) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const sorted = [...edition.races].sort(sortRaces);
+    const sorted = getOrderedRaces(edition, localRaceOrder);
     const oldIndex = sorted.findIndex(r => r.id === active.id);
     const newIndex = sorted.findIndex(r => r.id === over.id);
     const reordered = arrayMove(sorted, oldIndex, newIndex);
@@ -2068,12 +2076,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                       </TableRow>
                     </TableHead>
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={e => void handleRaceDragEnd(e, edition)}>
-                    <SortableContext items={(localRaceOrder.get(edition.id) ?? [...edition.races].sort(sortRaces).map(r => r.id))} strategy={verticalListSortingStrategy}>
+                    <SortableContext items={getOrderedRaces(edition, localRaceOrder).map(r => r.id)} strategy={verticalListSortingStrategy}>
                     <TableBody>
-                      {(localRaceOrder.get(edition.id)
-                        ? localRaceOrder.get(edition.id)!.map(id => edition.races.find(r => r.id === id)!).filter(Boolean)
-                        : [...edition.races].sort(sortRaces)
-                      ).map(race => {
+                      {getOrderedRaces(edition, localRaceOrder).map(race => {
                           const staleTx = raceHasStaleTx(race);
                           return (
                             <SortableRaceRow

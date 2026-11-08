@@ -98,7 +98,6 @@
         "aboutUs": "Um okkur",
         "media": "Fjölmiðlar",
         "services": "Þjónusta",
-        "challenge": "Áskorun",
         "allTrails": "Listi yfir leiðir",
         "allEvents": "Næstu viðburðir",
         "eventsCalendar": "Dagatal",
@@ -698,26 +697,6 @@
         "benefit4": "Aðdráttarkraftur fyrir erlendar þátttakendur á íslenska viðburði",
         "contact": "Hafa samband"
     },
-    "challenge": {
-        "title": "Útivistaáskorun 2026",
-        "tagline": "VERTU ÚT UM ALLT Í SUMAR",
-        "intro": "Safnaðu stigum og merkjum með því að heimsækja nærri 100 útivistastaði á höfuðborgarsvæðinu — gangandi, hlaupandi eða á hjóli.",
-        "locations100": "100+ staðir",
-        "capitalRegion": "Höfuðborgarsvæðið",
-        "deadline": "Til 6. september",
-        "feature1": { "title": "Kanna", "desc": "Heimsæktu útivistastaði um allt höfuðborgarsvæðið" },
-        "feature2": { "title": "Uppgötva", "desc": "Finndu falin dýr á völdum stöðum" },
-        "feature3": { "title": "Vinna", "desc": "Taktu þátt í verðlaunadreifingum frá samstarfsaðilum" },
-        "howTitle": "Hvernig tekur þú þátt",
-        "step1": "Skráðu þig í áskorunina á vefsíðunni",
-        "step2": "Veldu staði til að heimsækja gangandi, hlaupandi eða á hjóli",
-        "step3": "Skráðu mætingu með GPS eða QR kóða á hverjum stað",
-        "step4": "Safnaðu stigum, klifraðu upp stigatöfluna og taktu þátt í verðlaunadreifingum",
-        "prizesTitle": "Verðlaun",
-        "prizes": "Þátttakendur sem ljúka einni eða fleiri áskorunum taka þátt í verðlaupadreifingum allt sumarið og til 6. september. Viðbótarverðlaun eru dreifð á samfélagsmiðlum — deildu þátttöku þinni með #útivistaáskorun.",
-        "sponsors": "Samstarfsaðilar",
-        "register": "Skrá sig í áskoruna"
-    },
     "media": {
         "title": "Fjölmiðlar",
         "description": "Hlaupadagskra.is í fjölmiðlum",
@@ -832,6 +811,10 @@
             }
         },
         "changelog": {
+            "v1_17_10": {
+                "title": "Ábendingar hreinsaðar, deilikort fyrir einstök keppnishlaup, og lagfæring á röðun í stjórnborði",
+                "description": "Skjámyndir og vafraupplýsingar sem fylgja ábendingum eru nú sjálfkrafa hreinsaðar eftir ákveðinn varðveislutíma. Deiling á keppnishlaupi í seríu vikuna fyrir næsta keppnishlaupseríunnar. Flýtihnapparnir j/k í stjórnborði fylgja nú sömu röð og síðasta endurröðun. Alls kyns villur lagfærðar og óvirk /challenge/2026 síða fjarlægð."
+            },
             "v1_17_9": {
                 "title": "Endurhannaður viðburðalisti, fréttabréf tengt og veðurspá viðburða",
                 "description": "Viðburðasíður sýna nú veðurspá í stað veðurfars þegar innan við 7 dagar eru til viðburðar. Uppsetning gagna í viðburðalista breytt fyrir 'list view'. Skráning í fréttabréf er komin í gagnið. Tilkynningaborði 'í þróun' hefur verið fjarlægður og tengill á ábendingar birtur í fótnum í staðinn."

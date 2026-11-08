@@ -450,12 +450,22 @@
     "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
   },
   {
-    "id": "pool_laugarvatn_fontana",
-    "name": "Laugarvatn Fontana",
-    "type": "spa",
+    "id": "pool_laugarvatn",
+    "name": "Sundlaug Laugarvatns",
+    "type": "",
     "locationSlug": "sudurland",
     "coordinates": { "lat": 64.2224, "lng": -20.7243 },
     "url": "https://sundlaugar.is/sundlaugasafn/laugarvatn/",
+    "amenities": { "hot_tubs": true, "sauna": false, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_laugarvatn_fontana",
+    "name": "Laugarvatn Fontana",
+    "type": "municipal",
+    "locationSlug": "sudurland",
+    "coordinates": { "lat": 64.2148, "lng": -20.7305 },
+    "url": "https://fontana.is",
     "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
     "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
   },
@@ -1013,9 +1023,19 @@
     "id": "pool_sundlaugin_laugaskardi",
     "name": "Sundlaugin Laugaskarði",
     "type": "municipal",
-    "locationSlug": "selfoss",
+    "locationSlug": "hveragerdi",
     "coordinates": { "lat": 64.0033, "lng": -21.1750 },
     "url": "https://sundlaugar.is/sundlaugasafn/sundlaugin-laugaskardi/",
+    "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
+    "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
+  },
+  {
+    "id": "pool_hveragerdi_reykjabod",
+    "name": "Reykjaböð",
+    "type": "spa",
+    "locationSlug": "hveragerdi",
+    "coordinates": { "lat": 64.0178, "lng": -21.2101 },
+    "url": "https://reykjabod.is/",
     "amenities": { "hot_tubs": true, "sauna": true, "showers": true, "changing_rooms": true },
     "access": { "is_paid": true, "requires_hiking": false, "requires_4wd": false }
   },

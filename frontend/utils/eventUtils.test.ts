@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, msUntilNextMidnight, resolveCarouselSortDate, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString, truncateWords } from './eventUtils';
+import { addDays, computeRaceDayFlags, daysBetween, deriveEventTrailSlugs, filterRowsByMonths, filterRowsByWeekRange, flattenEventRows, formatYearRanges, getCountdownLabel, getEditionTimingStatus, getEffectiveDaysUntil, getRowDaysUntil, getWeekRange, isOngoingPastDayTwo, isRaceHappeningToday, isRaceWithinShareWindow, msUntilNextMidnight, resolveCarouselSortDate, resolveEditionDayProgress, resolveHeroDaysUntil, resolveSeriesClimateDate, shortestUniqueEditionKey, sortByRecentlyCompletedDate, toDateOnlyString, truncateWords } from './eventUtils';
 import type { EventSummary, SeriesRaceDto } from '../hooks/useEvents';
 
 // Minimal EventSummary factory — mirrors the one in eventFilters.test.ts; only the fields
@@ -1064,5 +1064,35 @@ describe('isRaceHappeningToday', () => {
     it('is false for a future Series race not yet reached, even with daysUntil pinned to 0', () => {
         const now = new Date('2026-11-07T00:00:00');
         expect(isRaceHappeningToday(0, true, '2027-01-14', now)).toBe(false);
+    });
+});
+
+// #1693: the share card must be scoped to this individual race's own 7-day window, not the
+// Series-wide isRaceWeek, so a finished or months-away leg doesn't show it just because another
+// leg in the same series is within range.
+describe('isRaceWithinShareWindow', () => {
+    it('is true when the race is exactly today (diff = 0)', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceWithinShareWindow('2026-11-07', now)).toBe(true);
+    });
+
+    it('is true when the race is exactly 7 days out (diff = 7)', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceWithinShareWindow('2026-11-14', now)).toBe(true);
+    });
+
+    it('is false when the race is 8 days out (diff = 8)', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceWithinShareWindow('2026-11-15', now)).toBe(false);
+    });
+
+    it('is false when the race was yesterday (diff = -1)', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceWithinShareWindow('2026-11-06', now)).toBe(false);
+    });
+
+    it('is false when dateOfRace is null', () => {
+        const now = new Date('2026-11-07T00:00:00');
+        expect(isRaceWithinShareWindow(null, now)).toBe(false);
     });
 });
