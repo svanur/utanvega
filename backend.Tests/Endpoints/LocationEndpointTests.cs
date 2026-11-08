@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Locations;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Tests.WebHost;
 
@@ -313,6 +314,86 @@ public class LocationEndpointTests : IDisposable
         Assert.Equal("Validation failed", body!.Title);
         Assert.True(body.Errors.ContainsKey("Id"));
     }
+
+    private async Task<Guid> SeedLocationWithBoundaryAsync()
+    {
+        const string boundaryGeoJson = """
+            {"type":"Polygon","coordinates":[[[-21.95,64.10],[-21.90,64.10],[-21.90,64.15],[-21.95,64.15],[-21.95,64.10]]]}
+            """;
+        Assert.True(LocationBoundaryParser.TryParse(boundaryGeoJson, out var polygon, out _));
+
+        using var db = _factory.CreateDbContext();
+        var location = new Location
+        {
+            Name = "Bounded Location",
+            Slug = $"bounded-location-{Guid.NewGuid():N}",
+            Type = LocationType.Municipality,
+            Boundary = polygon,
+            CreatedBy = "seed-user",
+        };
+        db.Locations.Add(location);
+        await db.SaveChangesAsync();
+        return location.Id;
+    }
+
+    /// <summary>
+    /// Endpoint-level test for <c>GET /api/v1/admin/locations/{id:guid}/boundary</c> (#1706) —
+    /// proves a saved <see cref="Location.Boundary"/> round-trips back out as GeoJSON via
+    /// <c>GetLocationBoundaryQuery</c>'s <c>GeoJsonWriter</c>, for the admin LocationDialog to load
+    /// into an editable Geoman layer.
+    /// </summary>
+    [Fact]
+    public async Task GetLocationBoundary_LocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var locationId = await SeedLocationWithBoundaryAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<BoundaryResponse>();
+        Assert.NotNull(body);
+        Assert.NotNull(body!.BoundaryGeoJson);
+        Assert.Contains("Polygon", body.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public async Task GetLocationBoundary_LocationWithoutBoundary_ReturnsNullBoundaryGeoJson()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<BoundaryResponse>();
+        Assert.NotNull(body);
+        Assert.Null(body!.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public async Task GetLocationBoundary_AnonymousRequest_IsRejected()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLocationBoundary_NonAdminRole_IsForbidden()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("some-user", role: "member");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private record BoundaryResponse(string? BoundaryGeoJson);
 
     private record CreatedLocationResponse(Guid Id);
 }

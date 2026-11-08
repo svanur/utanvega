@@ -34,6 +34,7 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailSuggestions;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
+using Utanvega.Backend.Application.Locations.Queries.GetLocationBoundary;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometries;
 using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
@@ -1337,6 +1338,13 @@ app.MapPut("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")
     return Results.NoContent();
 })
 .WithName("UpdateLocation");
+
+app.MapGet("/api/v1/admin/locations/{id:guid}/boundary", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var boundary = await mediator.Send(new GetLocationBoundaryQuery(id));
+    return Results.Ok(boundary);
+})
+.WithName("GetLocationBoundary");
 
 app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator, ILogger<Program> logger, HttpContext httpContext) =>
 {
