@@ -29,13 +29,14 @@ import SortIcon from '@mui/icons-material/Sort';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import ViewListIcon from '@mui/icons-material/ViewList';
-import { MapContainer, TileLayer, Marker, Tooltip as LeafletTooltip, useMap, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polygon, Tooltip as LeafletTooltip, useMap, LayersControl } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
+import { geoJsonPolygonToLatLngs } from '../components/TrailMapView';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
 import { useTrails, Trail } from '../hooks/useTrails';
@@ -129,6 +130,10 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState<SortField>('trails');
     const [showMap, setShowMap] = useState(true);
+    // #1708: shared between the map's boundary Polygon layer and the list Cards — hovering (or
+    // tapping, via click) either one highlights both, independent of MarkerClusterGroup's own
+    // marker state.
+    const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
     const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
     const statsMap = useMemo(() => {
@@ -166,6 +171,13 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         [filtered]
     );
 
+    // #1708: locations with a saved boundary (#1705), rendered as Polygon outlines on the index
+    // map alongside (not instead of) the dot markers above.
+    const locationsWithBoundary = useMemo(() =>
+        filtered.filter(l => l.boundaryGeoJson),
+        [filtered]
+    );
+
     const scrollToCard = useCallback((slug: string) => {
         const el = cardRefs.current[slug];
         if (!el) return;
@@ -191,6 +203,16 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         if (stats.trailCount >= 2) return theme.palette.secondary.main;
         return theme.palette.info.main;
     };
+
+    // #1708: default vs. hover-highlighted boundary styling — same theme color (secondary),
+    // brighter/more opaque on hover, so it reads as a state swap rather than a different shape.
+    const getBoundaryPathOptions = (isHovered: boolean) => ({
+        color: isHovered ? theme.palette.secondary.light : theme.palette.secondary.main,
+        weight: isHovered ? 3 : 2,
+        dashArray: isHovered ? undefined : '6 6',
+        fillColor: isHovered ? theme.palette.secondary.light : theme.palette.secondary.main,
+        fillOpacity: isHovered ? 0.35 : 0.08,
+    });
 
     if (loading) {
         return (
@@ -302,6 +324,31 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                 );
                             })}
                             </MarkerClusterGroup>
+                            {/* #1708: boundary outlines — a separate layer outside MarkerClusterGroup
+                                so shapes never join/affect dot-marker clustering. Interactive (unlike
+                                TrailMapView's static context polygon): hover/tap highlights the shape
+                                and its list card together. */}
+                            {locationsWithBoundary.map(loc => {
+                                const positions = geoJsonPolygonToLatLngs(loc.boundaryGeoJson!);
+                                if (!positions) return null;
+                                const isHovered = hoveredSlug === loc.slug;
+                                return (
+                                    <Polygon
+                                        key={`boundary-${loc.id}`}
+                                        positions={positions}
+                                        pathOptions={getBoundaryPathOptions(isHovered)}
+                                        eventHandlers={{
+                                            mouseover: () => setHoveredSlug(loc.slug),
+                                            mouseout: () => setHoveredSlug(null),
+                                            click: () => scrollToCard(loc.slug),
+                                        }}
+                                    >
+                                        <LeafletTooltip direction="center" sticky>
+                                            <Typography variant="caption" fontWeight="bold">{localize(loc.name, loc.nameEn) ?? loc.name}</Typography>
+                                        </LeafletTooltip>
+                                    </Polygon>
+                                );
+                            })}
                             <FitBounds locations={locationsWithCoords} />
                         </MapContainer>
                     </Box>
@@ -367,10 +414,18 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                 <div ref={el => { cardRefs.current[loc.slug] = el; }}>
                                     <Card
                                         elevation={2}
+                                        onMouseEnter={() => setHoveredSlug(loc.slug)}
+                                        onMouseLeave={() => setHoveredSlug(null)}
                                         sx={{
                                             borderRadius: '16px',
                                             transition: 'transform 0.3s ease, box-shadow 0.3s ease, outline 0.3s ease',
                                             '&:hover': { transform: 'translateY(-3px)', boxShadow: 6 },
+                                            // #1708: mirrors the map boundary Polygon's hover state back onto
+                                            // the card, so hovering either one highlights both together.
+                                            ...(hoveredSlug === loc.slug && {
+                                                outline: `3px solid ${theme.palette.secondary.main}`,
+                                                boxShadow: 6,
+                                            }),
                                             height: '100%',
                                             display: 'flex',
                                             flexDirection: 'column',
