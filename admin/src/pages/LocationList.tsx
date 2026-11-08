@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Button, Typography, Box, CircularProgress, IconButton, Chip,
@@ -14,7 +15,6 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { useLocations, LocationDto } from '../hooks/useLocations';
-import { LocationDialog } from '../components/LocationDialog';
 import { apiFetch } from '../hooks/api';
 import { usePageShortcuts, isDialogOpen } from '../hooks/usePageShortcuts';
 import { useRowFocus } from '../hooks/useRowFocus';
@@ -183,9 +183,8 @@ const LocationTreeRow = React.memo(function LocationTreeRow({ node, depth, onEdi
 });
 
 export function LocationList({ onNotify }: LocationListProps) {
+    const navigate = useNavigate();
     const { locations, loading, error: _error, refresh } = useLocations();
-    const [selectedLocation, setSelectedLocation] = useState<LocationDto | undefined>();
-    const [dialogOpen, setDialogOpen] = useState(false);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -229,9 +228,8 @@ export function LocationList({ onNotify }: LocationListProps) {
     const collapseAll = useCallback(() => setExpanded(new Set()), []);
 
     const handleEdit = useCallback((location: LocationDto) => {
-        setSelectedLocation(location);
-        setDialogOpen(true);
-    }, []);
+        navigate(`/locations/${location.id}`);
+    }, [navigate]);
 
     // Currently-visible rows in tree order (respecting collapsed/expanded state) when
     // not searching, or the flat search results when searching — one useRowFocus call,
@@ -257,7 +255,7 @@ export function LocationList({ onNotify }: LocationListProps) {
     }, [onNotify, refresh]);
 
     usePageShortcuts([
-        { key: 'n', alt: true, skip: isDialogOpen, handler: () => { setSelectedLocation(undefined); setDialogOpen(true); } },
+        { key: 'n', alt: true, skip: isDialogOpen, handler: () => navigate('/locations/new') },
     ]);
 
     if (loading && !locations.length) {
@@ -274,7 +272,7 @@ export function LocationList({ onNotify }: LocationListProps) {
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={() => { setSelectedLocation(undefined); setDialogOpen(true); }}
+                    onClick={() => navigate('/locations/new')}
                 >
                     New Location
                 </Button>
@@ -402,15 +400,6 @@ export function LocationList({ onNotify }: LocationListProps) {
                     </TableBody>
                 </Table>
             </TableContainer>
-
-            <LocationDialog
-                open={dialogOpen}
-                onClose={() => setDialogOpen(false)}
-                onSaveSuccess={refresh}
-                onNotify={onNotify}
-                location={selectedLocation}
-                allLocations={locations}
-            />
         </Box>
     );
 }

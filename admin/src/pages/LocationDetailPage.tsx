@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-    Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, TextField, Box, Alert, Typography, Slider,
-    Tabs, Tab, Autocomplete, CircularProgress, IconButton, Tooltip
+    Box, Alert, Typography, Slider, Tabs, Tab, Autocomplete, CircularProgress,
+    IconButton, Tooltip, TextField, Button, Stack,
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import HistoryIcon from '@mui/icons-material/History';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
@@ -17,13 +19,14 @@ import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import { booleanIntersects } from '@turf/turf';
-import { LocationDto, LocationType } from '../hooks/useLocations';
+import { useLocations, LocationType } from '../hooks/useLocations';
 import { findBundledMunicipalityBoundary, MunicipalityBoundaryFeature } from '../utils/municipalityBoundaries';
 import type { MunicipalityBoundaryProperties } from '../utils/municipalityBoundaries';
 import { apiFetch } from '../hooks/api';
 import { useTranslate } from '../hooks/useTranslate';
-import BilingualTextField from './BilingualTextField';
-import ChangeLogList from './ChangeLogList';
+import { useBackToList } from '../hooks/useBackToList';
+import BilingualTextField from '../components/BilingualTextField';
+import ChangeLogList from '../components/ChangeLogList';
 import { BilingualLangProvider } from '../contexts/BilingualLangContext';
 
 // Fix for default Leaflet marker icon
@@ -34,15 +37,6 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
-
-interface LocationDialogProps {
-    open: boolean;
-    onClose: () => void;
-    onSaveSuccess: () => void;
-    onNotify: (message: string, severity: 'success' | 'error') => void;
-    location?: LocationDto;
-    allLocations: LocationDto[];
-}
 
 const LOCATION_TYPES: LocationType[] = ['Country', 'Area', 'Region', 'Municipality', 'Place', 'Other'];
 
@@ -144,15 +138,15 @@ function isValidCoord(lat: number, lon: number): boolean {
     return !isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
 }
 
-function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate }: { 
-    lat: number | null, 
-    lon: number | null, 
-    radius: number | null, 
+function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate }: {
+    lat: number | null,
+    lon: number | null,
+    radius: number | null,
     onUpdate: (lat: number, lon: number) => void,
     onRadiusUpdate: (radius: number) => void
 }) {
     const map = useMap();
-    
+
     useMapEvents({
         click(e) {
             onUpdate(e.latlng.lat, e.latlng.lng);
@@ -342,15 +336,23 @@ function BoundaryEditor({
     return null;
 }
 
-function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location, allLocations }: LocationDialogProps) {
+function LocationDetailPageInner({ onNotify }: { onNotify: (message: string, severity: 'success' | 'error') => void }) {
+    const { id = 'new' } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const handleBackToList = useBackToList('/locations');
+    const isNew = id === 'new';
+    const { locations: allLocations, loading: allLocationsLoading, refresh } = useLocations();
+    const location = isNew ? undefined : allLocations.find(l => l.id === id);
+
     const [name, setName] = useState('');
     const [nameEn, setNameEn] = useState('');
     const [slug, setSlug] = useState('');
     // Seeded from the mode rather than defaulting to locked: the effect below
-    // resets this on every open, but it runs after the first paint, so
-    // defaulting to false showed a locked field for a frame when creating.
-    const [slugUnlocked, setSlugUnlocked] = useState(location === undefined);
-    // Creating and editing share this dialog, and the slug means different
+    // resets this whenever the loaded location changes, but it runs after the
+    // first paint, so defaulting to false showed a locked field for a frame
+    // when creating.
+    const [slugUnlocked, setSlugUnlocked] = useState(isNew);
+    // Creating and editing share this page, and the slug means different
     // things in each: on a new location it is optional and the backend derives
     // one from the name, on an existing one it is a live URL.
     const isEditing = location !== undefined;
@@ -369,8 +371,8 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
     const { translate, translating } = useTranslate();
 
     // #1706: Location.Boundary polygon editing. boundaryGeoJson is the single source of truth fed
-    // into <BoundaryEditor> — set from the GET .../boundary fetch below on open, or reseeded by
-    // "Load official boundary"; BoundaryEditor itself reports user draws/edits back into it.
+    // into <BoundaryEditor> — set from the GET .../boundary fetch below once the location loads, or
+    // reseeded by "Load official boundary"; BoundaryEditor itself reports user draws/edits back into it.
     const [boundaryGeoJson, setBoundaryGeoJson] = useState<string | null>(null);
     const [boundaryLoading, setBoundaryLoading] = useState(false);
     const [municipalityBoundaries, setMunicipalityBoundaries] = useState<MunicipalityBoundaryFeature[]>([]);
@@ -384,11 +386,11 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
     // a Location that never had one, or before the fetch below resolves). handleSave uses this to
     // choose between omitting BoundaryGeoJson (leave an untouched Boundary alone) and sending the
     // "" clear sentinel UpdateLocationCommand needs to actually delete it (#1706 review fix —
-    // previously this dialog always sent null after a removal, which UpdateLocationCommandHandler
+    // previously this page always sent null after a removal, which UpdateLocationCommandHandler
     // reads as "field omitted" and silently kept the stale Boundary in the DB).
     const [boundaryRemoved, setBoundaryRemoved] = useState(false);
 
-    // Loaded once per dialog instance — a small static asset (~17KB), not worth refetching per
+    // Loaded once per page instance — a small static asset (~17KB), not worth refetching per
     // Location opened.
     useEffect(() => {
         let cancelled = false;
@@ -468,9 +470,9 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
         // The lock protects a slug that is already a live URL, so it only
         // applies when editing. A new location has nothing to break yet, and
         // locking the field there would hide the one moment the slug is worth
-        // seeing — before it is created. Reset on every open so an unlock never
-        // carries over to the next location edited.
-        setSlugUnlocked(location === undefined);
+        // seeing — before it is created. Reset whenever the loaded location
+        // changes so an unlock never carries over to the next location edited.
+        setSlugUnlocked(!location);
         setOfficialBoundaryDisplayed(false);
         setBoundaryRemoved(false);
         if (location) {
@@ -487,7 +489,7 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
 
             // Lazy admin-only fetch (#1706) — the shared LocationDto/GetLocationsQuery the list
             // view uses deliberately carries no boundary field, so this is only ever requested
-            // when a specific Location's edit dialog actually opens.
+            // when a specific Location's edit page actually loads.
             setBoundaryGeoJson(null);
             setBoundaryLoading(true);
             let cancelled = false;
@@ -504,7 +506,7 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                 });
             setError(null);
             return () => { cancelled = true; };
-        } else {
+        } else if (isNew) {
             setName('');
             setNameEn('');
             setSlug('');
@@ -519,7 +521,8 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
             setBoundaryLoading(false);
         }
         setError(null);
-    }, [location, open]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location?.id, isNew]);
 
     const handleSave = async () => {
         // An empty slug means "generate one from the name", which the backend
@@ -566,8 +569,8 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                 });
                 onNotify('Location created successfully', 'success');
             }
-            onSaveSuccess();
-            onClose();
+            refresh();
+            navigate('/locations');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save location');
         } finally {
@@ -575,11 +578,51 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
         }
     };
 
+    if (allLocationsLoading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (!isNew && !location) {
+        return (
+            <Alert severity="error" sx={{ mt: 2 }}>
+                Location not found
+                <Button size="small" sx={{ ml: 2 }} onClick={() => navigate('/locations')}>Back to locations</Button>
+            </Alert>
+        );
+    }
+
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-            <DialogTitle>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">{location ? 'Edit Location' : 'New Location'}</Typography>
+        <Box>
+            {/* Breadcrumb */}
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 2 }}>
+                <IconButton size="small" onClick={handleBackToList}>
+                    <ArrowBackIcon fontSize="small" />
+                </IconButton>
+                <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    component={RouterLink}
+                    to="/locations"
+                    onClick={e => {
+                        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                        e.preventDefault();
+                        handleBackToList();
+                    }}
+                    sx={{ cursor: 'pointer', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                >
+                    Locations
+                </Typography>
+                <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                <Typography variant="body2" fontWeight={500}>{location ? location.name : 'New Location'}</Typography>
+            </Stack>
+
+            <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2.5, mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+                    <Typography variant="h5" fontWeight={600}>{location ? 'Edit Location' : 'New Location'}</Typography>
                     {location && (
                         <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
                             <Tab label="General" />
@@ -587,13 +630,12 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                         </Tabs>
                     )}
                 </Box>
-            </DialogTitle>
-            <DialogContent>
+
                 {activeTab === 0 ? (
                     <>
-                        <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-                                {error && <Alert severity="error">{error}</Alert>}
+                        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <Autocomplete
                                     freeSolo
                                     options={geo.options}
@@ -777,8 +819,10 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                                     inputProps={{ step: "100", min: "0" }}
                                 />
                             </Box>
-                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <Box sx={{ height: 400, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
+                            {/* Grown past the old dialog's fixed 400px box (#557) — a page has the width
+                                and height to spare, and the boundary polygon editor benefits from both. */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Box sx={{ height: { xs: 360, sm: 460, md: 640 }, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'action.hover', pl: 1 }}>
                                         <Typography variant="caption">
                                             Click on the map to set location coordinates
@@ -853,8 +897,9 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                 ) : (
                     <ChangeLogList entityName="Location" entityId={location?.id} title="Location History" />
                 )}
-            </DialogContent>
-            <DialogActions sx={{ justifyContent: 'space-between', borderTop: 1, borderColor: 'divider' }}>
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: 1, borderColor: 'divider', pt: 2 }}>
                 {activeTab === 0 ? (
                     <Button
                         startIcon={translating ? <CircularProgress size={16} /> : <TranslateIcon />}
@@ -869,7 +914,7 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                     </Button>
                 ) : <Box />}
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleBackToList}>Cancel</Button>
                     {activeTab === 0 && (
                         <Button
                             onClick={handleSave}
@@ -881,15 +926,15 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                         </Button>
                     )}
                 </Box>
-            </DialogActions>
-        </Dialog>
+            </Box>
+        </Box>
     );
 }
 
-export function LocationDialog(props: LocationDialogProps) {
+export default function LocationDetailPage(props: { onNotify: (message: string, severity: 'success' | 'error') => void }) {
     return (
         <BilingualLangProvider>
-            <LocationDialogInner {...props} />
+            <LocationDetailPageInner {...props} />
         </BilingualLangProvider>
     );
 }

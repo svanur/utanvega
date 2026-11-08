@@ -40,6 +40,7 @@ import FeedbackIcon from '@mui/icons-material/Feedback';
 const TrailsListPage = lazy(() => import('./pages/TrailsListPage'));
 const TrailDetailPage = lazy(() => import('./pages/TrailDetailPage'));
 const LocationList = lazy(() => import('./pages/LocationList').then(m => ({ default: m.LocationList })));
+const LocationDetailPage = lazy(() => import('./pages/LocationDetailPage'));
 const TrailHealth = lazy(() => import('./pages/TrailHealth'));
 const EventHealth = lazy(() => import('./pages/EventHealth'));
 const EditionHealth = lazy(() => import('./pages/EditionHealth'));
@@ -103,6 +104,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
 function pathToPage(pathname: string): PageKey {
   if (pathname.startsWith('/events')) return 'events';
   if (pathname.startsWith('/trails')) return 'trails';
+  if (pathname.startsWith('/locations')) return 'locations';
   if (pathname.startsWith('/organizers')) return 'organizers';
   if (pathname.startsWith('/photographers')) return 'photographers';
   const entry = Object.entries(PAGE_PATHS).find(([, path]) => path === pathname);
@@ -415,6 +417,12 @@ function AdminContent() {
             <TranslationHealth onNotify={notify} />
           ) : currentPage === 'feedback' ? (
             <FeedbackPage onNotify={notify} />
+          ) : currentPage === 'locations' ? (
+            <Routes>
+              <Route path="/locations/new" element={<LocationDetailPage onNotify={notify} />} />
+              <Route path="/locations/:id" element={<LocationDetailPage onNotify={notify} />} />
+              <Route path="/locations" element={<LocationList onNotify={notify} />} />
+            </Routes>
           ) : (
             <LocationList onNotify={notify} />
           )}
