@@ -265,7 +265,6 @@ function BoundaryEditor({
             snappingOption: false,
             autoTracingOption: false,
             snapGuidesOption: false,
-            spitalMode: false,
         });
         // The one hard constraint the issue calls for explicitly: Geoman itself refuses to finish
         // (or edit into) a self-intersecting ring, rather than the app validating it after the fact.
