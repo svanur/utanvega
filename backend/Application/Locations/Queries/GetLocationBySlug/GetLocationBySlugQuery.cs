@@ -6,6 +6,7 @@ using Utanvega.Backend.Application.Locations.Queries.GetLocations;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
 
 namespace Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 
@@ -44,12 +45,17 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
                 ParentName = l.Parent != null ? l.Parent.Name : null,
                 ParentNameEn = l.Parent != null ? l.Parent.NameEn : null,
                 ChildrenCount = l.Children.Count,
+                l.Boundary,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (location == null) return null;
 
         var trailCount = await _context.TrailLocations.CountAsync(tl => tl.LocationId == location.Id, cancellationToken);
+
+        // Boundary is a Polygon — can't convert to GeoJSON inside the EF projection above, so
+        // it's done here in memory, same two-pass approach as the GpxData/LineString handling below.
+        var boundaryGeoJson = location.Boundary == null ? null : new GeoJsonWriter().Write(location.Boundary);
 
         var locationDto = new LocationDto(
             location.Id,
@@ -66,7 +72,8 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             location.Longitude,
             location.Radius,
             location.ChildrenCount,
-            trailCount
+            trailCount,
+            BoundaryGeoJson: boundaryGeoJson
         );
 
         // Build child location DTOs

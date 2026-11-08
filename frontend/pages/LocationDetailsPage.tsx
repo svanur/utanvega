@@ -416,7 +416,12 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     filteredTrails.length > 0 ? (
                         <Box mt={2}>
                             <Box sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
-                               <TrailMapView trails={filteredTrails} userLocation={userLocation} height="400px" />
+                               <TrailMapView
+                                   trails={filteredTrails}
+                                   userLocation={userLocation}
+                                   height="400px"
+                                   locationBoundary={location.boundaryGeoJson ? { geoJson: location.boundaryGeoJson } : null}
+                               />
                             </Box>
                             
                             <Divider sx={{ mb: 4 }} />
