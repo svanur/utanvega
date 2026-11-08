@@ -778,8 +778,8 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                                 />
                             </Box>
                             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <Box sx={{ height: 400, borderRadius: 1, overflow: 'hidden', border: '1px solid #ccc', display: 'flex', flexDirection: 'column' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'grey.100', pl: 1 }}>
+                                <Box sx={{ height: 400, borderRadius: 1, overflow: 'hidden', border: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'action.hover', pl: 1 }}>
                                         <Typography variant="caption">
                                             Click on the map to set location coordinates
                                             {boundaryLoading && ' — loading boundary…'}
