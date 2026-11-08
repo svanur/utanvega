@@ -91,6 +91,7 @@ var municipalities = new[]
 };
 
 using var http = new HttpClient();
+using var wfsHttp = new HttpClient();
 var geoJsonReader = new GeoJsonReader();
 var geoJsonWriter = new GeoJsonWriter();
 
@@ -115,7 +116,7 @@ foreach (var muni in municipalities)
     Console.WriteLine($"── {muni.WfsName} ({muni.Slug}) ──");
     Console.WriteLine($"GET {requestUrl}");
 
-    var json = await http.GetStringAsync(requestUrl);
+    var json = await wfsHttp.GetStringAsync(requestUrl);
     var featureCollection = JsonDocument.Parse(json);
     var features = featureCollection.RootElement.GetProperty("features");
     if (features.GetArrayLength() != 1)
