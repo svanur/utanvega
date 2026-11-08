@@ -64,9 +64,11 @@ public class CreateLocationCommandHandler : IRequestHandler<CreateLocationComman
         // #1705: a provided boundary wins over Lat/Lon — Center becomes the polygon's centroid so
         // every existing Center consumer (e.g. GetEventClimateQuery) keeps working unchanged.
         // The validator has already rejected a malformed/non-Polygon/self-intersecting value by
-        // the time the handler runs, so TryParse here is only expected to fail on a null input.
+        // the time the handler runs, so TryParse here is only expected to fail on a null/empty
+        // input. #1706: "" is UpdateLocationCommand's explicit "clear" sentinel — a brand-new
+        // Location has no Boundary to clear, so it's treated the same as null here (no boundary).
         Polygon? boundary = null;
-        if (request.BoundaryGeoJson != null &&
+        if (!string.IsNullOrEmpty(request.BoundaryGeoJson) &&
             LocationBoundaryParser.TryParse(request.BoundaryGeoJson, out var parsedBoundary, out _))
         {
             boundary = parsedBoundary;

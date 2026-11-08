@@ -12,7 +12,14 @@ import TranslateIcon from '@mui/icons-material/Translate';
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+// Side-effect import: attaches `.pm` to L.Map/L.Layer (module augmentation lives in its .d.ts) and
+// registers the draw/edit/removal toolbar Geoman adds to any map it's imported alongside (#1706).
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import { booleanIntersects } from '@turf/turf';
 import { LocationDto, LocationType } from '../hooks/useLocations';
+import { findBundledMunicipalityBoundary, MunicipalityBoundaryFeature } from '../utils/municipalityBoundaries';
+import type { MunicipalityBoundaryProperties } from '../utils/municipalityBoundaries';
 import { apiFetch } from '../hooks/api';
 import { useTranslate } from '../hooks/useTranslate';
 import BilingualTextField from './BilingualTextField';
@@ -170,9 +177,14 @@ function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate
         <>
             {lat && lon && (
                 <>
-                    <Marker 
-                        position={[lat, lon]} 
+                    {/* pmIgnore excludes this layer from Geoman's draw/edit/removal toolbar
+                        (#1706) — without it, toggling Geoman's global "Edit Layers" button would
+                        also attach vertex-drag handles to this pin, fighting the drag handler
+                        above that already drives onUpdate. */}
+                    <Marker
+                        position={[lat, lon]}
                         draggable={true}
+                        pmIgnore
                         eventHandlers={{
                             dragend: (e) => {
                                 const marker = e.target;
@@ -182,16 +194,153 @@ function MapPicker({ lat, lon, radius, onUpdate, onRadiusUpdate: _onRadiusUpdate
                         }}
                     />
                     {radius && (
-                        <Circle 
-                            center={[lat, lon]} 
+                        <Circle
+                            center={[lat, lon]}
                             radius={radius}
                             pathOptions={{ color: 'blue', fillColor: 'blue' }}
+                            pmIgnore
                         />
                     )}
                 </>
             )}
         </>
     );
+}
+
+/**
+ * Geoman draw/edit/delete toolbar for a single Location.Boundary polygon (#1706). Deliberately
+ * only exposes polygon drawing plus edit/drag/removal — no line/marker/circle/rectangle/text
+ * tools, and no union/difference "composer" modes (out of scope, see the issue).
+ *
+ * `boundaryGeoJson` is the single source of truth for what should be on the map — both the
+ * initial fetch-on-open and "Load official boundary" reseed it, and this component reacts by
+ * loading it as a fresh editable layer. `loadedRef` distinguishes "a new value arrived from the
+ * parent" from "I just emitted this value myself via a pm:edit", so a user's own edits don't
+ * bounce the layer through a remove/recreate on every vertex drag.
+ */
+function BoundaryEditor({
+    boundaryGeoJson,
+    onBoundaryChange,
+    onUserDrewNewShape,
+    onBoundaryRemoved,
+}: {
+    boundaryGeoJson: string | null;
+    onBoundaryChange: (geoJson: string | null) => void;
+    onUserDrewNewShape: () => void;
+    onBoundaryRemoved: () => void;
+}) {
+    const map = useMap();
+    const layerRef = useRef<L.Polygon | null>(null);
+    const loadedRef = useRef<string | null>(null);
+
+    const captureGeometry = useCallback((layer: L.Polygon) => {
+        const feature = layer.toGeoJSON();
+        const json = JSON.stringify(feature.geometry);
+        loadedRef.current = json;
+        onBoundaryChange(json);
+    }, [onBoundaryChange]);
+
+    useEffect(() => {
+        map.pm.addControls({
+            position: 'topleft',
+            drawMarker: false,
+            drawCircleMarker: false,
+            drawPolyline: false,
+            drawRectangle: false,
+            drawCircle: false,
+            drawText: false,
+            drawPolygon: true,
+            editMode: true,
+            dragMode: true,
+            cutPolygon: false,
+            removalMode: true,
+            rotateMode: false,
+            splitMode: false,
+            scaleMode: false,
+            unionMode: false,
+            differenceMode: false,
+            bringToMode: false,
+            sendToBackMode: false,
+            pinningOption: false,
+            snappingOption: false,
+            autoTracingOption: false,
+            snapGuidesOption: false,
+            spitalMode: false,
+        });
+        // The one hard constraint the issue calls for explicitly: Geoman itself refuses to finish
+        // (or edit into) a self-intersecting ring, rather than the app validating it after the fact.
+        map.pm.setGlobalOptions({ allowSelfIntersection: false });
+
+        return () => {
+            map.pm.removeControls();
+        };
+    }, [map]);
+
+    useEffect(() => {
+        const handleCreate: L.PM.CreateEventHandler = (e) => {
+            // Location.Boundary is a single Polygon — drawing a new one while a previous draft is
+            // still on the map replaces it rather than accumulating multiple shapes.
+            if (layerRef.current && (layerRef.current as unknown as L.Layer) !== e.layer) {
+                map.removeLayer(layerRef.current);
+            }
+            const layer = e.layer as L.Polygon;
+            layerRef.current = layer;
+            layer.on('pm:edit', () => captureGeometry(layer));
+            onUserDrewNewShape();
+            captureGeometry(layer);
+        };
+        const handleRemove: L.PM.RemoveEventHandler = (e) => {
+            if ((e.layer as unknown as L.Layer) === (layerRef.current as unknown as L.Layer)) {
+                layerRef.current = null;
+                loadedRef.current = null;
+                onBoundaryChange(null);
+                // Distinct from onBoundaryChange(null) above: that also fires on first mount with
+                // nothing loaded, which must never be mistaken for "the user explicitly deleted a
+                // previously-saved boundary" (the save path turns that into the "" clear sentinel
+                // UpdateLocationCommand expects — see the #1706 review fix in handleSave).
+                onBoundaryRemoved();
+            }
+        };
+        map.on('pm:create', handleCreate);
+        map.on('pm:remove', handleRemove);
+        return () => {
+            map.off('pm:create', handleCreate);
+            map.off('pm:remove', handleRemove);
+        };
+    }, [map, captureGeometry, onBoundaryChange, onUserDrewNewShape, onBoundaryRemoved]);
+
+    useEffect(() => {
+        if (boundaryGeoJson === loadedRef.current) return;
+        loadedRef.current = boundaryGeoJson;
+
+        if (layerRef.current) {
+            map.removeLayer(layerRef.current);
+            layerRef.current = null;
+        }
+        if (!boundaryGeoJson) return;
+
+        let geometry: GeoJSON.Polygon;
+        try {
+            geometry = JSON.parse(boundaryGeoJson);
+        } catch {
+            return;
+        }
+
+        const layer = L.geoJSON(geometry).getLayers()[0] as L.Polygon;
+        layer.addTo(map);
+        layer.pm.enable();
+        layer.on('pm:edit', () => captureGeometry(layer));
+        layerRef.current = layer;
+
+        try {
+            const bounds = layer.getBounds();
+            if (bounds.isValid()) map.fitBounds(bounds, { maxZoom: 14 });
+        } catch {
+            // Bounds might not be ready yet — not worth failing the load over.
+        }
+    }, [boundaryGeoJson, map, captureGeometry]);
+
+    return null;
 }
 
 function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location, allLocations }: LocationDialogProps) {
@@ -219,6 +368,77 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
     const geo = useGeocode();
     const [wikiLoading, setWikiLoading] = useState(false);
     const { translate, translating } = useTranslate();
+
+    // #1706: Location.Boundary polygon editing. boundaryGeoJson is the single source of truth fed
+    // into <BoundaryEditor> — set from the GET .../boundary fetch below on open, or reseeded by
+    // "Load official boundary"; BoundaryEditor itself reports user draws/edits back into it.
+    const [boundaryGeoJson, setBoundaryGeoJson] = useState<string | null>(null);
+    const [boundaryLoading, setBoundaryLoading] = useState(false);
+    const [municipalityBoundaries, setMunicipalityBoundaries] = useState<MunicipalityBoundaryFeature[]>([]);
+    // True only while the displayed polygon is the bundled official shape or a direct edit of it
+    // — drives the CC BY attribution credit, and is reset the moment the user draws a fresh shape
+    // from scratch or removes the layer entirely (see the effects below).
+    const [officialBoundaryDisplayed, setOfficialBoundaryDisplayed] = useState(false);
+    const [boundaryIntersectWarning, setBoundaryIntersectWarning] = useState(false);
+    // True only when the user explicitly deleted a previously-saved boundary via Geoman's removal
+    // tool this session — distinct from boundaryGeoJson simply being null (which is also true for
+    // a Location that never had one, or before the fetch below resolves). handleSave uses this to
+    // choose between omitting BoundaryGeoJson (leave an untouched Boundary alone) and sending the
+    // "" clear sentinel UpdateLocationCommand needs to actually delete it (#1706 review fix —
+    // previously this dialog always sent null after a removal, which UpdateLocationCommandHandler
+    // reads as "field omitted" and silently kept the stale Boundary in the DB).
+    const [boundaryRemoved, setBoundaryRemoved] = useState(false);
+
+    // Loaded once per dialog instance — a small static asset (~17KB), not worth refetching per
+    // Location opened.
+    useEffect(() => {
+        let cancelled = false;
+        fetch('/data/municipality-boundaries.geojson')
+            .then(res => (res.ok ? res.json() : null))
+            .then((data: GeoJSON.FeatureCollection<GeoJSON.Polygon, MunicipalityBoundaryProperties> | null) => {
+                if (!cancelled && data) setMunicipalityBoundaries(data.features);
+            })
+            .catch(() => {
+                // Bundled reference boundaries are an optional convenience (soft intersects warning
+                // + "Load official boundary") — their absence must never block drawing/saving a
+                // hand-drawn boundary.
+            });
+        return () => { cancelled = true; };
+    }, []);
+
+    const matchedMunicipalityBoundary = findBundledMunicipalityBoundary(type, slug, name, municipalityBoundaries);
+
+    useEffect(() => {
+        if (boundaryGeoJson === null) setOfficialBoundaryDisplayed(false);
+    }, [boundaryGeoJson]);
+
+    useEffect(() => {
+        if (!boundaryGeoJson || !matchedMunicipalityBoundary) {
+            setBoundaryIntersectWarning(false);
+            return;
+        }
+        try {
+            const drawnGeometry = JSON.parse(boundaryGeoJson) as GeoJSON.Polygon;
+            const drawnFeature: GeoJSON.Feature<GeoJSON.Polygon> = { type: 'Feature', properties: {}, geometry: drawnGeometry };
+            setBoundaryIntersectWarning(!booleanIntersects(drawnFeature, matchedMunicipalityBoundary));
+        } catch {
+            setBoundaryIntersectWarning(false);
+        }
+    }, [boundaryGeoJson, matchedMunicipalityBoundary]);
+
+    const handleLoadOfficialBoundary = useCallback(() => {
+        if (!matchedMunicipalityBoundary) return;
+        setBoundaryGeoJson(JSON.stringify(matchedMunicipalityBoundary.geometry));
+        setOfficialBoundaryDisplayed(true);
+        setBoundaryRemoved(false);
+    }, [matchedMunicipalityBoundary]);
+
+    const handleUserDrewNewShape = useCallback(() => {
+        setOfficialBoundaryDisplayed(false);
+        setBoundaryRemoved(false);
+    }, []);
+
+    const handleBoundaryRemoved = useCallback(() => setBoundaryRemoved(true), []);
 
     const lookupWikipedia = async () => {
         if (!name.trim()) return;
@@ -252,6 +472,8 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
         // seeing — before it is created. Reset on every open so an unlock never
         // carries over to the next location edited.
         setSlugUnlocked(location === undefined);
+        setOfficialBoundaryDisplayed(false);
+        setBoundaryRemoved(false);
         if (location) {
             setName(location.name);
             setNameEn(location.nameEn || '');
@@ -263,6 +485,26 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
             setLatitude(location.latitude?.toString() || '');
             setLongitude(location.longitude?.toString() || '');
             setRadius(location.radius?.toString() || '');
+
+            // Lazy admin-only fetch (#1706) — the shared LocationDto/GetLocationsQuery the list
+            // view uses deliberately carries no boundary field, so this is only ever requested
+            // when a specific Location's edit dialog actually opens.
+            setBoundaryGeoJson(null);
+            setBoundaryLoading(true);
+            let cancelled = false;
+            apiFetch<{ boundaryGeoJson: string | null }>(`/api/v1/admin/locations/${location.id}/boundary`)
+                .then((result) => {
+                    if (!cancelled) setBoundaryGeoJson(result.boundaryGeoJson);
+                })
+                .catch(() => {
+                    // Leave boundaryGeoJson at null — the pin-drag + circle-radius flow still
+                    // works unaffected, this only disables the boundary editor pre-population.
+                })
+                .finally(() => {
+                    if (!cancelled) setBoundaryLoading(false);
+                });
+            setError(null);
+            return () => { cancelled = true; };
         } else {
             setName('');
             setNameEn('');
@@ -274,6 +516,8 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
             setLatitude('');
             setLongitude('');
             setRadius('');
+            setBoundaryGeoJson(null);
+            setBoundaryLoading(false);
         }
         setError(null);
     }, [location, open]);
@@ -303,6 +547,11 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null,
                 radius: radius ? parseFloat(radius) : null,
+                // null = "untouched, leave an existing saved Boundary alone"; "" = the explicit
+                // clear sentinel UpdateLocationCommand needs after a Geoman removal (#1706 review
+                // fix) — boundaryGeoJson itself is also null in that case, so boundaryRemoved is
+                // what tells the two apart.
+                boundaryGeoJson: boundaryRemoved ? '' : boundaryGeoJson,
             };
 
             if (location) {
@@ -529,32 +778,57 @@ function LocationDialogInner({ open, onClose, onSaveSuccess, onNotify, location,
                                     inputProps={{ step: "100", min: "0" }}
                                 />
                             </Box>
-                            <Box sx={{ flex: 1, height: 400, borderRadius: 1, overflow: 'hidden', border: '1px solid #ccc' }}>
-                                <Typography variant="caption" sx={{ p: 1, display: 'block', bgcolor: '#f5f5f5' }}>
-                                    Click on the map to set location coordinates
-                                </Typography>
-                                <MapContainer 
-                                    center={[64.1265, -21.8174]} 
-                                    zoom={7} 
-                                    style={{ height: 'calc(100% - 32px)', width: '100%' }}
-                                >
-                                    <TileLayer
-                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    />
-                                    <MapPicker 
-                                        lat={latitude ? parseFloat(latitude) : null}
-                                        lon={longitude ? parseFloat(longitude) : null}
-                                        radius={radius ? parseFloat(radius) : null}
-                                        onUpdate={(lat, lon) => {
-                                            setLatitude(lat.toFixed(6));
-                                            setLongitude(lon.toFixed(6));
-                                        }}
-                                        onRadiusUpdate={(r) => {
-                                            setRadius(Math.round(r).toString());
-                                        }}
-                                    />
-                                </MapContainer>
+                            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Box sx={{ height: 400, borderRadius: 1, overflow: 'hidden', border: '1px solid #ccc', display: 'flex', flexDirection: 'column' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'grey.100', pl: 1 }}>
+                                        <Typography variant="caption">
+                                            Click on the map to set location coordinates
+                                            {boundaryLoading && ' — loading boundary…'}
+                                        </Typography>
+                                        {matchedMunicipalityBoundary && (
+                                            <Button size="small" onClick={handleLoadOfficialBoundary}>
+                                                Load official boundary
+                                            </Button>
+                                        )}
+                                    </Box>
+                                    <MapContainer
+                                        center={[64.1265, -21.8174]}
+                                        zoom={7}
+                                        style={{ flex: 1, width: '100%' }}
+                                    >
+                                        <TileLayer
+                                            attribution={
+                                                officialBoundaryDisplayed
+                                                    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors. Contains data from Náttúrufræðistofnun / Landmælingar Íslands (IS 50V), CC BY 4.0.'
+                                                    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                            }
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        />
+                                        <MapPicker
+                                            lat={latitude ? parseFloat(latitude) : null}
+                                            lon={longitude ? parseFloat(longitude) : null}
+                                            radius={radius ? parseFloat(radius) : null}
+                                            onUpdate={(lat, lon) => {
+                                                setLatitude(lat.toFixed(6));
+                                                setLongitude(lon.toFixed(6));
+                                            }}
+                                            onRadiusUpdate={(r) => {
+                                                setRadius(Math.round(r).toString());
+                                            }}
+                                        />
+                                        <BoundaryEditor
+                                            boundaryGeoJson={boundaryGeoJson}
+                                            onBoundaryChange={setBoundaryGeoJson}
+                                            onUserDrewNewShape={handleUserDrewNewShape}
+                                            onBoundaryRemoved={handleBoundaryRemoved}
+                                        />
+                                    </MapContainer>
+                                </Box>
+                                {boundaryIntersectWarning && matchedMunicipalityBoundary && (
+                                    <Alert severity="warning">
+                                        This boundary doesn't overlap {matchedMunicipalityBoundary.properties.name}'s official boundary — check before saving.
+                                    </Alert>
+                                )}
                             </Box>
                         </Box>
                         <Box sx={{ mt: 3, px: 1 }}>
