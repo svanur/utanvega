@@ -11,13 +11,29 @@ namespace Utanvega.Backend.Application.Locations;
 /// </summary>
 public static class LocationBoundaryParser
 {
+    // #1714: both caps are generous but bounded — chosen to comfortably admit the 4 Greater
+    // Reykjavík municipality boundaries already imported by PR #1713 (largest so far: Reykjavík
+    // itself at ~7.6 KB / 403 vertices) while still bounding the worst case. Create/UpdateLocation
+    // sit behind [Authorize(Policy = "AdminOnly")], so this isn't externally exploitable today —
+    // it's a defence-in-depth cap flagged as a follow-up in #1705 / PR #1713, not a response to an
+    // observed attack.
+    private const int MaxPayloadLength = 500_000;
+    private const int MaxVertexCount = 50_000;
+
     /// <summary>
     /// Parses <paramref name="geoJson"/> into a Polygon with SRID 4326. Fails (returns false) when
-    /// the input isn't valid GeoJSON, doesn't resolve to a Polygon geometry type, or the polygon is
-    /// not simple (self-intersecting ring).
+    /// the input isn't valid GeoJSON, doesn't resolve to a Polygon geometry type, the polygon is
+    /// not simple (self-intersecting ring), or the raw payload/vertex count exceeds the caps above.
     /// </summary>
     public static bool TryParse(string geoJson, out Polygon? polygon, out string? error)
     {
+        if (geoJson.Length > MaxPayloadLength)
+        {
+            polygon = null;
+            error = $"BoundaryGeoJson must not exceed {MaxPayloadLength:N0} characters.";
+            return false;
+        }
+
         Geometry? geometry;
         try
         {
@@ -34,6 +50,15 @@ public static class LocationBoundaryParser
         {
             polygon = null;
             error = "BoundaryGeoJson must be a Polygon.";
+            return false;
+        }
+
+        // NumPoints sums the exterior ring plus every interior ring (hole) — matches the vertex
+        // count the import tooling already logs (scripts/import-municipality-boundaries).
+        if (parsed.NumPoints > MaxVertexCount)
+        {
+            polygon = null;
+            error = $"BoundaryGeoJson polygon must not exceed {MaxVertexCount:N0} vertices.";
             return false;
         }
 
