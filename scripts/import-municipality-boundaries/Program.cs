@@ -215,8 +215,10 @@ static async Task ApplyAsync(HttpClient http, string adminApiUrl, string slug, s
     {
         id,
         name = match.GetProperty("name").GetString(),
+        nameEn = match.GetProperty("nameEn").GetString(),
         slug,
         description = match.GetProperty("description").GetString(),
+        descriptionEn = match.GetProperty("descriptionEn").GetString(),
         type = match.GetProperty("type").GetString(),
         parentId = match.GetProperty("parentId").ValueKind == JsonValueKind.Null ? null : match.GetProperty("parentId").GetString(),
         latitude = match.GetProperty("latitude").ValueKind == JsonValueKind.Null ? (double?)null : match.GetProperty("latitude").GetDouble(),
