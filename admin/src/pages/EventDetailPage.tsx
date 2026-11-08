@@ -1326,7 +1326,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   const handleRaceDragEnd = async (event: DragEndEvent, edition: EventEditionDto) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const sorted = [...edition.races].sort(sortRaces);
+    const sorted = getOrderedRaces(edition, localRaceOrder);
     const oldIndex = sorted.findIndex(r => r.id === active.id);
     const newIndex = sorted.findIndex(r => r.id === over.id);
     const reordered = arrayMove(sorted, oldIndex, newIndex);
