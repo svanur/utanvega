@@ -811,6 +811,10 @@
             }
         },
         "changelog": {
+            "v1_17_10": {
+                "title": "Ábendingar hreinsaðar, deilikort fyrir einstök keppnishlaup, og lagfæring á röðun í stjórnborði",
+                "description": "Skjámyndir og vafraupplýsingar sem fylgja ábendingum eru nú sjálfkrafa hreinsaðar eftir ákveðinn varðveislutíma. Deiling á keppnishlaupi í seríu vikuna fyrir næsta keppnishlaupseríunnar. Flýtihnapparnir j/k í stjórnborði fylgja nú sömu röð og síðasta endurröðun. Alls kyns villur lagfærðar og óvirk /challenge/2026 síða fjarlægð."
+            },
             "v1_17_9": {
                 "title": "Endurhannaður viðburðalisti, fréttabréf tengt og veðurspá viðburða",
                 "description": "Viðburðasíður sýna nú veðurspá í stað veðurfars þegar innan við 7 dagar eru til viðburðar. Uppsetning gagna í viðburðalista breytt fyrir 'list view'. Skráning í fréttabréf er komin í gagnið. Tilkynningaborði 'í þróun' hefur verið fjarlægður og tengill á ábendingar birtur í fótnum í staðinn."

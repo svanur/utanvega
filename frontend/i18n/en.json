@@ -811,6 +811,10 @@
             }
         },
         "changelog": {
+            "v1_17_10": {
+                "title": "Feedback privacy, per-race share cards, and an admin ordering fix",
+                "description": "Feedback screenshots and browser info you submit are now automatically cleared after a retention window. Sharing a race within a series now reflects that race's own race-week status instead of the whole series'. Admin's keyboard j/k navigation through a series' expanded races now matches the order you last dragged them into. A service-worker bug that could serve the app shell instead of the actual file for some file-style request paths has been fixed, and the stale, unused /challenge/2026 page has been removed."
+            },
             "v1_17_9": {
                 "title": "Live weather forecasts, newsletter signup, and a redesigned events list",
                 "description": "Event pages now show a real short-range weather forecast in place of historical climate data within 7 days of the event, and the countdown chip has moved to sit beside the date. The events list card now leads with the event name and includes a description preview. Newsletter signup is live, wired to MailerLite with per-email safeguards against duplicate sends. The in-development announcement banner has been removed in favor of a Feedback link in the footer."
