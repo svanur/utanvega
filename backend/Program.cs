@@ -24,6 +24,7 @@ using Utanvega.Backend.Application.Trails.Commands.BackfillElevationProfiles;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
+using Utanvega.Backend.Application.Locations.Queries.GetLocationById;
 using Utanvega.Backend.Application.Locations.Commands.CreateLocation;
 using Utanvega.Backend.Application.Locations.Commands.UpdateLocation;
 using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
@@ -1310,6 +1311,13 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
     return Results.Ok(locations);
 })
 .WithName("GetLocations");
+
+app.MapGet("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var location = await mediator.Send(new GetLocationByIdQuery(id));
+    return location is null ? Results.NotFound() : Results.Ok(location);
+})
+.WithName("GetLocationById");
 
 app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {

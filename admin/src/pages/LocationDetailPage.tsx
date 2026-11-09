@@ -19,7 +19,7 @@ import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import { booleanIntersects } from '@turf/turf';
-import { useLocations, LocationType } from '../hooks/useLocations';
+import { useLocations, useLocationById, LocationType } from '../hooks/useLocations';
 import { findBundledMunicipalityBoundary, MunicipalityBoundaryFeature } from '../utils/municipalityBoundaries';
 import type { MunicipalityBoundaryProperties } from '../utils/municipalityBoundaries';
 import { apiFetch } from '../hooks/api';
@@ -341,8 +341,12 @@ function LocationDetailPageInner({ onNotify }: { onNotify: (message: string, sev
     const navigate = useNavigate();
     const handleBackToList = useBackToList('/locations');
     const isNew = id === 'new';
-    const { locations: allLocations, loading: allLocationsLoading, refresh } = useLocations();
-    const location = isNew ? undefined : allLocations.find(l => l.id === id);
+    // Full/filtered list — still needed for the parent-location picker below, which must offer
+    // every other Location as a candidate parent (#1729 out of scope: that data source).
+    const { locations: allLocations, refresh } = useLocations();
+    // #1729: the edited record itself is resolved with a direct single-record fetch instead of
+    // pulling the entire unfiltered admin locations list just to find one row by id.
+    const { location, loading: locationLoading, refresh: refreshLocation } = useLocationById(isNew ? undefined : id);
 
     const [name, setName] = useState('');
     const [nameEn, setNameEn] = useState('');
@@ -570,6 +574,7 @@ function LocationDetailPageInner({ onNotify }: { onNotify: (message: string, sev
                 onNotify('Location created successfully', 'success');
             }
             refresh();
+            refreshLocation();
             navigate('/locations');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save location');
@@ -578,7 +583,7 @@ function LocationDetailPageInner({ onNotify }: { onNotify: (message: string, sev
         }
     };
 
-    if (allLocationsLoading) {
+    if (!isNew && locationLoading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
                 <CircularProgress />
