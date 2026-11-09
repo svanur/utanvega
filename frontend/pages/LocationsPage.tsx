@@ -251,7 +251,9 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                 </Typography>
 
                 {/* Map Hero */}
-                {showMap && locationsWithCoords.length > 0 && (
+                {/* #1754: gate on boundary-only locations too (#1708), not just coord-bearing ones,
+                    so an all-boundary-only dataset still mounts the map (markers, Polygon outlines, FitBounds). */}
+                {showMap && (locationsWithCoords.length > 0 || locationsWithBoundary.length > 0) && (
                     <Box sx={{
                         height: { xs: 260, sm: 350 },
                         borderRadius: '16px',
