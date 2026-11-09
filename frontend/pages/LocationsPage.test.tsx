@@ -76,7 +76,7 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
 // /weight as data-* attributes so a hover test can assert the isHovered argument's effect without
 // needing Leaflet's real SVG renderer.
 vi.mock('react-leaflet', () => ({
-    MapContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map-container">{children}</div>,
     TileLayer: () => null,
     useMap: () => ({ fitBounds: vi.fn() }),
     LayersControl: Object.assign(
@@ -310,5 +310,34 @@ describe('LocationsPage click/tap on a Marker or Polygon scrolls to the matching
         expect(cardFor('Coords Only').style.outline).not.toBe('');
         expect(cardFor('Both Loc').style.outline).toBe('');
         expect(cardFor('Boundary Only').style.outline).toBe('');
+    });
+});
+
+// #1754: the Map Hero render gate (LocationsPage.tsx:254) originally only checked
+// locationsWithCoords.length > 0, so a dataset where every location is boundary-only (no
+// lat/long anywhere) never mounted MapContainer at all — hiding the boundary Polygon outlines,
+// markers, and FitBounds (#1740/#1753) that would otherwise render fine once mounted.
+describe('LocationsPage Map Hero render gate (#1754)', () => {
+    it('renders the Map Hero when every location is boundary-only (no lat/long anywhere)', () => {
+        mockLocations.current = [boundaryOnly];
+        renderLocationsPage();
+
+        expect(screen.getByTestId('map-container')).toBeDefined();
+        expect(polygonFor('Boundary Only')).not.toBeUndefined();
+    });
+
+    it('hides the Map Hero when every location has neither coordinates nor a boundary', () => {
+        mockLocations.current = [neither];
+        renderLocationsPage();
+
+        expect(screen.queryByTestId('map-container')).toBeNull();
+    });
+
+    it('still renders the Map Hero for a coordinate-bearing dataset (no regression)', () => {
+        mockLocations.current = [coordsOnly];
+        renderLocationsPage();
+
+        expect(screen.getByTestId('map-container')).toBeDefined();
+        expect(markerFor('Coords Only')).not.toBeUndefined();
     });
 });
