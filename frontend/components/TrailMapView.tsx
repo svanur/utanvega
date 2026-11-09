@@ -65,6 +65,27 @@ export function geoJsonPolygonToLatLngs(geoJson: string): L.LatLngExpression[][]
     }
 }
 
+// #1739: Polygon and MultiPolygon, normalized to one ring-set ("part") per polygon — a plain
+// Polygon comes back as a single-part array so callers always loop over parts the same way,
+// regardless of whether the boundary has one shape (Polygon) or several (MultiPolygon, e.g. a
+// municipality with a disconnected exclave). Each part keeps the same [lng,lat] -> [lat,lng] swap
+// geoJsonPolygonToLatLngs does above, including any holes (rings after the first per part).
+export function geoJsonBoundaryToLatLngParts(geoJson: string): L.LatLngExpression[][][] | null {
+    try {
+        const parsed = JSON.parse(geoJson) as GeoJSON.Polygon | GeoJSON.MultiPolygon;
+        const ringToLatLngs = (ring: number[][]) => ring.map(([lng, lat]) => [lat, lng] as L.LatLngExpression);
+        if (parsed?.type === 'Polygon' && Array.isArray(parsed.coordinates)) {
+            return [parsed.coordinates.map(ringToLatLngs)];
+        }
+        if (parsed?.type === 'MultiPolygon' && Array.isArray(parsed.coordinates)) {
+            return parsed.coordinates.map(polygon => polygon.map(ringToLatLngs));
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
 function ChangeView({ bounds, followMe, userLocation, containerReady }: {
     bounds: L.LatLngBoundsExpression | null,
     followMe: boolean,
@@ -219,10 +240,11 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
         return corners ? L.latLngBounds(corners[0], corners[1]) : null;
     }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter]);
 
-    // #1707: parsed once per geoJson string, not per render — the boundary itself never changes
-    // while a location detail page is mounted.
-    const boundaryPositions = useMemo(
-        () => (locationBoundary ? geoJsonPolygonToLatLngs(locationBoundary.geoJson) : null),
+    // #1707/#1739: parsed once per geoJson string, not per render — the boundary itself never
+    // changes while a location detail page is mounted. One part per polygon (Polygon: one part;
+    // MultiPolygon: one part per disconnected shape, e.g. an exclave).
+    const boundaryParts = useMemo(
+        () => (locationBoundary ? geoJsonBoundaryToLatLngParts(locationBoundary.geoJson) : null),
         [locationBoundary],
     );
     // Theme-driven default (secondary.main) rather than a hardcoded hex, per #1707 — must stay
@@ -419,12 +441,15 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                         </LayersControl.BaseLayer>
                     </LayersControl>
                 
-                {/* #1707: location boundary outline — rendered first so it sits below the trail
-                    routes/highlight in z-order; dashed + lightly filled so it reads as context,
-                    not as another route competing with TRAIL_ROUTE_PALETTE. */}
-                {boundaryPositions && (
+                {/* #1707/#1739: location boundary outline(s) — rendered first so it sits below the
+                    trail routes/highlight in z-order; dashed + lightly filled so it reads as
+                    context, not as another route competing with TRAIL_ROUTE_PALETTE. One <Polygon>
+                    per part so a MultiPolygon boundary (e.g. a municipality's exclave) renders as
+                    several disconnected outlines rather than one shape joining them. */}
+                {boundaryParts?.map((part, index) => (
                     <Polygon
-                        positions={boundaryPositions}
+                        key={`boundary-${index}`}
+                        positions={part}
                         pathOptions={{
                             color: boundaryColor,
                             weight: 2,
@@ -434,7 +459,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                         }}
                         interactive={false}
                     />
-                )}
+                ))}
 
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
