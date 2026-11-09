@@ -88,7 +88,7 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
     default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import { TrailMapView, geoJsonPolygonToLatLngs } from './TrailMapView';
+import { TrailMapView, geoJsonPolygonToLatLngs, geoJsonBoundaryToLatLngParts } from './TrailMapView';
 
 const noTrails: Trail[] = [];
 
@@ -457,5 +457,71 @@ describe('geoJsonPolygonToLatLngs (#1722)', () => {
     it('returns null without throwing on valid JSON that is not Polygon-shaped', () => {
         expect(geoJsonPolygonToLatLngs(JSON.stringify({ type: 'Point', coordinates: [-19.0, 64.0] }))).toBeNull();
         expect(geoJsonPolygonToLatLngs(JSON.stringify({ type: 'Polygon' }))).toBeNull();
+    });
+});
+
+// #1739: geoJsonBoundaryToLatLngParts (TrailMapView.tsx:67-83) generalizes the #1722 parser above
+// to also accept MultiPolygon GeoJSON (a municipality with a disconnected exclave, e.g. Reykjavík's
+// Kjalarnes/Esjan area) — normalizing both shapes to one ring-set ("part") per polygon, so both
+// render call sites (TrailMapView's boundaryParts, LocationsPage's locationsWithBoundary.flatMap)
+// can loop over parts the same way regardless of which GeoJSON type the boundary actually is.
+describe('geoJsonBoundaryToLatLngParts (#1739)', () => {
+    it('wraps a single-ring Polygon as one part, swapping [lng,lat] to [lat,lng]', () => {
+        const geoJson = JSON.stringify({
+            type: 'Polygon',
+            coordinates: [[[-19.0, 64.0], [-19.1, 64.1], [-19.2, 64.0], [-19.0, 64.0]]],
+        });
+
+        expect(geoJsonBoundaryToLatLngParts(geoJson)).toEqual([
+            [[[64.0, -19.0], [64.1, -19.1], [64.0, -19.2], [64.0, -19.0]]],
+        ]);
+    });
+
+    it('keeps a Polygon-with-hole as one part containing both rings', () => {
+        const exterior = [[-19.0, 64.0], [-19.5, 64.5], [-19.0, 64.0]];
+        const hole = [[-19.1, 64.1], [-19.2, 64.2], [-19.1, 64.1]];
+        const geoJson = JSON.stringify({ type: 'Polygon', coordinates: [exterior, hole] });
+
+        expect(geoJsonBoundaryToLatLngParts(geoJson)).toEqual([
+            [
+                [[64.0, -19.0], [64.5, -19.5], [64.0, -19.0]],
+                [[64.1, -19.1], [64.2, -19.2], [64.1, -19.1]],
+            ],
+        ]);
+    });
+
+    it('splits a MultiPolygon into one part per polygon, swapping [lng,lat] to [lat,lng]', () => {
+        const mainland = [[[-19.0, 64.0], [-19.1, 64.1], [-19.2, 64.0], [-19.0, 64.0]]];
+        const exclave = [[[-21.0, 64.3], [-21.1, 64.4], [-21.2, 64.3], [-21.0, 64.3]]];
+        const geoJson = JSON.stringify({ type: 'MultiPolygon', coordinates: [mainland, exclave] });
+
+        expect(geoJsonBoundaryToLatLngParts(geoJson)).toEqual([
+            [[[64.0, -19.0], [64.1, -19.1], [64.0, -19.2], [64.0, -19.0]]],
+            [[[64.3, -21.0], [64.4, -21.1], [64.3, -21.2], [64.3, -21.0]]],
+        ]);
+    });
+
+    it('keeps holes on their own polygon part within a MultiPolygon', () => {
+        const exterior = [[-19.0, 64.0], [-19.5, 64.5], [-19.0, 64.0]];
+        const hole = [[-19.1, 64.1], [-19.2, 64.2], [-19.1, 64.1]];
+        const exclave = [[[-21.0, 64.3], [-21.1, 64.4], [-21.2, 64.3], [-21.0, 64.3]]];
+        const geoJson = JSON.stringify({ type: 'MultiPolygon', coordinates: [[exterior, hole], exclave] });
+
+        expect(geoJsonBoundaryToLatLngParts(geoJson)).toEqual([
+            [
+                [[64.0, -19.0], [64.5, -19.5], [64.0, -19.0]],
+                [[64.1, -19.1], [64.2, -19.2], [64.1, -19.1]],
+            ],
+            [[[64.3, -21.0], [64.4, -21.1], [64.3, -21.2], [64.3, -21.0]]],
+        ]);
+    });
+
+    it('returns null without throwing on invalid JSON', () => {
+        expect(geoJsonBoundaryToLatLngParts('{not valid json')).toBeNull();
+    });
+
+    it('returns null without throwing on valid JSON that is neither Polygon nor MultiPolygon', () => {
+        expect(geoJsonBoundaryToLatLngParts(JSON.stringify({ type: 'Point', coordinates: [-19.0, 64.0] }))).toBeNull();
+        expect(geoJsonBoundaryToLatLngParts(JSON.stringify({ type: 'MultiPolygon' }))).toBeNull();
     });
 });

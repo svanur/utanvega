@@ -36,7 +36,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
-import { geoJsonPolygonToLatLngs } from '../components/TrailMapView';
+import { geoJsonBoundaryToLatLngParts } from '../components/TrailMapView';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
 import { useTrails, Trail } from '../hooks/useTrails';
@@ -328,14 +328,18 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                 so shapes never join/affect dot-marker clustering. Interactive (unlike
                                 TrailMapView's static context polygon): hover/tap highlights the shape
                                 and its list card together. */}
-                            {locationsWithBoundary.map(loc => {
-                                const positions = geoJsonPolygonToLatLngs(loc.boundaryGeoJson!);
-                                if (!positions) return null;
+                            {locationsWithBoundary.flatMap(loc => {
+                                const parts = geoJsonBoundaryToLatLngParts(loc.boundaryGeoJson!);
+                                if (!parts) return [];
                                 const isHovered = hoveredSlug === loc.slug;
-                                return (
+                                // #1739: one <Polygon> per part so a MultiPolygon boundary (e.g. an
+                                // exclave) renders as several disconnected outlines, all sharing the
+                                // same hover/click handlers so hovering/clicking any part highlights
+                                // the same location card.
+                                return parts.map((part, index) => (
                                     <Polygon
-                                        key={`boundary-${loc.id}`}
-                                        positions={positions}
+                                        key={`boundary-${loc.id}-${index}`}
+                                        positions={part}
                                         pathOptions={getBoundaryPathOptions(isHovered)}
                                         eventHandlers={{
                                             mouseover: () => setHoveredSlug(loc.slug),
@@ -347,7 +351,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                             <Typography variant="caption" fontWeight="bold">{localize(loc.name, loc.nameEn) ?? loc.name}</Typography>
                                         </LeafletTooltip>
                                     </Polygon>
-                                );
+                                ));
                             })}
                             <FitBounds locations={locationsWithCoords} />
                         </MapContainer>
