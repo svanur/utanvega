@@ -423,9 +423,7 @@ function AdminContent() {
               <Route path="/locations/:id" element={<LocationDetailPage onNotify={notify} />} />
               <Route path="/locations" element={<LocationList onNotify={notify} />} />
             </Routes>
-          ) : (
-            <LocationList onNotify={notify} />
-          )}
+          ) : null}
           </Suspense>
 
           <GpxUploadDialog 
