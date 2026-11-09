@@ -88,7 +88,7 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
     default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import { TrailMapView, geoJsonPolygonToLatLngs, geoJsonBoundaryToLatLngParts } from './TrailMapView';
+import { TrailMapView, geoJsonBoundaryToLatLngParts } from './TrailMapView';
 
 const noTrails: Trail[] = [];
 
@@ -423,45 +423,8 @@ describe('TrailMapView controlled selection (#1543)', () => {
     });
 });
 
-// #1722: geoJsonPolygonToLatLngs (TrailMapView.tsx:58-64) swaps GeoJSON's [lng,lat] ring tuples
-// into Leaflet's [lat,lng] expectation for the locationBoundary Polygon overlay's
-// boundaryPositions (useMemo around TrailMapView.tsx:224-227). Exercised directly as a named
-// export, since it's a pure parser with no dependency on React/Leaflet rendering.
-describe('geoJsonPolygonToLatLngs (#1722)', () => {
-    it('swaps [lng,lat] to [lat,lng] for a single-ring Polygon', () => {
-        const geoJson = JSON.stringify({
-            type: 'Polygon',
-            coordinates: [[[-19.0, 64.0], [-19.1, 64.1], [-19.2, 64.0], [-19.0, 64.0]]],
-        });
-
-        expect(geoJsonPolygonToLatLngs(geoJson)).toEqual([
-            [[64.0, -19.0], [64.1, -19.1], [64.0, -19.2], [64.0, -19.0]],
-        ]);
-    });
-
-    it('swaps both rings of a Polygon with a hole', () => {
-        const exterior = [[-19.0, 64.0], [-19.5, 64.5], [-19.0, 64.0]];
-        const hole = [[-19.1, 64.1], [-19.2, 64.2], [-19.1, 64.1]];
-        const geoJson = JSON.stringify({ type: 'Polygon', coordinates: [exterior, hole] });
-
-        expect(geoJsonPolygonToLatLngs(geoJson)).toEqual([
-            [[64.0, -19.0], [64.5, -19.5], [64.0, -19.0]],
-            [[64.1, -19.1], [64.2, -19.2], [64.1, -19.1]],
-        ]);
-    });
-
-    it('returns null without throwing on invalid JSON', () => {
-        expect(geoJsonPolygonToLatLngs('{not valid json')).toBeNull();
-    });
-
-    it('returns null without throwing on valid JSON that is not Polygon-shaped', () => {
-        expect(geoJsonPolygonToLatLngs(JSON.stringify({ type: 'Point', coordinates: [-19.0, 64.0] }))).toBeNull();
-        expect(geoJsonPolygonToLatLngs(JSON.stringify({ type: 'Polygon' }))).toBeNull();
-    });
-});
-
-// #1739: geoJsonBoundaryToLatLngParts (TrailMapView.tsx:67-83) generalizes the #1722 parser above
-// to also accept MultiPolygon GeoJSON (a municipality with a disconnected exclave, e.g. Reykjavík's
+// #1739: geoJsonBoundaryToLatLngParts (TrailMapView.tsx:67-83) accepts Polygon and MultiPolygon
+// GeoJSON (a municipality with a disconnected exclave, e.g. Reykjavík's
 // Kjalarnes/Esjan area) — normalizing both shapes to one ring-set ("part") per polygon, so both
 // render call sites (TrailMapView's boundaryParts, LocationsPage's locationsWithBoundary.flatMap)
 // can loop over parts the same way regardless of which GeoJSON type the boundary actually is.
