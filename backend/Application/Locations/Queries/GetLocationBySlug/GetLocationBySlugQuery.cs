@@ -78,6 +78,7 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
 
         // Build child location DTOs
         var childRaw = await _context.Locations
+            .AsNoTracking()
             .Where(l => l.ParentId == location.Id)
             .OrderBy(l => l.Name)
             .Select(l => new {
