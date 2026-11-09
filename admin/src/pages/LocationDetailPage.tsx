@@ -337,16 +337,25 @@ function BoundaryEditor({
 }
 
 function LocationDetailPageInner({ onNotify }: { onNotify: (message: string, severity: 'success' | 'error') => void }) {
-    const { id = 'new' } = useParams<{ id: string }>();
+    const { idOrSlug = 'new' } = useParams<{ idOrSlug: string }>();
     const navigate = useNavigate();
     const handleBackToList = useBackToList('/locations');
-    const isNew = id === 'new';
+    const isNew = idOrSlug === 'new';
     // Full/filtered list — still needed for the parent-location picker below, which must offer
     // every other Location as a candidate parent (#1729 out of scope: that data source).
     const { locations: allLocations, refresh } = useLocations();
     // #1729: the edited record itself is resolved with a direct single-record fetch instead of
     // pulling the entire unfiltered admin locations list just to find one row by id.
-    const { location, loading: locationLoading, refresh: refreshLocation } = useLocationById(isNew ? undefined : id);
+    // #1746: idOrSlug — the backend resolves either shape to the same LocationDto.
+    const { location, loading: locationLoading, refresh: refreshLocation } = useLocationById(isNew ? undefined : idOrSlug);
+
+    // #1746: canonicalize the URL to the slug once the location loads, mirroring
+    // TrailDetailPage — some entry points (e.g. a bookmarked id URL) only have the id on hand.
+    useEffect(() => {
+        if (location && idOrSlug !== location.slug) {
+            navigate(`/locations/${location.slug}`, { replace: true });
+        }
+    }, [location, idOrSlug, navigate]);
 
     const [name, setName] = useState('');
     const [nameEn, setNameEn] = useState('');

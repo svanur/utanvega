@@ -1312,9 +1312,9 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
 })
 .WithName("GetLocations");
 
-app.MapGet("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+app.MapGet("/api/v1/admin/locations/{idOrSlug}", [Authorize(Policy = "AdminOnly")] async (string idOrSlug, IMediator mediator) =>
 {
-    var location = await mediator.Send(new GetLocationByIdQuery(id));
+    var location = await mediator.Send(new GetLocationByIdQuery(idOrSlug));
     return location is null ? Results.NotFound() : Results.Ok(location);
 })
 .WithName("GetLocationById");

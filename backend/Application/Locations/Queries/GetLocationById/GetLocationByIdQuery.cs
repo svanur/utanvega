@@ -8,11 +8,12 @@ using Utanvega.Backend.Infrastructure.Persistence;
 namespace Utanvega.Backend.Application.Locations.Queries.GetLocationById;
 
 /// <summary>
-/// Admin-only lookup of a single Location by id (#1729). Resolves the record a detail page edits
-/// without pulling the entire unfiltered admin locations list via GetLocationsQuery just to find
-/// one row by id.
+/// Admin-only lookup of a single Location by id (#1729), extended under #1746 to also accept a
+/// slug — mirroring the idOrSlug pattern GetAdminTrail already uses (Program.cs). Resolves the
+/// record a detail page edits without pulling the entire unfiltered admin locations list via
+/// GetLocationsQuery just to find one row.
 /// </summary>
-public record GetLocationByIdQuery(Guid Id) : IRequest<LocationDto?>;
+public record GetLocationByIdQuery(string IdOrSlug) : IRequest<LocationDto?>;
 
 public class GetLocationByIdQueryHandler : IRequestHandler<GetLocationByIdQuery, LocationDto?>
 {
@@ -25,9 +26,13 @@ public class GetLocationByIdQueryHandler : IRequestHandler<GetLocationByIdQuery,
 
     public async Task<LocationDto?> Handle(GetLocationByIdQuery request, CancellationToken cancellationToken)
     {
-        var raw = await _context.Locations
-            .AsNoTracking()
-            .Where(l => l.Id == request.Id)
+        var isGuid = Guid.TryParse(request.IdOrSlug, out var id);
+        var locations = _context.Locations.AsNoTracking();
+        var matched = isGuid
+            ? locations.Where(l => l.Id == id)
+            : locations.Where(l => l.Slug == request.IdOrSlug);
+
+        var raw = await matched
             .Select(l => new {
                 l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
                 Type = l.Type.ToString(),
