@@ -37,6 +37,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
 import { geoJsonBoundaryToLatLngParts } from '../components/TrailMapView';
+import { computeFitBoundsPoints } from './locationsFitBounds';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
 import { useTrails, Trail } from '../hooks/useTrails';
@@ -101,11 +102,15 @@ function computeLocationStats(trails: Trail[], locationSlug: string): LocationSt
 
 type SortField = 'trails' | 'distance' | 'name';
 
+// #1740: takes the full (unfiltered-by-coords) location list so a boundary-only location (no
+// lat/long yet, e.g. the first one added via #1705 without a center point) still reaches the
+// fit-bounds calc — today it's rendered via locationsWithBoundary's own Polygon layer below but
+// never counted here, so the map's initial view can sit anywhere relative to it.
 function FitBounds({ locations }: { locations: Location[] }) {
     const map = useMap();
-    const withCoords = locations.filter(l => l.latitude && l.longitude);
-    if (withCoords.length > 0) {
-        const bounds = L.latLngBounds(withCoords.map(l => [l.latitude!, l.longitude!] as [number, number]));
+    const points = computeFitBoundsPoints(locations);
+    if (points.length > 0) {
+        const bounds = L.latLngBounds(points);
         if (bounds.isValid()) {
             map.fitBounds(bounds, { padding: [40, 40] });
         }
@@ -353,7 +358,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                     </Polygon>
                                 ));
                             })}
-                            <FitBounds locations={locationsWithCoords} />
+                            <FitBounds locations={filtered} />
                         </MapContainer>
                     </Box>
                 )}
