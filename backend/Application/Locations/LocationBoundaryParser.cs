@@ -1,3 +1,4 @@
+using System.Text;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 
@@ -27,10 +28,13 @@ public static class LocationBoundaryParser
     /// </summary>
     public static bool TryParse(string geoJson, out Polygon? polygon, out string? error)
     {
-        if (geoJson.Length > MaxPayloadLength)
+        // #1736: byte length, not geoJson.Length (UTF-16 char count) — a payload padded with
+        // multi-byte UTF-8 characters can stay under the char cap while exceeding the byte size
+        // the cap was meant to bound.
+        if (Encoding.UTF8.GetByteCount(geoJson) > MaxPayloadLength)
         {
             polygon = null;
-            error = $"BoundaryGeoJson must not exceed {MaxPayloadLength:N0} characters.";
+            error = $"BoundaryGeoJson must not exceed {MaxPayloadLength:N0} bytes.";
             return false;
         }
 

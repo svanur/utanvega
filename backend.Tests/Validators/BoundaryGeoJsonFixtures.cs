@@ -22,6 +22,15 @@ internal static class BoundaryGeoJsonFixtures
         return sb.ToString();
     }
 
+    // #1736: a payload padded with multi-byte UTF-8 chars (3 bytes each in UTF-8) — char count
+    // stays comfortably under MaxPayloadLength (500,000) while the UTF-8 byte count exceeds it,
+    // proving the cap is enforced on bytes rather than string.Length (UTF-16 chars).
+    internal static string BuildPayloadWithMultiByteCharsExceedingByteCap()
+    {
+        const int charCount = 200_000; // 200,000 chars but 600,000 UTF-8 bytes (3 bytes/char)
+        return new string('本', charCount);
+    }
+
     // The actual Reykjavík boundary bundled by PR #1713 (admin/public/data/
     // municipality-boundaries.geojson) — the largest of the 4 imported municipalities at 403
     // vertices / ~7.6 KB. Confirms the caps chosen in the vertex/size-cap tests don't clip real

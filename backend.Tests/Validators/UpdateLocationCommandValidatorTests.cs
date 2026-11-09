@@ -105,6 +105,20 @@ public class UpdateLocationCommandValidatorTests
     }
 
     [Fact]
+    public void BoundaryGeoJsonExceedsByteSizeCapOnly_Fails()
+    {
+        // #1736: multi-byte UTF-8 chars (3 bytes each) keep string.Length well under the 500,000
+        // char/byte cap value while the actual UTF-8 byte count exceeds it — proves the cap is
+        // enforced in bytes, not chars.
+        var cmd = ValidCommand with
+        {
+            BoundaryGeoJson = BoundaryGeoJsonFixtures.BuildPayloadWithMultiByteCharsExceedingByteCap()
+        };
+        var result = _validator.TestValidate(cmd);
+        result.ShouldHaveValidationErrorFor(x => x.BoundaryGeoJson);
+    }
+
+    [Fact]
     public void BoundaryGeoJsonExceedsVertexCountCap_Fails()
     {
         // 50,001 vertices via a minimal "[x,0]" per point keeps the raw payload at ~300 KB — well
