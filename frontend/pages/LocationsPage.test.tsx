@@ -26,15 +26,6 @@ import type { Trail } from '../hooks/useTrails';
 // TrailMapView.test.tsx:20 / RacesPage.test.tsx:35.
 afterEach(cleanup);
 
-// jsdom (unlike a real browser) doesn't implement Element.scrollIntoView at all — calling it
-// throws "not a function" rather than silently no-op'ing, which would abort scrollToCard
-// (LocationsPage.tsx:189) before it ever reaches the DOM highlight this file asserts on. Stubbed
-// once, globally, as a no-op — the click tests below assert scrollToCard's *style* side effect,
-// never that scrolling itself occurred.
-beforeEach(() => {
-    Element.prototype.scrollIntoView = vi.fn();
-});
-
 // LocationsPage's t()/useLocalize() calls need a real, initialized i18next instance — initialized
 // once with the real EN resources, same as RacesPage.test.tsx, rather than a hand-rolled stub.
 void i18n.use(initReactI18next).init({
