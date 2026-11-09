@@ -420,7 +420,7 @@ function AdminContent() {
           ) : currentPage === 'locations' ? (
             <Routes>
               <Route path="/locations/new" element={<LocationDetailPage onNotify={notify} />} />
-              <Route path="/locations/:id" element={<LocationDetailPage onNotify={notify} />} />
+              <Route path="/locations/:idOrSlug" element={<LocationDetailPage onNotify={notify} />} />
               <Route path="/locations" element={<LocationList onNotify={notify} />} />
             </Routes>
           ) : null}

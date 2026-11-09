@@ -484,7 +484,7 @@ public class LocationQueryHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             var handler = new GetLocationByIdQueryHandler(ctx);
-            var result = await handler.Handle(new GetLocationByIdQuery(location.Id), CancellationToken.None);
+            var result = await handler.Handle(new GetLocationByIdQuery(location.Id.ToString()), CancellationToken.None);
 
             Assert.NotNull(result);
             Assert.Equal(location.Id, result.Id);
@@ -497,7 +497,7 @@ public class LocationQueryHandlerTests : IDisposable
     {
         using var ctx = _factory.CreateContext();
         var handler = new GetLocationByIdQueryHandler(ctx);
-        var result = await handler.Handle(new GetLocationByIdQuery(Guid.NewGuid()), CancellationToken.None);
+        var result = await handler.Handle(new GetLocationByIdQuery(Guid.NewGuid().ToString()), CancellationToken.None);
 
         Assert.Null(result);
     }
@@ -517,11 +517,45 @@ public class LocationQueryHandlerTests : IDisposable
         using (var ctx = _factory.CreateContext())
         {
             var handler = new GetLocationByIdQueryHandler(ctx);
-            var result = await handler.Handle(new GetLocationByIdQuery(location.Id), CancellationToken.None);
+            var result = await handler.Handle(new GetLocationByIdQuery(location.Id.ToString()), CancellationToken.None);
 
             Assert.NotNull(result);
             Assert.NotNull(result.BoundaryGeoJson);
             Assert.Contains("\"type\":\"Polygon\"", result.BoundaryGeoJson);
         }
+    }
+
+    // --- #1746: GetLocationById by slug ---
+
+    [Fact]
+    public async Task GetLocationById_ReturnsLocation_WhenFoundBySlug()
+    {
+        var location = CreateLocation("Akranes", LocationType.Municipality);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationByIdQueryHandler(ctx);
+            var result = await handler.Handle(new GetLocationByIdQuery("akranes"), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.Equal(location.Id, result.Id);
+            Assert.Equal("Akranes", result.Name);
+        }
+    }
+
+    [Fact]
+    public async Task GetLocationById_ReturnsNull_WhenSlugUnknown()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new GetLocationByIdQueryHandler(ctx);
+        var result = await handler.Handle(new GetLocationByIdQuery("no-such-location"), CancellationToken.None);
+
+        Assert.Null(result);
     }
 }

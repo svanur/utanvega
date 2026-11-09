@@ -496,6 +496,40 @@ public class LocationEndpointTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>
+    /// #1746: the same <c>GET /api/v1/admin/locations/{idOrSlug}</c> route must resolve a slug
+    /// to the identical record — and identical JSON shape — as the id lookup above.
+    /// </summary>
+    [Fact]
+    public async Task GetLocationById_BySlug_ReturnsSameLocationAsById()
+    {
+        var locationId = await SeedLocationAsync();
+        string slug;
+        using (var db = _factory.CreateDbContext())
+        {
+            slug = (await db.Locations.FindAsync(locationId))!.Slug;
+        }
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var byId = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+        var bySlug = await client.GetAsync($"/api/v1/admin/locations/{slug}");
+
+        Assert.Equal(HttpStatusCode.OK, bySlug.StatusCode);
+        var byIdBody = await byId.Content.ReadAsStringAsync();
+        var bySlugBody = await bySlug.Content.ReadAsStringAsync();
+        Assert.Equal(byIdBody, bySlugBody);
+    }
+
+    [Fact]
+    public async Task GetLocationById_UnknownSlug_ReturnsNotFound()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync("/api/v1/admin/locations/no-such-location");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     [Fact]
     public async Task GetLocationById_AnonymousRequest_IsRejected()
     {

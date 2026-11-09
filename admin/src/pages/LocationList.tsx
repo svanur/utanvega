@@ -247,7 +247,7 @@ export function LocationList({ onNotify }: LocationListProps) {
     const collapseAll = useCallback(() => setValue('expanded', ''), [setValue]);
 
     const handleEdit = useCallback((location: LocationDto) => {
-        navigate(`/locations/${location.id}`);
+        navigate(`/locations/${location.slug}`);
     }, [navigate]);
 
     // Currently-visible rows in tree order (respecting collapsed/expanded state) when
