@@ -53,23 +53,13 @@ interface TrailMapViewProps {
     locationBoundary?: { geoJson: string; color?: string } | null;
 }
 
-// GeoJSON Polygon coordinates are rings of [lng, lat] tuples (exterior ring first, then holes);
-// Leaflet's <Polygon positions> expects the opposite order, [lat, lng], as the same ring shape.
-export function geoJsonPolygonToLatLngs(geoJson: string): L.LatLngExpression[][] | null {
-    try {
-        const parsed = JSON.parse(geoJson) as GeoJSON.Polygon;
-        if (parsed?.type !== 'Polygon' || !Array.isArray(parsed.coordinates)) return null;
-        return parsed.coordinates.map(ring => ring.map(([lng, lat]) => [lat, lng] as L.LatLngExpression));
-    } catch {
-        return null;
-    }
-}
-
 // #1739: Polygon and MultiPolygon, normalized to one ring-set ("part") per polygon — a plain
 // Polygon comes back as a single-part array so callers always loop over parts the same way,
 // regardless of whether the boundary has one shape (Polygon) or several (MultiPolygon, e.g. a
-// municipality with a disconnected exclave). Each part keeps the same [lng,lat] -> [lat,lng] swap
-// geoJsonPolygonToLatLngs does above, including any holes (rings after the first per part).
+// municipality with a disconnected exclave). GeoJSON coordinates are rings of [lng, lat] tuples
+// (exterior ring first, then holes); Leaflet's <Polygon positions> expects the opposite order,
+// [lat, lng], as the same ring shape — each part applies that swap, including any holes (rings
+// after the first per part).
 export function geoJsonBoundaryToLatLngParts(geoJson: string): L.LatLngExpression[][][] | null {
     try {
         const parsed = JSON.parse(geoJson) as GeoJSON.Polygon | GeoJSON.MultiPolygon;
