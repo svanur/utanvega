@@ -29,4 +29,14 @@
     <ProjectReference Include="..\backend\backend.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- #1764: scripts/import-landsvaedi-regions is a standalone console tool, never wired into
+         the backend web app's build/runtime or CI (see that project's own header comment) — this
+         links in only its one pure-geometry helper file (no HTTP/Console code) so the
+         MultiPolygon-reduction logic gets xUnit coverage without pulling in the whole script
+         project as a dependency. NetTopologySuite.Geometries (which the helper uses) already
+         comes in transitively via the backend.csproj ProjectReference above. -->
+    <Compile Include="..\scripts\import-landsvaedi-regions\MultiPolygonReducer.cs" Link="Services\MultiPolygonReducer.cs" />
+  </ItemGroup>
+
 </Project>
