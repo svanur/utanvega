@@ -17,6 +17,19 @@
 //      mainland, and discard the rest. "Largest area" was rejected as the selection rule by the
 //      municipality script's precedent (its largest-area part was not reliably the populated
 //      mainland one) — "contains the reference point" is deliberate and carried over here.
+//
+// Two extra robustness fixes, added by #1751 when scripts/import-municipality-boundaries reused
+// this type for 7 more municipalities (Seltjarnarnesbær..Sveitarfélagið Stykkishólmur) — neither
+// was needed by IS8/IS6 or the original 4 municipalities, but both are cheap no-ops when the
+// input doesn't need them, so they're folded into every return path here rather than kept as a
+// second, divergent copy in the municipality script:
+//   4. Hveragerðisbær: Union() can collapse touching parts into a Polygon whose ring touches
+//      itself at a single point — OGC counts that as valid (IsValid=true) but not simple
+//      (IsSimple=false). CleanSelfTouching Buffer(0)-fixes this without changing covered area.
+//   5. Sveitarfélagið Stykkishólmur (324 disjoint parts): a raw MultiPolygon with an internally
+//      self-intersecting part can make Union()'s noded overlay throw TopologyException outright
+//      instead of returning a result. Caught as a fallback only — re-unions a Buffer(0)-cleaned
+//      copy of the raw geometry — so geometry that unions cleanly on the first try is untouched.
 
 using NetTopologySuite.Geometries;
 
@@ -39,14 +52,23 @@ public static class MultiPolygonReducer
         if (geometry is Polygon alreadyPolygon)
         {
             logMessage = $"  {label}: already a single Polygon, nothing to reduce.";
-            return alreadyPolygon;
+            return CleanSelfTouching(alreadyPolygon, label, ref logMessage);
         }
 
-        var unioned = geometry.Union();
+        Geometry unioned;
+        try
+        {
+            unioned = geometry.Union();
+        }
+        catch (TopologyException)
+        {
+            unioned = geometry.Buffer(0).Union();
+        }
+
         if (unioned is Polygon unionedPolygon)
         {
             logMessage = $"  {label}: Union() collapsed all parts into one simply-connected Polygon.";
-            return unionedPolygon;
+            return CleanSelfTouching(unionedPolygon, label, ref logMessage);
         }
 
         if (unioned is not MultiPolygon multi || multi.NumGeometries == 0)
@@ -78,6 +100,23 @@ public static class MultiPolygonReducer
             $"containing the reference point (area {chosen.Area:F6} deg² of {totalArea:F6} deg² total), " +
             $"discarding {multi.NumGeometries - 1} other part(s) (discarded area {discardedArea:F6} deg²).";
 
-        return chosen;
+        return CleanSelfTouching(chosen, label, ref logMessage);
+    }
+
+    // Buffer(0) is NTS's standard fix for a Polygon whose ring touches itself at a single point
+    // (IsValid=true per OGC's relaxed self-tangency rule, but IsSimple=false) — a zero-distance
+    // buffer forces a clean, non-self-touching ring without changing the covered area. A no-op
+    // (same instance back, logMessage untouched) when the Polygon is already simple and valid.
+    private static Polygon CleanSelfTouching(Polygon polygon, string label, ref string logMessage)
+    {
+        if (polygon.IsSimple && polygon.IsValid)
+            return polygon;
+
+        if (polygon.Buffer(0) is not Polygon cleaned)
+            throw new InvalidOperationException(
+                $"{label}: Buffer(0) clean-up of a self-touching Polygon did not produce a Polygon.");
+
+        logMessage += " (self-touching ring cleaned up via Buffer(0).)";
+        return cleaned;
     }
 }

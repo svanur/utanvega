@@ -13,4 +13,11 @@
         <PackageReference Include="NetTopologySuite" Version="2.*" />
         <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.*" />
     </ItemGroup>
+    <ItemGroup>
+        <!-- #1751: reuse the MultiPolygon → Polygon reduction scripts/import-landsvaedi-regions
+             extracted into its own file for xUnit coverage (#1764, backend.Tests/Services/
+             MultiPolygonReducerTests.cs), instead of keeping a second, divergent copy of the same
+             algorithm inlined in this script's Program.cs. -->
+        <Compile Include="..\import-landsvaedi-regions\MultiPolygonReducer.cs" Link="MultiPolygonReducer.cs" />
+    </ItemGroup>
 </Project>

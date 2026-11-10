@@ -49,6 +49,14 @@
 //      exclave north of Kjalarnes that this reduction excludes) — not a bug, and logged per
 //      municipality (part count + area kept vs. discarded) so it's visible at import time.
 //
+// This reduction (steps 1-2 above) is implemented in MultiPolygonReducer.ReduceToMainlandPolygon
+// — originally inlined here, extracted to scripts/import-landsvaedi-regions/MultiPolygonReducer.cs
+// by #1764 so backend.Tests could cover it (see that file's header and
+// backend.Tests/Services/MultiPolygonReducerTests.cs), and reused unchanged from here since #1751
+// needed the same two extra robustness fixes (self-touching-ring cleanup, TopologyException
+// fallback) that file's header documents — rather than keep a second, divergent copy of the
+// algorithm in this script.
+//
 // ── Usage ──
 //
 //   cd scripts/import-municipality-boundaries
@@ -74,6 +82,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
+using Utanvega.Scripts.ImportLandsvaediRegions;
 
 var apply = args.Contains("--apply");
 
@@ -138,8 +147,14 @@ foreach (var muni in municipalities)
     var geometryJson = features[0].GetProperty("geometry").GetRawText();
     var rawGeometry = geoJsonReader.Read<Geometry>(geometryJson);
 
-    var polygon = ReduceToSinglePolygon(rawGeometry, muni.WfsName, muni.ReferenceLng, muni.ReferenceLat);
+    // MultiPolygonReducer (scripts/import-landsvaedi-regions/MultiPolygonReducer.cs) is the same
+    // reduction algorithm this tool used to keep its own inlined copy of — reused here, with
+    // xUnit coverage, since #1764 extracted it and #1751 needed its self-touching-ring/
+    // TopologyException robustness fixes for 3 of the new municipalities below.
+    var polygon = MultiPolygonReducer.ReduceToMainlandPolygon(
+        rawGeometry, muni.WfsName, muni.ReferenceLng, muni.ReferenceLat, out var reduceLog);
     polygon.SRID = 4326;
+    Console.WriteLine(reduceLog);
 
     // Same rule LocationBoundaryParser enforces server-side — fail loudly here rather than have
     // the admin API's validator reject it later with a less specific error.
@@ -159,82 +174,6 @@ foreach (var muni in municipalities)
 }
 
 return 0;
-
-// Union() collapses touching/overlapping parts into one simply-connected Polygon. If what's left
-// is still a MultiPolygon (genuinely disjoint parts — the common case for this layer, see the
-// file header comment on why this picks "contains the reference point" over "largest area").
-static Polygon ReduceToSinglePolygon(Geometry geometry, string label, double referenceLng, double referenceLat)
-{
-    if (geometry is Polygon alreadyPolygon)
-        return CleanSelfTouching(alreadyPolygon, label);
-
-    Geometry unioned;
-    try
-    {
-        unioned = geometry.Union();
-    }
-    catch (TopologyException)
-    {
-        // Seen live for Sveitarfélagið Stykkishólmur (#1751): its raw MultiPolygon has a part
-        // with a self-intersecting ring, which made Union()'s noded overlay throw ("side location
-        // conflict") instead of returning a result — a robustness limit of the overlay algorithm
-        // on invalid input, not something the other 10 municipalities hit (their Union() succeeds
-        // on the first try above). Buffer(0)-cleaning the raw geometry first and re-unioning is
-        // NTS's standard escape hatch for this; only used as a fallback here, not applied
-        // up front, so it cannot change the already-working result for the other 10.
-        unioned = geometry.Buffer(0).Union();
-    }
-    if (unioned is Polygon unionedPolygon)
-        return CleanSelfTouching(unionedPolygon, label);
-
-    if (unioned is not MultiPolygon multi || multi.NumGeometries == 0)
-        throw new InvalidOperationException($"{label}: unexpected geometry type {unioned.GeometryType} after union.");
-
-    var referencePoint = new Point(referenceLng, referenceLat);
-    Polygon? chosen = null;
-    var discardedArea = 0.0;
-    var totalArea = 0.0;
-    for (int i = 0; i < multi.NumGeometries; i++)
-    {
-        var part = (Polygon)multi.GetGeometryN(i);
-        totalArea += part.Area;
-        if (part.Contains(referencePoint))
-            chosen = part;
-        else
-            discardedArea += part.Area;
-    }
-
-    if (chosen == null)
-        throw new InvalidOperationException(
-            $"{label}: reference point ({referenceLng}, {referenceLat}) is not inside any of the " +
-            $"{multi.NumGeometries} disjoint parts after union — update its ReferenceLng/ReferenceLat " +
-            $"to a point known to be inside the municipality before re-running.");
-
-    Console.WriteLine(
-        $"  {label}: {multi.NumGeometries} disjoint parts after union — keeping the one " +
-        $"containing the reference point (area {chosen.Area:F6} deg² of {totalArea:F6} deg² total), " +
-        $"discarding {multi.NumGeometries - 1} other part(s) (discarded area {discardedArea:F6} deg², " +
-        $"offshore islands/skerries and/or exclaves — observed for the original 4 Greater Reykjavík " +
-        $"municipalities (#1705, 2026-11-08) and the 7 added by #1751).");
-
-    return CleanSelfTouching(chosen, label);
-}
-
-// Seen live for Hveragerðisbær (#1751): Union() collapsed its MultiPolygon into a single Polygon
-// whose ring touches itself at one point — OGC counts that as valid (IsValid=true) but not simple
-// (IsSimple=false), and LocationBoundaryParser (and the main loop's own check, mirroring it)
-// requires both. Buffer(0) is NTS's standard fix for this: a zero-distance buffer forces a clean,
-// non-self-touching ring without changing the covered area.
-static Polygon CleanSelfTouching(Polygon polygon, string label)
-{
-    if (polygon.IsSimple && polygon.IsValid)
-        return polygon;
-
-    if (polygon.Buffer(0) is Polygon cleaned)
-        return cleaned;
-
-    throw new InvalidOperationException($"{label}: Buffer(0) clean-up of a self-touching Polygon did not produce a Polygon.");
-}
 
 static async Task ApplyAsync(HttpClient http, string adminApiUrl, string slug, string boundaryGeoJson)
 {
