@@ -53,16 +53,17 @@
 //
 //   cd scripts/import-municipality-boundaries
 //   dotnet run -- --dry-run
-//       Fetches all 4, unions/reduces each to a Polygon, prints the resulting BoundaryGeoJson
-//       and area-kept-vs-discarded log — makes no admin API calls. Use this to eyeball the
-//       result (e.g. paste a printed BoundaryGeoJson into geojson.io) before writing anything.
+//       Fetches every municipality in the array below, unions/reduces each to a Polygon, prints
+//       the resulting BoundaryGeoJson and area-kept-vs-discarded log — makes no admin API calls.
+//       Use this to eyeball the result (e.g. paste a printed BoundaryGeoJson into geojson.io)
+//       before writing anything.
 //
 //   UTANVEGA_ADMIN_API_URL=https://api.hlaupadagskra.is UTANVEGA_ADMIN_TOKEN=<jwt> \
 //       dotnet run -- --apply
 //       Same fetch/reduce, then PUTs <UTANVEGA_ADMIN_API_URL>/api/v1/admin/locations/{id} with
 //       BoundaryGeoJson set to the reduced Polygon (and every other field echoed back unchanged)
 //       — the existing admin-only UpdateLocationCommand endpoint, no new backend endpoint. Each
-//       of the 4 municipalities must already exist as a Location (by slug) before this is run;
+//       municipality in the array must already exist as a Location (by slug) before this is run;
 //       it only attaches a boundary, it does not create the Location. Requires an AdminOnly-
 //       policy bearer token in UTANVEGA_ADMIN_TOKEN.
 //
@@ -79,15 +80,24 @@ var apply = args.Contains("--apply");
 const string WfsBaseUrl = "https://gis.lmi.is/geoserver/wfs";
 const string TypeName = "IS_50V:mork_sveitarf_svaedi";
 
-// The 4 Greater Reykjavík municipalities locked by #1700/#1705 — add future municipalities here,
-// matching (WFS "sveitarfelag" value, our Location slug, approximate town-centre lng/lat used
-// only to pick the right disjoint part after Union(), per the file header comment above).
+// The 4 Greater Reykjavík municipalities locked by #1700/#1705, plus 7 more added by #1751 —
+// add future municipalities here, matching (WFS "sveitarfelag" value, our Location slug,
+// approximate town-centre lng/lat used only to pick the right disjoint part after Union(), per
+// the file header comment above). The 7 added by #1751 keep their existing display Name as-is —
+// this tool only ever echoes name/nameEn back unchanged (see ApplyAsync below), it never renames.
 var municipalities = new[]
 {
     new Municipality("Reykjavíkurborg", "reykjavik", -21.9426, 64.1466),
     new Municipality("Kópavogsbær", "kopavogur", -21.9093, 64.1058),
     new Municipality("Hafnarfjarðarkaupstaður", "hafnarfjordur", -21.9403, 64.0671),
     new Municipality("Garðabær", "gardabaer", -21.9291, 64.0896),
+    new Municipality("Seltjarnarnesbær", "seljtjarnarnes", -22.0026, 64.1542),
+    new Municipality("Mosfellsbær", "mosfellsbaer", -21.6861, 64.1655),
+    new Municipality("Reykjanesbær", "reykjanesbaer", -22.5937, 63.9208),
+    new Municipality("Hveragerðisbær", "hveragerdi", -21.1858, 64.0005),
+    new Municipality("Akureyrarbær", "akureyri", -18.1105, 65.6826),
+    new Municipality("Vestmannaeyjabær", "vestmannaeyjar", -20.2755, 63.4427),
+    new Municipality("Sveitarfélagið Stykkishólmur", "stykkisholmur", -22.7266, 65.0760),
 };
 
 using var http = new HttpClient();
@@ -156,11 +166,26 @@ return 0;
 static Polygon ReduceToSinglePolygon(Geometry geometry, string label, double referenceLng, double referenceLat)
 {
     if (geometry is Polygon alreadyPolygon)
-        return alreadyPolygon;
+        return CleanSelfTouching(alreadyPolygon, label);
 
-    var unioned = geometry.Union();
+    Geometry unioned;
+    try
+    {
+        unioned = geometry.Union();
+    }
+    catch (TopologyException)
+    {
+        // Seen live for Sveitarfélagið Stykkishólmur (#1751): its raw MultiPolygon has a part
+        // with a self-intersecting ring, which made Union()'s noded overlay throw ("side location
+        // conflict") instead of returning a result — a robustness limit of the overlay algorithm
+        // on invalid input, not something the other 10 municipalities hit (their Union() succeeds
+        // on the first try above). Buffer(0)-cleaning the raw geometry first and re-unioning is
+        // NTS's standard escape hatch for this; only used as a fallback here, not applied
+        // up front, so it cannot change the already-working result for the other 10.
+        unioned = geometry.Buffer(0).Union();
+    }
     if (unioned is Polygon unionedPolygon)
-        return unionedPolygon;
+        return CleanSelfTouching(unionedPolygon, label);
 
     if (unioned is not MultiPolygon multi || multi.NumGeometries == 0)
         throw new InvalidOperationException($"{label}: unexpected geometry type {unioned.GeometryType} after union.");
@@ -189,9 +214,26 @@ static Polygon ReduceToSinglePolygon(Geometry geometry, string label, double ref
         $"  {label}: {multi.NumGeometries} disjoint parts after union — keeping the one " +
         $"containing the reference point (area {chosen.Area:F6} deg² of {totalArea:F6} deg² total), " +
         $"discarding {multi.NumGeometries - 1} other part(s) (discarded area {discardedArea:F6} deg², " +
-        $"offshore islands/skerries and/or exclaves for all 4 target municipalities as of 2026-11-08).");
+        $"offshore islands/skerries and/or exclaves — observed for the original 4 Greater Reykjavík " +
+        $"municipalities (#1705, 2026-11-08) and the 7 added by #1751).");
 
-    return chosen;
+    return CleanSelfTouching(chosen, label);
+}
+
+// Seen live for Hveragerðisbær (#1751): Union() collapsed its MultiPolygon into a single Polygon
+// whose ring touches itself at one point — OGC counts that as valid (IsValid=true) but not simple
+// (IsSimple=false), and LocationBoundaryParser (and the main loop's own check, mirroring it)
+// requires both. Buffer(0) is NTS's standard fix for this: a zero-distance buffer forces a clean,
+// non-self-touching ring without changing the covered area.
+static Polygon CleanSelfTouching(Polygon polygon, string label)
+{
+    if (polygon.IsSimple && polygon.IsValid)
+        return polygon;
+
+    if (polygon.Buffer(0) is Polygon cleaned)
+        return cleaned;
+
+    throw new InvalidOperationException($"{label}: Buffer(0) clean-up of a self-touching Polygon did not produce a Polygon.");
 }
 
 static async Task ApplyAsync(HttpClient http, string adminApiUrl, string slug, string boundaryGeoJson)
