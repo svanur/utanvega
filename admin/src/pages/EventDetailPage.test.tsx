@@ -1016,14 +1016,6 @@ describe('EventDetailPage — handleDeleteEdition/handleCancelEdition/handleComp
 // fixture order, so a future re-duplication of getOrderedRaces's logic would fail this test
 // rather than passing CI silently.
 describe('EventDetailPage — j/k focus order matches the post-drag-reorder race order (#566, #1690 regression)', () => {
-  // jsdom doesn't implement scrollIntoView at all — EventDetailPage.tsx:1071's focusedId effect
-  // calls it unconditionally once useIdRowFocus reports a focused row, which every other describe
-  // block in this file avoids simply by never pressing j/k. Stubbing it here is a jsdom-gap
-  // workaround, not a behavioural mock: the effect's actual argument/call is never asserted on.
-  beforeEach(() => {
-    Element.prototype.scrollIntoView = vi.fn();
-  });
-
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
