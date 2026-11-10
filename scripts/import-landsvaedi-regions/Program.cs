@@ -287,7 +287,13 @@ foreach (var (trail, link) in oldNordurlandTrailLinks)
     if (!apply) continue;
 
     var newLocationId = bucket == NordurlandVestra ? nordurlandVestraId!.Value : nordurlandEystraId!.Value;
-    await PostTrailLocationAsync(trailId, newLocationId, role);
+    var linked = await PostTrailLocationAsync(trailId, newLocationId, role);
+    if (!linked)
+    {
+        Console.WriteLine($"  UNRESOLVED: trail '{trailName}' link to {bucket} failed to create — leaving the old {NordurlandOld} link in place, not deleting it.");
+        unresolvedCount++;
+        continue;
+    }
     await DeleteTrailLocationAsync(trailId, nordurlandOldId);
 }
 
@@ -416,7 +422,12 @@ foreach (var regionName in boundarySwapOnlyRegions.Append(Sudurnes))
             Console.WriteLine($"    Skipped: {actual}'s Id isn't known yet in this run — re-run this tool once more after this pass completes.");
             continue;
         }
-        await PostTrailLocationAsync(trailId, newLocationId, role);
+        var linked = await PostTrailLocationAsync(trailId, newLocationId, role);
+        if (!linked)
+        {
+            Console.WriteLine($"    UNRESOLVED: trail '{trailName}' link to {actual} failed to create — leaving the old link under {regionName} in place, not deleting it.");
+            continue;
+        }
         await DeleteTrailLocationAsync(trailId, regionId);
     }
 }
@@ -529,17 +540,21 @@ async Task<Guid?> CreateRegionAsync(string name, Polygon polygon, Guid parentId)
     return Guid.Parse(created.GetProperty("id").GetString()!);
 }
 
-async Task PostTrailLocationAsync(Guid trailId, Guid locationId, string role)
+// Returns whether the new link was actually created. The caller must check this before deleting
+// the old link — a failed/transient POST must never be followed by the DELETE, or a trail's only
+// direct region link is silently lost with no UNRESOLVED log line (review fix, PR #1766).
+async Task<bool> PostTrailLocationAsync(Guid trailId, Guid locationId, string role)
 {
     if (!apply)
     {
         Console.WriteLine($"    [dry-run] would POST /api/v1/admin/trails/{trailId}/locations (location {locationId}, role {role})");
-        return;
+        return true;
     }
     var response = await http.PostAsJsonAsync(
         $"{adminApiUrl}/api/v1/admin/trails/{trailId}/locations",
         new { locationId, role });
     Console.WriteLine($"    POST /api/v1/admin/trails/{trailId}/locations -> {(int)response.StatusCode}");
+    return response.IsSuccessStatusCode;
 }
 
 async Task DeleteTrailLocationAsync(Guid trailId, Guid locationId)
