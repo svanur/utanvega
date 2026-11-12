@@ -82,6 +82,10 @@ using Utanvega.Scripts.ImportLandsvaediRegions;
 
 var apply = args.Contains("--apply");
 
+// Location ids for which an apply-mode PUT returned a non-success status — accumulated across all
+// 3 call sites and reported in the final summary (see PutLocationAsync below).
+var failedPutLocationIds = new List<Guid>();
+
 // Known-mainland reference points for the two MultiPolygon reductions (see file header above).
 const double SelfossLng = -20.9929, SelfossLat = 63.9333;
 const double AkureyriLng = -18.1104, AkureyriLat = 65.6885;
@@ -432,8 +436,13 @@ foreach (var regionName in boundarySwapOnlyRegions.Append(Sudurnes))
     }
 }
 
+if (failedPutLocationIds.Count > 0)
+{
+    Console.WriteLine($"── {failedPutLocationIds.Count} PUT location failure(s): {string.Join(", ", failedPutLocationIds)} ──");
+}
+
 Console.WriteLine(apply ? "Done (--apply)." : "Done (--dry-run — no changes made).");
-return 0;
+return failedPutLocationIds.Count > 0 ? 1 : 0;
 
 // ── helpers ──
 
@@ -508,6 +517,11 @@ async Task PutLocationAsync(Guid id, object body)
     }
     var response = await http.PutAsJsonAsync($"{adminApiUrl}/api/v1/admin/locations/{id}", body);
     Console.WriteLine($"  PUT /api/v1/admin/locations/{id} -> {(int)response.StatusCode}");
+    if (!response.IsSuccessStatusCode)
+    {
+        Console.WriteLine($"  UNRESOLVED: PUT /api/v1/admin/locations/{id} failed with status {(int)response.StatusCode} — needs manual reassignment.");
+        failedPutLocationIds.Add(id);
+    }
 }
 
 async Task UpdateBoundaryOnlyAsync(string regionName, Guid id)
