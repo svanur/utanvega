@@ -88,7 +88,8 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
     default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import { TrailMapView, geoJsonBoundaryToLatLngParts } from './TrailMapView';
+import { TrailMapView } from './TrailMapView';
+import { geoJsonBoundaryToLatLngParts } from './locationBoundary';
 
 const noTrails: Trail[] = [];
 
