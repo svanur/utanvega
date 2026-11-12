@@ -11,6 +11,12 @@
 // script's IS 50V WFS endpoint — a one-off attachment URL isn't safe to depend on resolving the
 // same way again next year) and is read from disk here, never fetched live:
 //
+// Attribution (required — the file's own "source" property points here): boundary data ©
+// simplemaps.com (https://simplemaps.com/gis/country/is#admin1), licensed CC BY 4.0
+// (https://creativecommons.org/licenses/by/4.0/). Not Hagstofa Íslands/LMÍ-sourced, despite the
+// "landsvæði" naming — it's a third-party admin1 boundary set that happens to split the country
+// the same way Hagstofa's statistical regions do.
+//
 //   IS1 Höfuðborgarsvæði   Polygon       → Höfuðborgarsvæðið (boundary only, name unchanged)
 //   IS2 Suðurnes           Polygon       → Reykjanes, renamed to Suðurnes/sudurnes
 //   IS3 Vesturland         Polygon       → Vesturland (boundary only)
