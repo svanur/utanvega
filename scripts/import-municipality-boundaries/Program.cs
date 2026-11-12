@@ -49,20 +49,29 @@
 //      exclave north of Kjalarnes that this reduction excludes) — not a bug, and logged per
 //      municipality (part count + area kept vs. discarded) so it's visible at import time.
 //
+// This reduction (steps 1-2 above) is implemented in MultiPolygonReducer.ReduceToMainlandPolygon
+// — originally inlined here, extracted to scripts/import-landsvaedi-regions/MultiPolygonReducer.cs
+// by #1764 so backend.Tests could cover it (see that file's header and
+// backend.Tests/Services/MultiPolygonReducerTests.cs), and reused unchanged from here since #1751
+// needed the same two extra robustness fixes (self-touching-ring cleanup, TopologyException
+// fallback) that file's header documents — rather than keep a second, divergent copy of the
+// algorithm in this script.
+//
 // ── Usage ──
 //
 //   cd scripts/import-municipality-boundaries
 //   dotnet run -- --dry-run
-//       Fetches all 4, unions/reduces each to a Polygon, prints the resulting BoundaryGeoJson
-//       and area-kept-vs-discarded log — makes no admin API calls. Use this to eyeball the
-//       result (e.g. paste a printed BoundaryGeoJson into geojson.io) before writing anything.
+//       Fetches every municipality in the array below, unions/reduces each to a Polygon, prints
+//       the resulting BoundaryGeoJson and area-kept-vs-discarded log — makes no admin API calls.
+//       Use this to eyeball the result (e.g. paste a printed BoundaryGeoJson into geojson.io)
+//       before writing anything.
 //
 //   UTANVEGA_ADMIN_API_URL=https://api.hlaupadagskra.is UTANVEGA_ADMIN_TOKEN=<jwt> \
 //       dotnet run -- --apply
 //       Same fetch/reduce, then PUTs <UTANVEGA_ADMIN_API_URL>/api/v1/admin/locations/{id} with
 //       BoundaryGeoJson set to the reduced Polygon (and every other field echoed back unchanged)
 //       — the existing admin-only UpdateLocationCommand endpoint, no new backend endpoint. Each
-//       of the 4 municipalities must already exist as a Location (by slug) before this is run;
+//       municipality in the array must already exist as a Location (by slug) before this is run;
 //       it only attaches a boundary, it does not create the Location. Requires an AdminOnly-
 //       policy bearer token in UTANVEGA_ADMIN_TOKEN.
 //
@@ -73,21 +82,31 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
+using Utanvega.Scripts.ImportLandsvaediRegions;
 
 var apply = args.Contains("--apply");
 
 const string WfsBaseUrl = "https://gis.lmi.is/geoserver/wfs";
 const string TypeName = "IS_50V:mork_sveitarf_svaedi";
 
-// The 4 Greater Reykjavík municipalities locked by #1700/#1705 — add future municipalities here,
-// matching (WFS "sveitarfelag" value, our Location slug, approximate town-centre lng/lat used
-// only to pick the right disjoint part after Union(), per the file header comment above).
+// The 4 Greater Reykjavík municipalities locked by #1700/#1705, plus 7 more added by #1751 —
+// add future municipalities here, matching (WFS "sveitarfelag" value, our Location slug,
+// approximate town-centre lng/lat used only to pick the right disjoint part after Union(), per
+// the file header comment above). The 7 added by #1751 keep their existing display Name as-is —
+// this tool only ever echoes name/nameEn back unchanged (see ApplyAsync below), it never renames.
 var municipalities = new[]
 {
     new Municipality("Reykjavíkurborg", "reykjavik", -21.9426, 64.1466),
     new Municipality("Kópavogsbær", "kopavogur", -21.9093, 64.1058),
     new Municipality("Hafnarfjarðarkaupstaður", "hafnarfjordur", -21.9403, 64.0671),
     new Municipality("Garðabær", "gardabaer", -21.9291, 64.0896),
+    new Municipality("Seltjarnarnesbær", "seljtjarnarnes", -22.0026, 64.1542),
+    new Municipality("Mosfellsbær", "mosfellsbaer", -21.6861, 64.1655),
+    new Municipality("Reykjanesbær", "reykjanesbaer", -22.5937, 63.9208),
+    new Municipality("Hveragerðisbær", "hveragerdi", -21.1858, 64.0005),
+    new Municipality("Akureyrarbær", "akureyri", -18.1105, 65.6826),
+    new Municipality("Vestmannaeyjabær", "vestmannaeyjar", -20.2755, 63.4427),
+    new Municipality("Sveitarfélagið Stykkishólmur", "stykkisholmur", -22.7266, 65.0760),
 };
 
 using var http = new HttpClient();
@@ -128,8 +147,14 @@ foreach (var muni in municipalities)
     var geometryJson = features[0].GetProperty("geometry").GetRawText();
     var rawGeometry = geoJsonReader.Read<Geometry>(geometryJson);
 
-    var polygon = ReduceToSinglePolygon(rawGeometry, muni.WfsName, muni.ReferenceLng, muni.ReferenceLat);
+    // MultiPolygonReducer (scripts/import-landsvaedi-regions/MultiPolygonReducer.cs) is the same
+    // reduction algorithm this tool used to keep its own inlined copy of — reused here, with
+    // xUnit coverage, since #1764 extracted it and #1751 needed its self-touching-ring/
+    // TopologyException robustness fixes for 3 of the new municipalities below.
+    var polygon = MultiPolygonReducer.ReduceToMainlandPolygon(
+        rawGeometry, muni.WfsName, muni.ReferenceLng, muni.ReferenceLat, out var reduceLog);
     polygon.SRID = 4326;
+    Console.WriteLine(reduceLog);
 
     // Same rule LocationBoundaryParser enforces server-side — fail loudly here rather than have
     // the admin API's validator reject it later with a less specific error.
@@ -149,50 +174,6 @@ foreach (var muni in municipalities)
 }
 
 return 0;
-
-// Union() collapses touching/overlapping parts into one simply-connected Polygon. If what's left
-// is still a MultiPolygon (genuinely disjoint parts — the common case for this layer, see the
-// file header comment on why this picks "contains the reference point" over "largest area").
-static Polygon ReduceToSinglePolygon(Geometry geometry, string label, double referenceLng, double referenceLat)
-{
-    if (geometry is Polygon alreadyPolygon)
-        return alreadyPolygon;
-
-    var unioned = geometry.Union();
-    if (unioned is Polygon unionedPolygon)
-        return unionedPolygon;
-
-    if (unioned is not MultiPolygon multi || multi.NumGeometries == 0)
-        throw new InvalidOperationException($"{label}: unexpected geometry type {unioned.GeometryType} after union.");
-
-    var referencePoint = new Point(referenceLng, referenceLat);
-    Polygon? chosen = null;
-    var discardedArea = 0.0;
-    var totalArea = 0.0;
-    for (int i = 0; i < multi.NumGeometries; i++)
-    {
-        var part = (Polygon)multi.GetGeometryN(i);
-        totalArea += part.Area;
-        if (part.Contains(referencePoint))
-            chosen = part;
-        else
-            discardedArea += part.Area;
-    }
-
-    if (chosen == null)
-        throw new InvalidOperationException(
-            $"{label}: reference point ({referenceLng}, {referenceLat}) is not inside any of the " +
-            $"{multi.NumGeometries} disjoint parts after union — update its ReferenceLng/ReferenceLat " +
-            $"to a point known to be inside the municipality before re-running.");
-
-    Console.WriteLine(
-        $"  {label}: {multi.NumGeometries} disjoint parts after union — keeping the one " +
-        $"containing the reference point (area {chosen.Area:F6} deg² of {totalArea:F6} deg² total), " +
-        $"discarding {multi.NumGeometries - 1} other part(s) (discarded area {discardedArea:F6} deg², " +
-        $"offshore islands/skerries and/or exclaves for all 4 target municipalities as of 2026-11-08).");
-
-    return chosen;
-}
 
 static async Task ApplyAsync(HttpClient http, string adminApiUrl, string slug, string boundaryGeoJson)
 {

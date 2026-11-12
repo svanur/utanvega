@@ -86,4 +86,62 @@ public class MultiPolygonReducerTests
         Assert.Contains("Test region", ex.Message);
         Assert.Contains("is not inside any", ex.Message);
     }
+
+    [Fact]
+    public void ReduceToMainlandPolygon_SelfTouchingRing_CleanedUpViaBufferZero()
+    {
+        // A zero-width spike (the ring dips in to (5, 5) and immediately back out along the same
+        // line) touches itself without crossing — IsSimple=false (seen live for Hveragerðisbær,
+        // #1751, whose Union() result had this shape). The spike has zero area, so Buffer(0)
+        // removes it losslessly.
+        var spiky = new Polygon(new LinearRing(new[]
+        {
+            new Coordinate(0, 0),
+            new Coordinate(10, 0),
+            new Coordinate(10, 10),
+            new Coordinate(5, 10),
+            new Coordinate(5, 5),
+            new Coordinate(5, 10),
+            new Coordinate(0, 10),
+            new Coordinate(0, 0),
+        }));
+        Assert.False(spiky.IsSimple);
+
+        var result = MultiPolygonReducer.ReduceToMainlandPolygon(
+            spiky, "Test", referenceLng: 5, referenceLat: 1, out var log);
+
+        Assert.True(result.IsSimple);
+        Assert.True(result.IsValid);
+        Assert.Equal(100, result.Area, precision: 3);
+        Assert.Contains("self-touching ring cleaned up via Buffer(0)", log);
+    }
+
+    [Fact]
+    public void ReduceToMainlandPolygon_UnionThrowsTopologyException_FallsBackToBufferZeroThenUnion()
+    {
+        // A self-intersecting ("bowtie") part alongside a disjoint island: Union()'s noded
+        // overlay throws TopologyException on this raw, invalid input (seen live for
+        // Sveitarfélagið Stykkishólmur, #1751, whose WFS geometry has a self-intersecting part
+        // among its 324 disjoint parts). The fallback Buffer(0)-cleans the raw geometry before
+        // re-unioning — Buffer(0) on a self-intersecting ring keeps only one of its two lobes.
+        var bowtie = new Polygon(new LinearRing(new[]
+        {
+            new Coordinate(0, 0),
+            new Coordinate(10, 10),
+            new Coordinate(10, 0),
+            new Coordinate(0, 10),
+            new Coordinate(0, 0),
+        }));
+        var island = Square(100, 100, 101, 101);
+        var multi = new MultiPolygon(new[] { bowtie, island });
+        Assert.Throws<TopologyException>(() => multi.Union());
+
+        var result = MultiPolygonReducer.ReduceToMainlandPolygon(
+            multi, "Test region", referenceLng: 9, referenceLat: 5, out var log);
+
+        Assert.True(result.IsSimple);
+        Assert.True(result.IsValid);
+        Assert.Equal(25, result.Area, precision: 3);
+        Assert.Contains("2 disjoint parts", log);
+    }
 }
