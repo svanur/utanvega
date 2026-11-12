@@ -36,7 +36,8 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
-import { geoJsonBoundaryToLatLngParts } from '../components/TrailMapView';
+import { MapAttributionSync } from '../components/TrailMapView';
+import { geoJsonBoundaryToLatLngParts, SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/locationBoundary';
 import { computeFitBoundsPoints } from './locationsFitBounds';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
@@ -183,6 +184,13 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         [filtered]
     );
 
+    // #1764: a landsvæði Region boundary is simplemaps.com (CC BY 4.0) — show that credit whenever
+    // one is among the shapes currently rendered, same attribution shown on LocationDetailsPage.
+    const hasSimplemapsBoundary = useMemo(() =>
+        locationsWithBoundary.some(l => l.type === 'Region'),
+        [locationsWithBoundary]
+    );
+
     const scrollToCard = useCallback((slug: string) => {
         const el = cardRefs.current[slug];
         if (!el) return;
@@ -267,6 +275,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                             style={{ height: '100%', width: '100%' }}
                             zoomControl={false}
                         >
+                            <MapAttributionSync text={hasSimplemapsBoundary ? SIMPLEMAPS_CC_BY_ATTRIBUTION : null} />
                             <LayersControl key={isDark ? 'dark' : 'light'} position="topleft">
                                 <LayersControl.BaseLayer checked={!isDark} name={t('map.street')}>
                                     <TileLayer

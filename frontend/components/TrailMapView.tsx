@@ -9,6 +9,7 @@ import RouteIcon from '@mui/icons-material/Route';
 import { Trail } from '../hooks/useTrails';
 import { useTrailGeometries } from '../hooks/useTrailGeometries';
 import { computeMapBounds } from './trailMapBounds';
+import { geoJsonBoundaryToLatLngParts } from './locationBoundary';
 import { computeSortedSlugs, getTrailRouteStyle, toggleTrailSelection } from './trailRouteColors';
 import { Link as RouterLink } from 'react-router-dom';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -50,30 +51,26 @@ interface TrailMapViewProps {
     // Polygon layer beneath the trail routes/selected-track highlight so it reads as context, not
     // as another route. Omitted (undefined/null) by TrailList and CompetitionDetailPage, which
     // have no location boundary to show.
-    locationBoundary?: { geoJson: string; color?: string } | null;
+    // `attribution`: set only when the boundary's source requires a visible credit (landsvæði
+    // regions are simplemaps.com, CC BY 4.0 — see SIMPLEMAPS_CC_BY_ATTRIBUTION below); omitted for
+    // municipality boundaries, which are LMÍ-sourced and don't need this per-page credit.
+    locationBoundary?: { geoJson: string; color?: string; attribution?: string } | null;
 }
 
-// #1739: Polygon and MultiPolygon, normalized to one ring-set ("part") per polygon — a plain
-// Polygon comes back as a single-part array so callers always loop over parts the same way,
-// regardless of whether the boundary has one shape (Polygon) or several (MultiPolygon, e.g. a
-// municipality with a disconnected exclave). GeoJSON coordinates are rings of [lng, lat] tuples
-// (exterior ring first, then holes); Leaflet's <Polygon positions> expects the opposite order,
-// [lat, lng], as the same ring shape — each part applies that swap, including any holes (rings
-// after the first per part).
-export function geoJsonBoundaryToLatLngParts(geoJson: string): L.LatLngExpression[][][] | null {
-    try {
-        const parsed = JSON.parse(geoJson) as GeoJSON.Polygon | GeoJSON.MultiPolygon;
-        const ringToLatLngs = (ring: number[][]) => ring.map(([lng, lat]) => [lat, lng] as L.LatLngExpression);
-        if (parsed?.type === 'Polygon' && Array.isArray(parsed.coordinates)) {
-            return [parsed.coordinates.map(ringToLatLngs)];
-        }
-        if (parsed?.type === 'MultiPolygon' && Array.isArray(parsed.coordinates)) {
-            return parsed.coordinates.map(polygon => polygon.map(ringToLatLngs));
-        }
-        return null;
-    } catch {
-        return null;
-    }
+// Leaflet's attribution control only reflects TileLayer attribution automatically; an overlay
+// (here, a boundary Polygon sourced from somewhere other than the active base tile layer) has to
+// register/unregister itself imperatively so its credit stays visible regardless of which base
+// layer (OSM/CARTO/OpenTopoMap) is currently selected. `text` is expected to be referentially
+// stable (a module-level constant, not a literal built fresh each render) since it's also the key
+// used to remove the attribution on cleanup.
+export function MapAttributionSync({ text }: { text: string | null }) {
+    const map = useMap();
+    useEffect(() => {
+        if (!text) return;
+        map.attributionControl.addAttribution(text);
+        return () => { map.attributionControl.removeAttribution(text); };
+    }, [map, text]);
+    return null;
 }
 
 function ChangeView({ bounds, followMe, userLocation, containerReady }: {
@@ -409,6 +406,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                 >
                     <MapInvalidateSize onReady={handleContainerReady} />
                     <MapDragHandler onDrag={handleDrag} onMapClick={handleMapClick} ignoreClickRef={ignoreMapClick} />
+                    <MapAttributionSync text={locationBoundary?.attribution ?? null} />
                 <LayersControl key={isDark ? 'dark' : 'light'} position="topleft">
                         <LayersControl.BaseLayer checked={!isDark} name={t('map.street')}>
                             <TileLayer
