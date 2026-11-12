@@ -50,7 +50,34 @@ interface TrailMapViewProps {
     // Polygon layer beneath the trail routes/selected-track highlight so it reads as context, not
     // as another route. Omitted (undefined/null) by TrailList and CompetitionDetailPage, which
     // have no location boundary to show.
-    locationBoundary?: { geoJson: string; color?: string } | null;
+    // `attribution`: set only when the boundary's source requires a visible credit (landsvæði
+    // regions are simplemaps.com, CC BY 4.0 — see SIMPLEMAPS_CC_BY_ATTRIBUTION below); omitted for
+    // municipality boundaries, which are LMÍ-sourced and don't need this per-page credit.
+    locationBoundary?: { geoJson: string; color?: string; attribution?: string } | null;
+}
+
+// CC BY 4.0 requires visible attribution wherever the licensed work (or an adaptation of it,
+// which a rendered boundary outline is) is shown to the public — a source-code comment on the
+// committed data file doesn't satisfy that for a site visitor. Shared so LocationDetailsPage
+// (single Region boundary) and LocationsPage (any Region among several boundaries shown at once)
+// both credit the same source the same way.
+export const SIMPLEMAPS_CC_BY_ATTRIBUTION =
+    '&copy; <a href="https://simplemaps.com/gis/country/is#admin1">simplemaps.com</a> boundary data (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>)';
+
+// Leaflet's attribution control only reflects TileLayer attribution automatically; an overlay
+// (here, a boundary Polygon sourced from somewhere other than the active base tile layer) has to
+// register/unregister itself imperatively so its credit stays visible regardless of which base
+// layer (OSM/CARTO/OpenTopoMap) is currently selected. `text` is expected to be referentially
+// stable (a module-level constant, not a literal built fresh each render) since it's also the key
+// used to remove the attribution on cleanup.
+export function MapAttributionSync({ text }: { text: string | null }) {
+    const map = useMap();
+    useEffect(() => {
+        if (!text) return;
+        map.attributionControl.addAttribution(text);
+        return () => { map.attributionControl.removeAttribution(text); };
+    }, [map, text]);
+    return null;
 }
 
 // #1739: Polygon and MultiPolygon, normalized to one ring-set ("part") per polygon — a plain
@@ -409,6 +436,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                 >
                     <MapInvalidateSize onReady={handleContainerReady} />
                     <MapDragHandler onDrag={handleDrag} onMapClick={handleMapClick} ignoreClickRef={ignoreMapClick} />
+                    <MapAttributionSync text={locationBoundary?.attribution ?? null} />
                 <LayersControl key={isDark ? 'dark' : 'light'} position="topleft">
                         <LayersControl.BaseLayer checked={!isDark} name={t('map.street')}>
                             <TileLayer

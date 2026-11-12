@@ -28,7 +28,7 @@ import { findPoolsByLocationSlugs } from '../data/pools';
 import { useLocationBySlug, useLocationTree } from '../hooks/useLocations';
 import type { LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
-import { TrailMapView } from '../components/TrailMapView';
+import { TrailMapView, SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/TrailMapView';
 import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
 import LostLocation from '../components/LostLocation';
@@ -420,7 +420,13 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                                    trails={filteredTrails}
                                    userLocation={userLocation}
                                    height="400px"
-                                   locationBoundary={location.boundaryGeoJson ? { geoJson: location.boundaryGeoJson } : null}
+                                   locationBoundary={location.boundaryGeoJson ? {
+                                       geoJson: location.boundaryGeoJson,
+                                       // #1764: landsvæði Region boundaries are simplemaps.com (CC
+                                       // BY 4.0) — municipality boundaries (#1705) are LMÍ-sourced
+                                       // and don't need this credit.
+                                       attribution: location.type === 'Region' ? SIMPLEMAPS_CC_BY_ATTRIBUTION : undefined,
+                                   } : null}
                                />
                             </Box>
                             
