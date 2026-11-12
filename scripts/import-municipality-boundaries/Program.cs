@@ -86,6 +86,11 @@ using Utanvega.Scripts.ImportLandsvaediRegions;
 
 var apply = args.Contains("--apply");
 
+// Municipality slugs for which an apply-mode PUT returned a non-success status (or found no
+// matching Location at all) — accumulated across the loop below and reported in the final
+// summary (see ApplyAsync).
+var failedSlugs = new List<string>();
+
 const string WfsBaseUrl = "https://gis.lmi.is/geoserver/wfs";
 const string TypeName = "IS_50V:mork_sveitarf_svaedi";
 
@@ -170,12 +175,21 @@ foreach (var muni in municipalities)
         continue;
     }
 
-    await ApplyAsync(http, adminApiUrl!, muni.Slug, boundaryGeoJson);
+    var success = await ApplyAsync(http, adminApiUrl!, muni.Slug, boundaryGeoJson);
+    if (!success)
+    {
+        failedSlugs.Add(muni.Slug);
+    }
 }
 
-return 0;
+if (failedSlugs.Count > 0)
+{
+    Console.WriteLine($"── {failedSlugs.Count} PUT location failure(s): {string.Join(", ", failedSlugs)} ──");
+}
 
-static async Task ApplyAsync(HttpClient http, string adminApiUrl, string slug, string boundaryGeoJson)
+return failedSlugs.Count > 0 ? 1 : 0;
+
+static async Task<bool> ApplyAsync(HttpClient http, string adminApiUrl, string slug, string boundaryGeoJson)
 {
     // GetLocationsQuery (via GET /api/v1/admin/locations) — same admin-only endpoint/DTO the
     // admin dashboard's location list uses — gives us the existing Id and every field
@@ -189,7 +203,7 @@ static async Task ApplyAsync(HttpClient http, string adminApiUrl, string slug, s
             $"  No existing Location with slug '{slug}' — this tool only updates an existing " +
             $"Location's boundary. Create the Location first (name/type/parent) via the admin " +
             $"UI, then re-run this tool to attach its boundary.");
-        return;
+        return false;
     }
 
     var id = match.GetProperty("id").GetString();
@@ -211,6 +225,11 @@ static async Task ApplyAsync(HttpClient http, string adminApiUrl, string slug, s
     };
     var response = await http.PutAsJsonAsync($"{adminApiUrl}/api/v1/admin/locations/{id}", body);
     Console.WriteLine($"  PUT /api/v1/admin/locations/{id} -> {(int)response.StatusCode}");
+    if (!response.IsSuccessStatusCode)
+    {
+        Console.WriteLine($"  UNRESOLVED: PUT /api/v1/admin/locations/{id} failed with status {(int)response.StatusCode} — needs manual reassignment.");
+    }
+    return response.IsSuccessStatusCode;
 }
 
 record Municipality(string WfsName, string Slug, double ReferenceLng, double ReferenceLat);
