@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polygon, Popup, Tooltip } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
-import { Box, Typography, Chip, Button, Paper, IconButton } from '@mui/material';
+import { Box, Typography, Chip, Button, Paper, IconButton, useTheme } from '@mui/material';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
@@ -11,6 +11,8 @@ import type { EventSummary } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
 import { getCountdownColor, getCountdownLabel, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
+import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
+import { MapAttributionSync } from './TrailMapView';
 import MapFollowController from './MapFollowController';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -49,9 +51,14 @@ const ICELAND_ZOOM = 6;
 const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
     const { t } = useTranslation();
     const loc = useLocalize();
+    const theme = useTheme();
     const { locations } = useLocations();
     const [followMe, setFollowMe] = useState(false);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    // #1776: one location's boundary shape hovered (or tapped — Leaflet's default tap-to-open
+    // behavior on touch) at a time, independent of MarkerClusterGroup's own marker state. Keyed by
+    // locationId rather than slug (EventSummary only carries locationId, not the location's slug).
+    const [hoveredLocationId, setHoveredLocationId] = useState<string | null>(null);
 
     // Start watching position only when the user activates follow mode
     useEffect(() => {
@@ -81,6 +88,26 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
             })
             .filter((e): e is NonNullable<typeof e> => e !== null);
     }, [events, locations]);
+
+    // #1776: distinct locations behind the current events that have a saved boundary
+    // (Location.boundaryGeoJson, #1705) — rendered as Polygon outlines alongside (not instead of)
+    // the event pins above, adapting LocationsPage.tsx's boundary-overlay pattern (#1708) from
+    // "every location" to "every location among these events".
+    const boundaryLocations = useMemo(() => {
+        const locationMap = new Map(locations.map(l => [l.id, l]));
+        const locationIds = new Set(events.map(e => e.locationId).filter((id): id is string => id != null));
+        return Array.from(locationIds)
+            .map(id => locationMap.get(id))
+            .filter((l): l is NonNullable<typeof l> & { boundaryGeoJson: string } => !!l?.boundaryGeoJson);
+    }, [events, locations]);
+
+    // #1764/#1776: a landsvæði Region boundary is simplemaps.com (CC BY 4.0) — surface that credit
+    // whenever one is among the shapes currently rendered, same gate LocationsPage.tsx/
+    // LocationDetailsPage.tsx use for the same data.
+    const hasSimplemapsBoundary = useMemo(() =>
+        boundaryLocations.some(l => l.type === 'Region'),
+        [boundaryLocations]
+    );
 
     const markerCluster = useMemo(() => (
         <MarkerClusterGroup
@@ -166,6 +193,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
+                <MapAttributionSync text={hasSimplemapsBoundary ? SIMPLEMAPS_CC_BY_ATTRIBUTION : null} />
                 <MapFollowController
                     followMe={followMe}
                     userLocation={userLocation}
@@ -173,6 +201,35 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                     returnZoom={ICELAND_ZOOM}
                     onDrag={() => setFollowMe(false)}
                 />
+                {/* #1776: boundary outlines — rendered outside/before MarkerClusterGroup so shapes
+                    never join marker clustering and always sit beneath the pins. Hovering (or
+                    tapping, on touch — Leaflet's default behavior) any part highlights the whole
+                    shape and shows the location's localized name. */}
+                {boundaryLocations.flatMap(location => {
+                    const parts = geoJsonBoundaryToLatLngParts(location.boundaryGeoJson);
+                    if (!parts) return [];
+                    const isHovered = hoveredLocationId === location.id;
+                    // #1739: one <Polygon> per part so a MultiPolygon boundary (e.g. an exclave)
+                    // renders as several disconnected outlines, all sharing the same hover
+                    // handlers so hovering/tapping any part highlights the same location.
+                    return parts.map((part, index) => (
+                        <Polygon
+                            key={`boundary-${location.id}-${index}`}
+                            positions={part}
+                            pathOptions={getBoundaryPathOptions(theme, isHovered)}
+                            eventHandlers={{
+                                mouseover: () => setHoveredLocationId(location.id),
+                                mouseout: () => setHoveredLocationId(null),
+                            }}
+                        >
+                            <Tooltip direction="center" sticky>
+                                <Typography variant="caption" fontWeight="bold">
+                                    {loc(location.name, location.nameEn) ?? location.name}
+                                </Typography>
+                            </Tooltip>
+                        </Polygon>
+                    ));
+                })}
                 {markerCluster}
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon} />
