@@ -24,7 +24,10 @@ import type { Trail } from '../hooks/useTrails';
 // afterEach(cleanup) registration never fires — without this, a later test's screen queries can
 // match leftover DOM nodes still mounted from an earlier test in this file. Mirrors
 // TrailMapView.test.tsx:20 / RacesPage.test.tsx:35.
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    mockFitBounds.mockClear();
+});
 
 // LocationsPage's t()/useLocalize() calls need a real, initialized i18next instance — initialized
 // once with the real EN resources, same as RacesPage.test.tsx, rather than a hand-rolled stub.
@@ -42,12 +45,23 @@ vi.mock('../components/Layout', () => ({
     default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }));
 
-const { mockLocations, mockTrails } = vi.hoisted(() => ({
-    // Mutable so individual tests can swap fixtures without re-mocking; .current is read fresh on
-    // every useLocations()/useTrails() call below.
-    mockLocations: { current: [] as Location[] },
-    mockTrails: { current: [] as Trail[] },
-}));
+const { mockLocations, mockTrails, mockFitBounds, mockMap } = vi.hoisted(() => {
+    const fitBounds = vi.fn();
+    return {
+        // Mutable so individual tests can swap fixtures without re-mocking; .current is read fresh
+        // on every useLocations()/useTrails() call below.
+        mockLocations: { current: [] as Location[] },
+        mockTrails: { current: [] as Trail[] },
+        mockFitBounds: fitBounds,
+        // #1786: a stable object, not a fresh literal per useMap() call — real Leaflet's useMap()
+        // always returns the same map instance, so FitBounds's `useEffect([bounds, map], ...)`
+        // (LocationsPage.tsx) only re-fires on an actual bounds change. A new literal per call
+        // would make `map` look like a changed dependency on every re-render, masking the
+        // hover-resets-zoom/pan bug behind an unrelated false positive. Mirrors
+        // TrailMapView.test.tsx's mockMap.
+        mockMap: { fitBounds },
+    };
+});
 
 vi.mock('../hooks/useLocations', () => ({
     useLocations: () => ({ locations: mockLocations.current, loading: false, error: null }),
@@ -69,7 +83,7 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
 vi.mock('react-leaflet', () => ({
     MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map-container">{children}</div>,
     TileLayer: () => null,
-    useMap: () => ({ fitBounds: vi.fn() }),
+    useMap: () => mockMap,
     LayersControl: Object.assign(
         ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
         { BaseLayer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> },
@@ -330,5 +344,41 @@ describe('LocationsPage Map Hero render gate (#1754)', () => {
 
         expect(screen.getByTestId('map-container')).toBeDefined();
         expect(markerFor('Coords Only')).not.toBeUndefined();
+    });
+});
+
+// #1786: FitBounds (LocationsPage.tsx) used to call map.fitBounds directly in its render body
+// with no guard, so any LocationsPage re-render — including hoveredSlug flipping on every Polygon
+// mouseover/mouseout (#1708) — reset the user's zoom/pan. Fixed to call fitBounds from a
+// useEffect keyed on a bounds value memoized off `locations` alone, mirroring TrailMapView's
+// ChangeView.
+describe('LocationsPage FitBounds hover-safety (#1786)', () => {
+    it('fits bounds once on initial render and not again on hover-only state changes', () => {
+        renderLocationsPage();
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        // Polygon hover (mouseover/mouseout) and Card hover (mouseenter/mouseleave) both only
+        // flip hoveredSlug — neither should trigger a re-fit.
+        fireEvent.mouseOver(polygonFor('Boundary Only')!);
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.mouseOut(polygonFor('Boundary Only')!);
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.mouseEnter(cardFor('Both Loc'));
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.mouseLeave(cardFor('Both Loc'));
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-fits bounds when the shown location set changes (search/filter)', () => {
+        renderLocationsPage();
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        const searchInput = screen.getByPlaceholderText(en.locations.searchPlaceholder);
+        fireEvent.change(searchInput, { target: { value: 'Both' } });
+
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(1);
     });
 });

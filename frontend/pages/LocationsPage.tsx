@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, useState } from 'react';
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
@@ -108,15 +108,25 @@ type SortField = 'trails' | 'distance' | 'name';
 // lat/long yet, e.g. the first one added via #1705 without a center point) still reaches the
 // fit-bounds calc — today it's rendered via locationsWithBoundary's own Polygon layer below but
 // never counted here, so the map's initial view can sit anywhere relative to it.
+// #1786: mirrors TrailMapView's ChangeView — fitBounds must run from a useEffect keyed on the
+// computed bounds, not directly in the render body, or every re-render (e.g. hoveredSlug changing
+// on Polygon mouseover/mouseout, #1708) resets the user's zoom/pan. `bounds` is memoized off
+// `locations` alone, so hover-only state changes elsewhere in LocationsPage don't recompute it.
 function FitBounds({ locations }: { locations: Location[] }) {
     const map = useMap();
-    const points = computeFitBoundsPoints(locations);
-    if (points.length > 0) {
-        const bounds = L.latLngBounds(points);
-        if (bounds.isValid()) {
+    const bounds = useMemo(() => {
+        const points = computeFitBoundsPoints(locations);
+        if (points.length === 0) return null;
+        const b = L.latLngBounds(points);
+        return b.isValid() ? b : null;
+    }, [locations]);
+
+    useEffect(() => {
+        if (bounds) {
             map.fitBounds(bounds, { padding: [40, 40] });
         }
-    }
+    }, [bounds, map]);
+
     return null;
 }
 
