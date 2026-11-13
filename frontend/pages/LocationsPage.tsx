@@ -37,6 +37,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
 import { MapAttributionSync } from '../components/TrailMapView';
+import { LeafletTooltipThemeStyles } from '../components/LeafletTooltipStyles';
 import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/locationBoundary';
 import { computeFitBoundsPoints } from './locationsFitBounds';
 import { useLocations, Location } from '../hooks/useLocations';
@@ -265,6 +266,8 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                             style={{ height: '100%', width: '100%' }}
                             zoomControl={false}
                         >
+                            {/* #1781: dark-mode-aware override for Leaflet's hardcoded-white .leaflet-tooltip */}
+                            <LeafletTooltipThemeStyles theme={theme} />
                             <MapAttributionSync text={hasSimplemapsBoundary ? SIMPLEMAPS_CC_BY_ATTRIBUTION : null} />
                             <LayersControl key={isDark ? 'dark' : 'light'} position="topleft">
                                 <LayersControl.BaseLayer checked={!isDark} name={t('map.street')}>
