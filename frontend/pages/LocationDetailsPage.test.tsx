@@ -9,7 +9,7 @@
 // LocationsPage.test.tsx/RacesPage.test.tsx use.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, act } from '@testing-library/react';
+import { render, screen, cleanup, act, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -222,16 +222,17 @@ describe('LocationDetailsPage map render gate (#1790)', () => {
 // so #1790's new zero-trail boundary/center map never got a `userLocation` to follow — the effect
 // now mirrors `showMap`'s own boundary/center-point predicate (inlined, since `showMap` itself is
 // declared after this effect, past the loading/error early-returns).
-describe('LocationDetailsPage geolocation prompt gate (#1792)', () => {
-    function mockGeolocation() {
-        const getCurrentPosition = vi.fn();
-        Object.defineProperty(navigator, 'geolocation', {
-            value: { getCurrentPosition, watchPosition: vi.fn(), clearWatch: vi.fn() },
-            configurable: true,
-        });
-        return getCurrentPosition;
-    }
+// Hoisted so both the #1792 describe block and the #1795 one below can share it.
+function mockGeolocation() {
+    const getCurrentPosition = vi.fn();
+    Object.defineProperty(navigator, 'geolocation', {
+        value: { getCurrentPosition, watchPosition: vi.fn(), clearWatch: vi.fn() },
+        configurable: true,
+    });
+    return getCurrentPosition;
+}
 
+describe('LocationDetailsPage geolocation prompt gate (#1792)', () => {
     it('calls getCurrentPosition and passes the resolved coordinate to TrailMapView for a zero-trail location with a center point', () => {
         const getCurrentPosition = mockGeolocation();
         const location = makeLocation({ latitude: 64.5, longitude: -20.5 });
@@ -271,6 +272,29 @@ describe('LocationDetailsPage geolocation prompt gate (#1792)', () => {
 
         renderLocationDetailsPage(location, [trail]);
 
+        expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+    });
+});
+
+// #1795: the effect's dependency array was `[location, filteredTrails]` — `filteredTrails` is a
+// useMemo that returns a new array reference on every filter-chip toggle (activeActivity/
+// activeTrailType/activeDifficulty), so getCurrentPosition() was re-firing on every chip tap, not
+// just on first render. Now depends on `trails` (unfiltered), which a chip toggle never changes.
+describe('LocationDetailsPage geolocation prompt does not re-fire on filter-chip toggle (#1795)', () => {
+    it('does NOT call getCurrentPosition again when a filter chip is toggled after it already fired once', () => {
+        const getCurrentPosition = mockGeolocation();
+        const location = makeLocation();
+        const trail = makeTrail({ activityType: 'Hiking' });
+
+        renderLocationDetailsPage(location, [trail]);
+
+        expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+
+        // The activity chip's label is `${emoji} ${t('difficulty.hiking')} (${count})` — "Hike (1)".
+        fireEvent.click(screen.getByText(/Hike \(1\)/));
+
+        // Toggling the chip still fired a re-render (filteredTrails recomputed), but the effect's
+        // own dependency array (location, trails) did not change, so no second GPS prompt.
         expect(getCurrentPosition).toHaveBeenCalledTimes(1);
     });
 });
