@@ -39,6 +39,11 @@ interface TrailMapViewProps {
     // #1790: LocationDetailsPage also passes this now — a location's own center point, used the
     // same way when it has no trail markers of its own either.
     fallbackCenter?: { lat: number; lng: number } | null;
+    // #1793: i18n key for the fallbackCenter marker's Popup text — defaults to the original
+    // `map.eventLocation` copy (#1309) so CompetitionDetailPage, the only caller that predates this
+    // prop, keeps its existing label unchanged. LocationDetailsPage (#1790) passes `map.locationCenter`
+    // instead, since its fallbackCenter is a plain location's own center point, not an event's.
+    fallbackCenterLabelKey?: string;
     // #1543: optional controlled selection — lets a sibling component (e.g. CompetitionDetailPage's
     // EventTrailLegend) read/drive the same highlight state as clicking a pin or a route. Omitted
     // (undefined, not null) by existing call sites (LocationDetailsPage), which keep today's
@@ -155,6 +160,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
     trails,
     userLocation,
     fallbackCenter = null,
+    fallbackCenterLabelKey = 'map.eventLocation',
     selectedSlug: selectedSlugProp,
     selectionSource: selectionSourceProp,
     onSelectionChange,
@@ -573,7 +579,7 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                 {trailsWithLocation.length === 0 && fallbackCenter && (
                     <Marker position={[fallbackCenter.lat, fallbackCenter.lng]} icon={trailIcon}>
                         <Popup>
-                            <Typography variant="body2">{t('map.eventLocation')}</Typography>
+                            <Typography variant="body2">{t(fallbackCenterLabelKey)}</Typography>
                         </Popup>
                     </Marker>
                 )}
