@@ -37,7 +37,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Layout from '../components/Layout';
 import { MapAttributionSync } from '../components/TrailMapView';
-import { geoJsonBoundaryToLatLngParts, SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/locationBoundary';
+import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/locationBoundary';
 import { computeFitBoundsPoints } from './locationsFitBounds';
 import { useLocations, Location } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
@@ -217,16 +217,6 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         return theme.palette.info.main;
     };
 
-    // #1708: default vs. hover-highlighted boundary styling — same theme color (secondary),
-    // brighter/more opaque on hover, so it reads as a state swap rather than a different shape.
-    const getBoundaryPathOptions = (isHovered: boolean) => ({
-        color: isHovered ? theme.palette.secondary.light : theme.palette.secondary.main,
-        weight: isHovered ? 3 : 2,
-        dashArray: isHovered ? undefined : '6 6',
-        fillColor: isHovered ? theme.palette.secondary.light : theme.palette.secondary.main,
-        fillOpacity: isHovered ? 0.35 : 0.08,
-    });
-
     if (loading) {
         return (
             <Layout mode={mode} onToggleMode={onToggleMode}>
@@ -356,7 +346,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                     <Polygon
                                         key={`boundary-${loc.id}-${index}`}
                                         positions={part}
-                                        pathOptions={getBoundaryPathOptions(isHovered)}
+                                        pathOptions={getBoundaryPathOptions(theme, isHovered)}
                                         eventHandlers={{
                                             mouseover: () => setHoveredSlug(loc.slug),
                                             mouseout: () => setHoveredSlug(null),

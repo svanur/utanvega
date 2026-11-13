@@ -1,4 +1,5 @@
 import type L from 'leaflet';
+import type { Theme } from '@mui/material/styles';
 
 // CC BY 4.0 requires visible attribution wherever the licensed work (or an adaptation of it,
 // which a rendered boundary outline is) is shown to the public — a source-code comment on the
@@ -29,4 +30,19 @@ export function geoJsonBoundaryToLatLngParts(geoJson: string): L.LatLngExpressio
     } catch {
         return null;
     }
+}
+
+// #1708: default vs. hover-highlighted boundary styling — same theme color (secondary),
+// brighter/more opaque on hover, so it reads as a state swap rather than a different shape.
+// Takes `theme` as a parameter (rather than closing over it) so it works the same from any
+// component that reads `useTheme()` — LocationsPage (several locations, hover-synced with its
+// list Cards) and, per #1776, EventMapView (one location at a time, synced with local hover state).
+export function getBoundaryPathOptions(theme: Theme, isHovered: boolean) {
+    return {
+        color: isHovered ? theme.palette.secondary.light : theme.palette.secondary.main,
+        weight: isHovered ? 3 : 2,
+        dashArray: isHovered ? undefined : '6 6',
+        fillColor: isHovered ? theme.palette.secondary.light : theme.palette.secondary.main,
+        fillOpacity: isHovered ? 0.35 : 0.08,
+    };
 }
