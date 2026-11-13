@@ -12,18 +12,26 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Trail } from '../hooks/useTrails';
+import type { Location } from '../hooks/useLocations';
 
 // vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
 // afterEach(cleanup) registration (which relies on a global test-framework hook) never fires —
 // without this, a later test's screen.getByRole(...) query can match leftover DOM nodes still
 // mounted from an earlier test in this same file.
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    mockAddAttribution.mockClear();
+    mockRemoveAttribution.mockClear();
+    mockLocations.current = [];
+});
 
 // #1303: mockFitBounds and mockGeometries are read by the react-leaflet/useTrailGeometries mocks
 // below. vi.hoisted is required because vi.mock(...) factories are hoisted above imports/consts —
 // referencing an un-hoisted outer variable from inside them throws a ReferenceError.
-const { mockFitBounds, mockGeometries, mockMap, polylineSpy } = vi.hoisted(() => {
+const { mockFitBounds, mockGeometries, mockMap, polylineSpy, mockLocations, mockAddAttribution, mockRemoveAttribution } = vi.hoisted(() => {
     const fitBounds = vi.fn();
+    const addAttribution = vi.fn();
+    const removeAttribution = vi.fn();
     return {
         mockFitBounds: fitBounds,
         mockGeometries: { current: [] as Array<{ slug: string; activityType: string; coordinates: [number, number][] }> },
@@ -32,13 +40,27 @@ const { mockFitBounds, mockGeometries, mockMap, polylineSpy } = vi.hoisted(() =>
         // (TrailMapView.tsx:48-52) only re-fires on an actual bounds/followMe change. A new literal
         // per call would make `map` look like a changed dependency on every re-render, masking
         // #1303's showTracks-triggered-refit bug behind an unrelated false positive.
-        mockMap: { fitBounds, setView: vi.fn(), getZoom: () => 10, invalidateSize: vi.fn() },
+        mockMap: {
+            fitBounds, setView: vi.fn(), getZoom: () => 10, invalidateSize: vi.fn(),
+            // #1777: MapAttributionSync (TrailMapView.tsx) calls these directly off useMap()'s
+            // return value — stubbed here (rather than left undefined) so the CC BY attribution
+            // tests below can assert on them without a real Leaflet attribution control.
+            attributionControl: { addAttribution, removeAttribution },
+        },
         // #1543: captures every <Polyline> render's props (pathOptions, positions, eventHandlers)
         // so tests can assert per-slug color/dashArray without needing Leaflet's real SVG renderer,
         // and can simulate a track click by calling the captured eventHandlers.click directly.
         polylineSpy: vi.fn(),
+        // #1777: read by the useLocations mock below, mirroring EventMapView.test.tsx's pattern.
+        mockLocations: { current: [] as Location[] },
+        mockAddAttribution: addAttribution,
+        mockRemoveAttribution: removeAttribution,
     };
 });
+
+vi.mock('../hooks/useLocations', () => ({
+    useLocations: () => ({ locations: mockLocations.current, loading: false, error: null }),
+}));
 
 // TrailMapView calls useTrailGeometries(), which uses @tanstack/react-query's useQuery and throws
 // without a QueryClientProvider ancestor — mocked rather than standing up a real QueryClient,
@@ -77,6 +99,27 @@ vi.mock('react-leaflet', () => ({
             />
         );
     },
+    // #1777: thin, queryable stand-in mirroring EventMapView.test.tsx's own Polygon mock — surfaces
+    // pathOptions.fillOpacity/weight as data-* attributes so a hover test can assert
+    // getBoundaryPathOptions's isHovered argument without Leaflet's real SVG renderer, and forwards
+    // eventHandlers.mouseover/mouseout so fireEvent can invoke the exact closures TrailMapView wires.
+    Polygon: (props: {
+        children?: React.ReactNode;
+        pathOptions?: { fillOpacity?: number; weight?: number; dashArray?: string };
+        eventHandlers?: { mouseover?: () => void; mouseout?: () => void };
+    }) => (
+        <div
+            data-testid="polygon"
+            data-fill-opacity={props.pathOptions?.fillOpacity}
+            data-weight={props.pathOptions?.weight}
+            data-dash={props.pathOptions?.dashArray ?? ''}
+            onMouseOver={() => props.eventHandlers?.mouseover?.()}
+            onMouseOut={() => props.eventHandlers?.mouseout?.()}
+        >
+            {props.children}
+        </div>
+    ),
+    Tooltip: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     useMap: () => mockMap,
     useMapEvents: () => null,
     LayersControl: Object.assign(
@@ -89,7 +132,7 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
 }));
 
 import { TrailMapView } from './TrailMapView';
-import { geoJsonBoundaryToLatLngParts } from './locationBoundary';
+import { geoJsonBoundaryToLatLngParts, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 
 const noTrails: Trail[] = [];
 
@@ -487,5 +530,193 @@ describe('geoJsonBoundaryToLatLngParts (#1739)', () => {
     it('returns null without throwing on valid JSON that is neither Polygon nor MultiPolygon', () => {
         expect(geoJsonBoundaryToLatLngParts(JSON.stringify({ type: 'Point', coordinates: [-19.0, 64.0] }))).toBeNull();
         expect(geoJsonBoundaryToLatLngParts(JSON.stringify({ type: 'MultiPolygon' }))).toBeNull();
+    });
+});
+
+// #1777: the trails-overview map view's opt-in multi-location boundary overlay, adapting
+// EventMapView.test.tsx's (#1776) boundary-rendering/hover/attribution coverage from
+// EventSummary.locationId to Trail.locations[].slug (Trail has no locationId — see
+// useTrails.ts's LocationInfo). Mirrors that file's react-leaflet Polygon mock shape above.
+function makeLocation(overrides: Partial<Location> = {}): Location {
+    return {
+        id: 'loc-1',
+        name: 'Location',
+        nameEn: null,
+        slug: 'loc-1',
+        type: 'Area',
+        childrenCount: 0,
+        trailsCount: 0,
+        boundaryGeoJson: null,
+        ...overrides,
+    };
+}
+
+function boundary(coords: [number, number][]): string {
+    return JSON.stringify({ type: 'Polygon', coordinates: [coords] });
+}
+
+function multiPolygonBoundary(parts: [number, number][][]): string {
+    return JSON.stringify({ type: 'MultiPolygon', coordinates: parts.map(coords => [coords]) });
+}
+
+function makeTrailAtLocation(slug: string, overrides: Partial<Trail> = {}): Trail {
+    return makeTrail({
+        id: slug,
+        slug,
+        locations: [{
+            name: slug, nameEn: null, slug, order: 0, role: 'primary',
+            centerLatitude: null, centerLongitude: null,
+        }],
+        ...overrides,
+    });
+}
+
+const boundaryLocationA = makeLocation({
+    id: 'loc-a', slug: 'loc-a', name: 'Location A',
+    boundaryGeoJson: boundary([[-19.0, 64.0], [-19.1, 64.1], [-19.2, 64.0], [-19.0, 64.0]]),
+});
+const boundaryLocationB = makeLocation({
+    id: 'loc-b', slug: 'loc-b', name: 'Location B',
+    boundaryGeoJson: boundary([[-20.0, 65.0], [-20.1, 65.1], [-20.2, 65.0], [-20.0, 65.0]]),
+});
+const noBoundaryLocation = makeLocation({ id: 'loc-c', slug: 'loc-c', name: 'Location C' });
+const regionBoundaryLocation = makeLocation({
+    id: 'loc-region', slug: 'loc-region', name: 'Region Loc', type: 'Region',
+    boundaryGeoJson: boundary([[-23.0, 68.0], [-23.1, 68.1], [-23.2, 68.0], [-23.0, 68.0]]),
+});
+const multiPolygonLocation = makeLocation({
+    id: 'loc-multi', slug: 'loc-multi', name: 'Location Multi',
+    boundaryGeoJson: multiPolygonBoundary([
+        [[-21.0, 66.0], [-21.1, 66.1], [-21.2, 66.0], [-21.0, 66.0]],
+        [[-22.0, 67.0], [-22.1, 67.1], [-22.2, 67.0], [-22.0, 67.0]],
+    ]),
+});
+
+describe('TrailMapView showLocationBoundaries overlay (#1777)', () => {
+    beforeEach(() => {
+        mockAddAttribution.mockClear();
+        mockRemoveAttribution.mockClear();
+    });
+
+    it('renders a boundary Polygon for each distinct trail location that has a saved boundary', () => {
+        mockLocations.current = [boundaryLocationA, boundaryLocationB, noBoundaryLocation];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView
+                    trails={[makeTrailAtLocation('loc-a'), makeTrailAtLocation('loc-b')]}
+                    userLocation={null}
+                    showLocationBoundaries
+                />
+            </MemoryRouter>
+        );
+
+        expect(screen.getAllByTestId('polygon')).toHaveLength(2);
+        expect(screen.getByText('Location A')).toBeDefined();
+        expect(screen.getByText('Location B')).toBeDefined();
+    });
+
+    it('draws no shape for a trail location with no saved boundary', () => {
+        mockLocations.current = [noBoundaryLocation];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-c')]} userLocation={null} showLocationBoundaries />
+            </MemoryRouter>
+        );
+
+        expect(screen.queryAllByTestId('polygon')).toHaveLength(0);
+    });
+
+    it('does not render any boundary overlay when showLocationBoundaries is omitted (default false)', () => {
+        mockLocations.current = [boundaryLocationA];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-a')]} userLocation={null} />
+            </MemoryRouter>
+        );
+
+        expect(screen.queryAllByTestId('polygon')).toHaveLength(0);
+    });
+
+    it('renders a MultiPolygon boundary as multiple disconnected Polygon stand-ins', () => {
+        mockLocations.current = [multiPolygonLocation];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-multi')]} userLocation={null} showLocationBoundaries />
+            </MemoryRouter>
+        );
+
+        expect(screen.getAllByTestId('polygon')).toHaveLength(2);
+    });
+
+    it('hovering a Polygon brightens its own pathOptions via getBoundaryPathOptions(isHovered), leaving the other location unaffected', () => {
+        mockLocations.current = [boundaryLocationA, boundaryLocationB];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView
+                    trails={[makeTrailAtLocation('loc-a'), makeTrailAtLocation('loc-b')]}
+                    userLocation={null}
+                    showLocationBoundaries
+                />
+            </MemoryRouter>
+        );
+
+        const [polygonA, polygonB] = screen.getAllByTestId('polygon');
+        expect(polygonA.getAttribute('data-fill-opacity')).toBe('0.08');
+
+        fireEvent.mouseOver(polygonA);
+
+        expect(polygonA.getAttribute('data-fill-opacity')).toBe('0.35');
+        expect(polygonA.getAttribute('data-weight')).toBe('3');
+        expect(polygonB.getAttribute('data-fill-opacity')).toBe('0.08');
+
+        fireEvent.mouseOut(polygonA);
+
+        expect(polygonA.getAttribute('data-fill-opacity')).toBe('0.08');
+        expect(polygonA.getAttribute('data-weight')).toBe('2');
+    });
+
+    it('hovering any part of a MultiPolygon highlights all of its parts together', () => {
+        mockLocations.current = [multiPolygonLocation];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-multi')]} userLocation={null} showLocationBoundaries />
+            </MemoryRouter>
+        );
+
+        const [partOne, partTwo] = screen.getAllByTestId('polygon');
+        fireEvent.mouseOver(partOne);
+
+        expect(partOne.getAttribute('data-fill-opacity')).toBe('0.35');
+        expect(partTwo.getAttribute('data-fill-opacity')).toBe('0.35');
+    });
+
+    it('adds the simplemaps CC BY attribution when a Region boundary is among the rendered shapes', () => {
+        mockLocations.current = [regionBoundaryLocation];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-region')]} userLocation={null} showLocationBoundaries />
+            </MemoryRouter>
+        );
+
+        expect(mockAddAttribution).toHaveBeenCalledWith(SIMPLEMAPS_CC_BY_ATTRIBUTION);
+    });
+
+    it('does not add the simplemaps attribution when the only boundary is not a Region (e.g. a municipality)', () => {
+        mockLocations.current = [boundaryLocationA];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-a')]} userLocation={null} showLocationBoundaries />
+            </MemoryRouter>
+        );
+
+        expect(mockAddAttribution).not.toHaveBeenCalled();
     });
 });

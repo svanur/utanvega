@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, useMap, useMapEvents, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, Tooltip as LeafletTooltip, useMap, useMapEvents, LayersControl } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import { Box, Typography, Button, IconButton, Paper, Tooltip, useTheme } from '@mui/material';
@@ -8,8 +8,10 @@ import MyLocationIcon from '@mui/icons-material/MyLocation';
 import RouteIcon from '@mui/icons-material/Route';
 import { Trail } from '../hooks/useTrails';
 import { useTrailGeometries } from '../hooks/useTrailGeometries';
+import { useLocations } from '../hooks/useLocations';
+import { useLocalize } from '../utils/localize';
 import { computeMapBounds } from './trailMapBounds';
-import { geoJsonBoundaryToLatLngParts } from './locationBoundary';
+import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 import { computeSortedSlugs, getTrailRouteStyle, toggleTrailSelection } from './trailRouteColors';
 import { Link as RouterLink } from 'react-router-dom';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -55,6 +57,12 @@ interface TrailMapViewProps {
     // regions are simplemaps.com, CC BY 4.0 — see SIMPLEMAPS_CC_BY_ATTRIBUTION below); omitted for
     // municipality boundaries, which are LMÍ-sourced and don't need this per-page credit.
     locationBoundary?: { geoJson: string; color?: string; attribution?: string } | null;
+    // #1777: opt-in overlay — one boundary shape per distinct location behind `trails` that has a
+    // saved Location.boundaryGeoJson (#1705), hover-highlighted the same way EventMapView's
+    // equivalent overlay is (#1776). Explicit prop rather than inferring "on" from `locationBoundary`
+    // being absent — CompetitionDetailPage also omits `locationBoundary` and must not pick this up
+    // implicitly. Defaults to `false`; only TrailList's map view passes `true`.
+    showLocationBoundaries?: boolean;
 }
 
 // Leaflet's attribution control only reflects TileLayer attribution automatically; an overlay
@@ -150,12 +158,20 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
     onSelectionChange,
     height = '70vh',
     locationBoundary = null,
+    showLocationBoundaries = false,
 }) => {
     const { t } = useTranslation();
+    const loc = useLocalize();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
+    const { locations } = useLocations();
     const [followMe, setFollowMe] = useState(false);
     const [showTracks, setShowTracks] = useState(true);
+    // #1777: one location's boundary shape hovered (or tapped — Leaflet's default tap-to-open
+    // behavior on touch) at a time, independent of the single-boundary `locationBoundary` prop's
+    // own (non-interactive) rendering below. Keyed by slug, not id — `Trail.locations[].slug` is
+    // all `LocationInfo` (useTrails.ts) carries; unlike EventSummary, it has no locationId.
+    const [hoveredLocationSlug, setHoveredLocationSlug] = useState<string | null>(null);
     // #1535: flips once after MapInvalidateSize's delayed invalidateSize() has corrected the
     // container's real size, so ChangeView's fitBounds re-runs against that size.
     const [containerReady, setContainerReady] = useState(false);
@@ -238,6 +254,33 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
     // legible in dark mode. Visually distinct from both TRAIL_ROUTE_PALETTE and the selected-track
     // highlight red by the dashed stroke + low fill opacity below, not by color alone.
     const boundaryColor = locationBoundary?.color ?? theme.palette.secondary.main;
+
+    // #1777: distinct locations behind the current trail set that have a saved boundary
+    // (Location.boundaryGeoJson, #1705) — rendered as Polygon outlines alongside (not instead of)
+    // the single `locationBoundary` prop above, adapting EventMapView.tsx's equivalent (#1776).
+    // Joined on slug, not id — `Trail.locations[].slug` (LocationInfo, useTrails.ts) is all a Trail
+    // carries about its locations; `useLocations()`'s own `Location.slug` is the matching key.
+    // Gated behind showLocationBoundaries so CompetitionDetailPage/LocationDetailsPage, which also
+    // omit `locationBoundary` but never pass this prop, stay visually unchanged.
+    const boundaryLocations = useMemo(() => {
+        if (!showLocationBoundaries) return [];
+        const locationBySlug = new Map(locations.map(l => [l.slug, l]));
+        const slugs = new Set(
+            trails.flatMap(trail => trail.locations.map(l => l.slug)),
+        );
+        return Array.from(slugs)
+            .map(slug => locationBySlug.get(slug))
+            .filter((l): l is NonNullable<typeof l> & { boundaryGeoJson: string } => !!l?.boundaryGeoJson);
+    }, [showLocationBoundaries, locations, trails]);
+
+    // #1777: a landsvæði Region boundary is simplemaps.com (CC BY 4.0) — surface that credit
+    // whenever one is among the shapes currently rendered, same gate LocationsPage.tsx/
+    // EventMapView.tsx use for the same data. Combined with locationBoundary's own attribution
+    // (below) so neither source's credit is dropped when both happen to be present.
+    const hasSimplemapsBoundary = useMemo(
+        () => boundaryLocations.some(l => l.type === 'Region'),
+        [boundaryLocations],
+    );
 
     const userLocationIcon = useMemo(() => new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
@@ -407,6 +450,17 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                     <MapInvalidateSize onReady={handleContainerReady} />
                     <MapDragHandler onDrag={handleDrag} onMapClick={handleMapClick} ignoreClickRef={ignoreMapClick} />
                     <MapAttributionSync text={locationBoundary?.attribution ?? null} />
+                    {/* #1777: separate registration from locationBoundary's own attribution above
+                        so both sources' credits stay visible if either (or both, LocationDetailsPage
+                        aside) happen to be present at once — unless they're the literal same string,
+                        in which case registering it twice would just double up for no benefit. */}
+                    <MapAttributionSync
+                        text={
+                            hasSimplemapsBoundary && locationBoundary?.attribution !== SIMPLEMAPS_CC_BY_ATTRIBUTION
+                                ? SIMPLEMAPS_CC_BY_ATTRIBUTION
+                                : null
+                        }
+                    />
                 <LayersControl key={isDark ? 'dark' : 'light'} position="topleft">
                         <LayersControl.BaseLayer checked={!isDark} name={t('map.street')}>
                             <TileLayer
@@ -448,6 +502,38 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                         interactive={false}
                     />
                 ))}
+
+                {/* #1777: the opt-in multi-location overlay (showLocationBoundaries) — rendered in
+                    the same boundary z-order slot as the single-boundary block above, beneath
+                    markerCluster/visibleGeometries below, so it reads as context rather than
+                    covering trail routes/markers. Styled via getBoundaryPathOptions (theme-driven,
+                    unlike the hand-written pathOptions above) and interactive, since hovering/
+                    tapping a shape is the point of this overlay. */}
+                {showLocationBoundaries && boundaryLocations.flatMap(location => {
+                    const parts = geoJsonBoundaryToLatLngParts(location.boundaryGeoJson);
+                    if (!parts) return [];
+                    const isHovered = hoveredLocationSlug === location.slug;
+                    // #1739: one <Polygon> per part so a MultiPolygon boundary (e.g. an exclave)
+                    // renders as several disconnected outlines, all sharing the same hover
+                    // handlers so hovering/tapping any part highlights the same location.
+                    return parts.map((part, index) => (
+                        <Polygon
+                            key={`location-boundary-${location.slug}-${index}`}
+                            positions={part}
+                            pathOptions={getBoundaryPathOptions(theme, isHovered)}
+                            eventHandlers={{
+                                mouseover: () => setHoveredLocationSlug(location.slug),
+                                mouseout: () => setHoveredLocationSlug(null),
+                            }}
+                        >
+                            <LeafletTooltip direction="center" sticky>
+                                <Typography variant="caption" fontWeight="bold">
+                                    {loc(location.name, location.nameEn) ?? location.name}
+                                </Typography>
+                            </LeafletTooltip>
+                        </Polygon>
+                    ));
+                })}
 
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
