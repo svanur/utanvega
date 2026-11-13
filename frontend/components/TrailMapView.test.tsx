@@ -128,6 +128,9 @@ vi.mock('react-leaflet', () => ({
         </div>
     ),
     Tooltip: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    // #1783: location-boundaries Pane wrapper (TrailMapView.tsx) — a plain pass-through, since
+    // this suite isn't asserting pane/z-index placement itself, only that its children still render.
+    Pane: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     useMap: () => mockMap,
     useMapEvents: () => null,
     LayersControl: Object.assign(
