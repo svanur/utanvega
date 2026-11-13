@@ -182,10 +182,15 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         return findPath(locationTree, slug) || [];
     }, [slug, locationTree]);
 
-    // Gated on the same condition that renders the map section below (#1253) so visitors
-    // landing on a location with no trails never see a geolocation permission prompt.
+    // Gated on the same condition that renders the map section below (#1253, extended by #1790/
+    // #1792) so visitors never see a geolocation permission prompt on a page with no map to show
+    // it on. Declared above the `showMap` const (itself below the loading/error early-returns),
+    // so the boundary/center-point predicate is duplicated inline here rather than reused —
+    // keep both in lockstep if either changes.
     useEffect(() => {
-        if (!(trails && trails.length > 0)) return;
+        const hasOwnGeometry = Boolean(location?.boundaryGeoJson)
+            || (location?.latitude != null && location?.longitude != null);
+        if (!hasOwnGeometry && filteredTrails.length === 0) return;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -199,7 +204,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 }
             );
         }
-    }, [trails]);
+    }, [location, filteredTrails]);
 
     if (loading) {
         return (
