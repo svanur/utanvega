@@ -13,7 +13,7 @@ import { getCountdownColor, getCountdownLabel, isOngoingPastDayTwo } from '../ut
 import { useLocalize } from '../utils/localize';
 import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 import { MapAttributionSync } from './TrailMapView';
-import { LeafletTooltipThemeStyles } from './LeafletTooltipStyles';
+import { LeafletTooltipThemeStyles, LeafletPopupThemeStyles } from './LeafletTooltipStyles';
 import MapFollowController from './MapFollowController';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -196,6 +196,8 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                 />
                 {/* #1781: dark-mode-aware override for Leaflet's hardcoded-white .leaflet-tooltip */}
                 <LeafletTooltipThemeStyles theme={theme} />
+                {/* #1785: same, for Leaflet's hardcoded-white .leaflet-popup */}
+                <LeafletPopupThemeStyles theme={theme} />
                 <MapAttributionSync text={hasSimplemapsBoundary ? SIMPLEMAPS_CC_BY_ATTRIBUTION : null} />
                 <MapFollowController
                     followMe={followMe}

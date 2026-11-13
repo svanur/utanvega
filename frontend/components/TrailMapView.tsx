@@ -12,7 +12,7 @@ import { useLocations } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
 import { computeMapBounds } from './trailMapBounds';
 import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
-import { LeafletTooltipThemeStyles } from './LeafletTooltipStyles';
+import { LeafletTooltipThemeStyles, LeafletPopupThemeStyles } from './LeafletTooltipStyles';
 import { computeSortedSlugs, getTrailRouteStyle, toggleTrailSelection } from './trailRouteColors';
 import { Link as RouterLink } from 'react-router-dom';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -454,6 +454,8 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                     <MapDragHandler onDrag={handleDrag} onMapClick={handleMapClick} ignoreClickRef={ignoreMapClick} />
                     {/* #1781: dark-mode-aware override for Leaflet's hardcoded-white .leaflet-tooltip */}
                     <LeafletTooltipThemeStyles theme={theme} />
+                    {/* #1785: same, for Leaflet's hardcoded-white .leaflet-popup */}
+                    <LeafletPopupThemeStyles theme={theme} />
                     <MapAttributionSync text={locationBoundary?.attribution ?? null} />
                     {/* #1777: separate registration from locationBoundary's own attribution above
                         so both sources' credits stay visible if either (or both, LocationDetailsPage
