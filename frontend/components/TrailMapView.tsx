@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, Tooltip as LeafletTooltip, useMap, useMapEvents, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, Tooltip as LeafletTooltip, useMap, useMapEvents, LayersControl, Pane } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
 import { Box, Typography, Button, IconButton, Paper, Tooltip, useTheme } from '@mui/material';
@@ -513,32 +513,39 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
                     markerCluster/visibleGeometries below, so it reads as context rather than
                     covering trail routes/markers. Styled via getBoundaryPathOptions (theme-driven,
                     unlike the hand-written pathOptions above) and interactive, since hovering/
-                    tapping a shape is the point of this overlay. */}
-                {showLocationBoundaries && boundaryLocations.flatMap(location => {
-                    const parts = geoJsonBoundaryToLatLngParts(location.boundaryGeoJson);
-                    if (!parts) return [];
-                    const isHovered = hoveredLocationSlug === location.slug;
-                    // #1739: one <Polygon> per part so a MultiPolygon boundary (e.g. an exclave)
-                    // renders as several disconnected outlines, all sharing the same hover
-                    // handlers so hovering/tapping any part highlights the same location.
-                    return parts.map((part, index) => (
-                        <Polygon
-                            key={`location-boundary-${location.slug}-${index}`}
-                            positions={part}
-                            pathOptions={getBoundaryPathOptions(theme, isHovered)}
-                            eventHandlers={{
-                                mouseover: () => setHoveredLocationSlug(location.slug),
-                                mouseout: () => setHoveredLocationSlug(null),
-                            }}
-                        >
-                            <LeafletTooltip direction="center" sticky>
-                                <Typography variant="caption" fontWeight="bold">
-                                    {loc(location.name, location.nameEn) ?? location.name}
-                                </Typography>
-                            </LeafletTooltip>
-                        </Polygon>
-                    ));
-                })}
+                    tapping a shape is the point of this overlay.
+                    #1783: filled + interactive, so without pane separation it wins clicks/taps
+                    over a route's thin stroke anywhere inside the shape. A dedicated low-z <Pane>
+                    (350, below the default overlayPane's 400 that Polyline/Polygon share with no
+                    explicit pane) keeps hover/tooltip working while letting routes win overlapping
+                    hit-tests — Leaflet resolves clicks by topmost pane first, then DOM order. */}
+                <Pane name="location-boundaries" style={{ zIndex: 350 }}>
+                    {showLocationBoundaries && boundaryLocations.flatMap(location => {
+                        const parts = geoJsonBoundaryToLatLngParts(location.boundaryGeoJson);
+                        if (!parts) return [];
+                        const isHovered = hoveredLocationSlug === location.slug;
+                        // #1739: one <Polygon> per part so a MultiPolygon boundary (e.g. an exclave)
+                        // renders as several disconnected outlines, all sharing the same hover
+                        // handlers so hovering/tapping any part highlights the same location.
+                        return parts.map((part, index) => (
+                            <Polygon
+                                key={`location-boundary-${location.slug}-${index}`}
+                                positions={part}
+                                pathOptions={getBoundaryPathOptions(theme, isHovered)}
+                                eventHandlers={{
+                                    mouseover: () => setHoveredLocationSlug(location.slug),
+                                    mouseout: () => setHoveredLocationSlug(null),
+                                }}
+                            >
+                                <LeafletTooltip direction="center" sticky>
+                                    <Typography variant="caption" fontWeight="bold">
+                                        {loc(location.name, location.nameEn) ?? location.name}
+                                    </Typography>
+                                </LeafletTooltip>
+                            </Polygon>
+                        ));
+                    })}
+                </Pane>
 
                 {userLocation && (
                     <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
