@@ -9,7 +9,7 @@
 // LocationsPage.test.tsx/RacesPage.test.tsx use.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -212,5 +212,62 @@ describe('LocationDetailsPage map render gate (#1790)', () => {
 
         const props = trailMapViewMock.mock.calls.at(-1)![0] as { locationBoundary: { attribution: string } };
         expect(props.locationBoundary.attribution).toContain('simplemaps.com');
+    });
+});
+
+// #1792: the geolocation-permission-prompt effect was still gated on `trails.length > 0` alone,
+// so #1790's new zero-trail boundary/center map never got a `userLocation` to follow — the effect
+// now mirrors `showMap`'s own boundary/center-point predicate (inlined, since `showMap` itself is
+// declared after this effect, past the loading/error early-returns).
+describe('LocationDetailsPage geolocation prompt gate (#1792)', () => {
+    function mockGeolocation() {
+        const getCurrentPosition = vi.fn();
+        Object.defineProperty(navigator, 'geolocation', {
+            value: { getCurrentPosition, watchPosition: vi.fn(), clearWatch: vi.fn() },
+            configurable: true,
+        });
+        return getCurrentPosition;
+    }
+
+    it('calls getCurrentPosition and passes the resolved coordinate to TrailMapView for a zero-trail location with a center point', () => {
+        const getCurrentPosition = mockGeolocation();
+        const location = makeLocation({ latitude: 64.5, longitude: -20.5 });
+
+        renderLocationDetailsPage(location, []);
+
+        expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+        const successCallback = getCurrentPosition.mock.calls[0][0] as (pos: unknown) => void;
+        act(() => { successCallback({ coords: { latitude: 64.1, longitude: -21.9 } }); });
+
+        const props = trailMapViewMock.mock.calls.at(-1)![0] as { userLocation: { lat: number; lng: number } | null };
+        expect(props.userLocation).toEqual({ lat: 64.1, lng: -21.9 });
+    });
+
+    it('calls getCurrentPosition for a zero-trail location with a boundary but no center point', () => {
+        const getCurrentPosition = mockGeolocation();
+        const location = makeLocation({ boundaryGeoJson });
+
+        renderLocationDetailsPage(location, []);
+
+        expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT call getCurrentPosition for a zero-trail location with neither a boundary nor a center point (no map, no regression)', () => {
+        const getCurrentPosition = mockGeolocation();
+        const location = makeLocation();
+
+        renderLocationDetailsPage(location, []);
+
+        expect(getCurrentPosition).not.toHaveBeenCalled();
+    });
+
+    it('still calls getCurrentPosition for a location with trails but no boundary/center, same as before #1792', () => {
+        const getCurrentPosition = mockGeolocation();
+        const location = makeLocation();
+        const trail = makeTrail();
+
+        renderLocationDetailsPage(location, [trail]);
+
+        expect(getCurrentPosition).toHaveBeenCalledTimes(1);
     });
 });
