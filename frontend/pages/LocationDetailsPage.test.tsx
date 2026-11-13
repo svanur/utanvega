@@ -173,6 +173,24 @@ describe('LocationDetailsPage map render gate (#1790)', () => {
         expect(screen.queryByTestId('trail-map-view')).toBeNull();
     });
 
+    // #1790 review (owner, post-merge-approval): showMap only accounted for the location's own
+    // boundary/center, so a location with neither but with linked trails — previously shown via
+    // the `trails.length > 0` gate, framed off trail route geometry/start points — regressed to
+    // no map at all. filteredTrails.length > 0 restores that path without reintroducing the
+    // original #1790 bug (it's additive to, not a replacement for, the boundary/center checks).
+    it('renders the map for a location with trails but no boundary and no center point (regression: trail-only locations must still show a map)', () => {
+        const location = makeLocation();
+        const trail = makeTrail();
+
+        renderLocationDetailsPage(location, [trail]);
+
+        expect(screen.getByTestId('trail-map-view')).toBeDefined();
+        const props = trailMapViewMock.mock.calls.at(-1)![0] as { trails: Trail[]; locationBoundary: unknown; fallbackCenter: unknown };
+        expect(props.trails).toEqual([trail]);
+        expect(props.locationBoundary).toBeNull();
+        expect(props.fallbackCenter).toBeNull();
+    });
+
     it('still renders the map with both boundary and trails together, with no "no trails" message (no regression)', () => {
         const location = makeLocation({ boundaryGeoJson });
         const trail = makeTrail();

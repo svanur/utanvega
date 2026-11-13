@@ -234,7 +234,13 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const fallbackCenter = hasCenterPoint
         ? { lat: location.latitude as number, lng: location.longitude as number }
         : null;
-    const showMap = Boolean(location.boundaryGeoJson) || hasCenterPoint;
+    // Pre-#1790, the map was gated on `filteredTrails.length > 0` alone — TrailMapView's own
+    // `trailsWithLocation` filter (not re-done here) is what actually determines whether any of
+    // those trails has plottable coordinates; when none do, TrailMapView still mounts and falls
+    // back to its hardcoded default view, exactly as it did before #1790. Folding that gate in
+    // here too (alongside the location's own boundary/center) avoids a regression for a location
+    // with trails but no boundaryGeoJson/center of its own.
+    const showMap = Boolean(location.boundaryGeoJson) || hasCenterPoint || filteredTrails.length > 0;
 
     // Full ancestor path from the location tree, rendered in the sticky
     // breadcrumb. Falls back to just this location if the tree hasn't loaded.
