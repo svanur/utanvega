@@ -449,6 +449,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                            userLocation={userLocation}
                            height="400px"
                            fallbackCenter={fallbackCenter}
+                           fallbackCenterLabelKey="map.locationCenter"
                            locationBoundary={location.boundaryGeoJson ? {
                                geoJson: location.boundaryGeoJson,
                                // #1764: landsvæði Region boundaries are simplemaps.com (CC

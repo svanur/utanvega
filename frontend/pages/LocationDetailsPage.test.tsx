@@ -147,9 +147,12 @@ describe('LocationDetailsPage map render gate (#1790)', () => {
         renderLocationDetailsPage(location, []);
 
         expect(screen.getByTestId('trail-map-view')).toBeDefined();
-        const props = trailMapViewMock.mock.calls.at(-1)![0] as { locationBoundary: unknown; fallbackCenter: unknown };
+        const props = trailMapViewMock.mock.calls.at(-1)![0] as { locationBoundary: unknown; fallbackCenter: unknown; fallbackCenterLabelKey: unknown };
         expect(props.locationBoundary).toBeNull();
         expect(props.fallbackCenter).toEqual({ lat: 64.5, lng: -20.5 });
+        // #1793: a plain location's fallbackCenter marker must not say "Event location" —
+        // LocationDetailsPage passes the location-specific label key, not TrailMapView's default.
+        expect(props.fallbackCenterLabelKey).toBe('map.locationCenter');
         expect(screen.getByText(en.locations.noTrailsInLocation)).toBeDefined();
     });
 

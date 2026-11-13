@@ -295,6 +295,25 @@ describe('TrailMapView fallbackCenter marker (#1309)', () => {
         expect(markers[0].getAttribute('data-lng')).toBe(String(makeTrail().startLongitude));
     });
 
+    // #1793: LocationDetailsPage passes this for a plain location's own center point — the
+    // fallback marker must then read that caller-supplied label, not the "Event location" default.
+    it('renders the fallbackCenterLabelKey override instead of the default "map.eventLocation"', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView
+                    trails={noTrails}
+                    userLocation={null}
+                    fallbackCenter={fallbackCenter}
+                    fallbackCenterLabelKey="map.locationCenter"
+                />
+            </MemoryRouter>
+        );
+
+        const markers = screen.getAllByTestId('marker');
+        expect(markers).toHaveLength(1);
+        expect(markers[0].textContent).toBe('map.locationCenter');
+    });
+
     it('does not render a fallback marker when fallbackCenter is not provided', () => {
         render(
             <MemoryRouter>
