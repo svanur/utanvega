@@ -26,7 +26,7 @@ import Layout from '../components/Layout';
 import PoolCard from '../components/PoolCard';
 import { findPoolsByLocationSlugs } from '../data/pools';
 import { useLocationBySlug, useLocationTree } from '../hooks/useLocations';
-import type { LocationTreeNode } from '../hooks/useLocations';
+import type { Location, LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
 import { TrailMapView } from '../components/TrailMapView';
 import { SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/locationBoundary';
@@ -41,6 +41,20 @@ type LocationDetailsPageProps = {
     mode: PaletteMode;
     onToggleMode: () => void;
 };
+
+// Shared by the geolocation effect and `showMap` below (#1796 — previously duplicated inline in
+// both places, see #1790/#1792/#1794): true when the location has its own plottable geometry — a
+// saved boundary polygon (#1705) and/or a center point (#1790) — independent of whether any trail
+// is linked to it. A plain function taking `location` as an argument, not a component-scoped
+// useMemo, so it also works in the geolocation effect, which runs above the loading/error
+// early-returns where `location` may still be null.
+// `!= null` (not `!== undefined`) — the backend serializes an unset latitude/longitude as explicit
+// JSON `null`, not an omitted key, same pattern CompetitionDetailPage.tsx/EventMapView.tsx already
+// use for the same reason.
+function hasOwnGeometry(location: Location | null | undefined): boolean {
+    return Boolean(location?.boundaryGeoJson)
+        || (location?.latitude != null && location?.longitude != null);
+}
 
 export default function LocationDetailsPage({ mode, onToggleMode }: LocationDetailsPageProps) {
     const { t } = useTranslation();
@@ -184,17 +198,15 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
     // Gated on the same condition that renders the map section below (#1253, extended by #1790/
     // #1792) so visitors never see a geolocation permission prompt on a page with no map to show
-    // it on. Declared above the `showMap` const (itself below the loading/error early-returns),
-    // so the boundary/center-point predicate is duplicated inline here rather than reused —
-    // keep both in lockstep if either changes.
+    // it on. Declared above the `showMap` const (itself below the loading/error early-returns);
+    // uses the module-level hasOwnGeometry() helper (#1796) rather than a component-scoped value,
+    // so it also works here, before `location` is guaranteed non-null.
     // #1795: depends on `trails` (unfiltered), not `filteredTrails` — filteredTrails gets a new
     // array reference from its useMemo on every filter-chip toggle, which was re-firing
     // getCurrentPosition() on every chip tap. Whether there's a map to show at all does not
     // depend on which filter chips are active.
     useEffect(() => {
-        const hasOwnGeometry = Boolean(location?.boundaryGeoJson)
-            || (location?.latitude != null && location?.longitude != null);
-        if (!hasOwnGeometry && (!trails || trails.length === 0)) return;
+        if (!hasOwnGeometry(location) && (!trails || trails.length === 0)) return;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -232,13 +244,10 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
     const locationName = loc(location.name, location.nameEn) ?? location.name;
 
-    // #1790: the map (and its boundary polygon, when saved) must render whenever the location
-    // itself has plottable geometry — a center point and/or a boundary — independent of whether
-    // any trail is currently linked to it. Previously gated on `trails.length > 0`, which hid even
-    // the location's own boundaryGeoJson for a location with zero linked trails.
-    // `!= null` (not `!== undefined`) — the backend serializes an unset latitude/longitude as
-    // explicit JSON `null`, not an omitted key, same pattern CompetitionDetailPage.tsx/
-    // EventMapView.tsx already use for the same reason.
+    // hasCenterPoint narrows hasOwnGeometry (declared above the component) to just the
+    // center-point half: fallbackCenter below needs a concrete lat/lng, which a boundary polygon
+    // alone doesn't give it. Same `!= null` reasoning as hasOwnGeometry — the backend serializes
+    // an unset latitude/longitude as explicit JSON `null`, not an omitted key.
     const hasCenterPoint = location.latitude != null && location.longitude != null;
     const fallbackCenter = hasCenterPoint
         ? { lat: location.latitude as number, lng: location.longitude as number }
@@ -246,10 +255,11 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     // Pre-#1790, the map was gated on `filteredTrails.length > 0` alone — TrailMapView's own
     // `trailsWithLocation` filter (not re-done here) is what actually determines whether any of
     // those trails has plottable coordinates; when none do, TrailMapView still mounts and falls
-    // back to its hardcoded default view, exactly as it did before #1790. Folding that gate in
-    // here too (alongside the location's own boundary/center) avoids a regression for a location
-    // with trails but no boundaryGeoJson/center of its own.
-    const showMap = Boolean(location.boundaryGeoJson) || hasCenterPoint || filteredTrails.length > 0;
+    // back to its hardcoded default view, exactly as it did before #1790. hasOwnGeometry(location)
+    // covers the location's own boundary/center (#1790); filteredTrails.length > 0 is OR'd in
+    // alongside it to avoid a regression for a location with trails but no boundaryGeoJson/center
+    // of its own.
+    const showMap = hasOwnGeometry(location) || filteredTrails.length > 0;
 
     // Full ancestor path from the location tree, rendered in the sticky
     // breadcrumb. Falls back to just this location if the tree hasn't loaded.
