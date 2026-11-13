@@ -39,7 +39,11 @@ export interface LocationWithTrails {
     trails: Trail[];
 }
 
-export function useLocations() {
+// #1780: `enabled` defaults to true so every caller that doesn't pass it (LocationsPage,
+// EventMapView, etc.) keeps fetching unconditionally; TrailMapView passes its own
+// showLocationBoundaries prop through so LocationDetailsPage/CompetitionDetailPage, which never
+// render location boundaries, skip the GET /api/v1/locations fetch entirely.
+export function useLocations(enabled = true) {
     const { data: locations = [], isPending, error: queryError } = useQuery<Location[]>({
         queryKey: ['locations'],
         queryFn: () => fetch(`${API_URL}/api/v1/locations`)
@@ -48,6 +52,7 @@ export function useLocations() {
                 return res.json() as Promise<Location[]>;
             }),
         staleTime: 10 * 60 * 1000,
+        enabled,
     });
     return {
         locations,

@@ -23,12 +23,13 @@ afterEach(() => {
     mockAddAttribution.mockClear();
     mockRemoveAttribution.mockClear();
     mockLocations.current = [];
+    useLocationsSpy.mockClear();
 });
 
 // #1303: mockFitBounds and mockGeometries are read by the react-leaflet/useTrailGeometries mocks
 // below. vi.hoisted is required because vi.mock(...) factories are hoisted above imports/consts —
 // referencing an un-hoisted outer variable from inside them throws a ReferenceError.
-const { mockFitBounds, mockGeometries, mockMap, polylineSpy, mockLocations, mockAddAttribution, mockRemoveAttribution } = vi.hoisted(() => {
+const { mockFitBounds, mockGeometries, mockMap, polylineSpy, mockLocations, mockAddAttribution, mockRemoveAttribution, useLocationsSpy } = vi.hoisted(() => {
     const fitBounds = vi.fn();
     const addAttribution = vi.fn();
     const removeAttribution = vi.fn();
@@ -55,11 +56,18 @@ const { mockFitBounds, mockGeometries, mockMap, polylineSpy, mockLocations, mock
         mockLocations: { current: [] as Location[] },
         mockAddAttribution: addAttribution,
         mockRemoveAttribution: removeAttribution,
+        // #1780: a vi.fn() (not a bare arrow function) so tests can assert the `enabled` arg
+        // TrailMapView passes through (its showLocationBoundaries prop) without standing up a
+        // real QueryClient/useQuery.
+        useLocationsSpy: vi.fn(),
     };
 });
 
 vi.mock('../hooks/useLocations', () => ({
-    useLocations: () => ({ locations: mockLocations.current, loading: false, error: null }),
+    useLocations: (enabled?: boolean) => {
+        useLocationsSpy(enabled);
+        return { locations: mockLocations.current, loading: false, error: null };
+    },
 }));
 
 // TrailMapView calls useTrailGeometries(), which uses @tanstack/react-query's useQuery and throws
@@ -638,6 +646,30 @@ describe('TrailMapView showLocationBoundaries overlay (#1777)', () => {
         );
 
         expect(screen.queryAllByTestId('polygon')).toHaveLength(0);
+    });
+
+    // #1780: LocationDetailsPage/CompetitionDetailPage render TrailMapView without
+    // showLocationBoundaries, so useLocations() (and its GET /api/v1/locations) must not run.
+    it('calls useLocations with enabled=false when showLocationBoundaries is omitted (default false)', () => {
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-a')]} userLocation={null} />
+            </MemoryRouter>
+        );
+
+        expect(useLocationsSpy).toHaveBeenCalledWith(false);
+    });
+
+    it('calls useLocations with enabled=true when showLocationBoundaries is passed', () => {
+        mockLocations.current = [boundaryLocationA];
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={[makeTrailAtLocation('loc-a')]} userLocation={null} showLocationBoundaries />
+            </MemoryRouter>
+        );
+
+        expect(useLocationsSpy).toHaveBeenCalledWith(true);
     });
 
     it('renders a MultiPolygon boundary as multiple disconnected Polygon stand-ins', () => {

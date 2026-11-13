@@ -164,7 +164,9 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
     const loc = useLocalize();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
-    const { locations } = useLocations();
+    // #1780: only fetch GET /api/v1/locations when boundaries are actually rendered — skips the
+    // fetch for LocationDetailsPage/CompetitionDetailPage, which never pass showLocationBoundaries.
+    const { locations } = useLocations(showLocationBoundaries);
     const [followMe, setFollowMe] = useState(false);
     const [showTracks, setShowTracks] = useState(true);
     // #1777: one location's boundary shape hovered (or tapped — Leaflet's default tap-to-open
