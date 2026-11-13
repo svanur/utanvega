@@ -14,12 +14,17 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import en from '../i18n/en.json';
 import { createAppTheme } from '../theme';
+import { SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 import type { Location } from '../hooks/useLocations';
 import type { EventSummary } from '../hooks/useEvents';
 
 // vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
 // afterEach(cleanup) registration never fires — mirrors LocationsPage.test.tsx:27.
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    mockAddAttribution.mockClear();
+    mockRemoveAttribution.mockClear();
+});
 
 void i18n.use(initReactI18next).init({
     resources: { en: { translation: en } },
@@ -28,8 +33,10 @@ void i18n.use(initReactI18next).init({
     interpolation: { escapeValue: false },
 });
 
-const { mockLocations } = vi.hoisted(() => ({
+const { mockLocations, mockAddAttribution, mockRemoveAttribution } = vi.hoisted(() => ({
     mockLocations: { current: [] as Location[] },
+    mockAddAttribution: vi.fn(),
+    mockRemoveAttribution: vi.fn(),
 }));
 
 vi.mock('../hooks/useLocations', () => ({
@@ -45,11 +52,18 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
 // invoke the exact closures EventMapView.tsx wires up, and surfaces pathOptions.fillOpacity/
 // weight as data-* attributes so a hover test can assert getBoundaryPathOptions's isHovered
 // argument without Leaflet's real SVG renderer. useMap/useMapEvents are stubbed no-ops so
-// MapFollowController (which calls both) doesn't throw outside a real MapContainer.
+// MapFollowController (which calls both) doesn't throw outside a real MapContainer; useMap's
+// attributionControl stub lets the real (unmocked) MapAttributionSync from TrailMapView.tsx run
+// against mock addAttribution/removeAttribution spies, so the CC BY credit wiring can be asserted
+// without a real Leaflet attribution control.
 vi.mock('react-leaflet', () => ({
     MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map-container">{children}</div>,
     TileLayer: () => null,
-    useMap: () => ({ setView: vi.fn(), getZoom: () => 6 }),
+    useMap: () => ({
+        setView: vi.fn(),
+        getZoom: () => 6,
+        attributionControl: { addAttribution: mockAddAttribution, removeAttribution: mockRemoveAttribution },
+    }),
     useMapEvents: () => null,
     Marker: ({ children }: { children?: React.ReactNode }) => <div data-testid="marker">{children}</div>,
     Popup: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
@@ -147,6 +161,10 @@ const boundaryLocationB = makeLocation({
     boundaryGeoJson: boundary([[-20.0, 65.0], [-20.1, 65.1], [-20.2, 65.0], [-20.0, 65.0]]),
 });
 const noBoundaryLocation = makeLocation({ id: 'loc-c', slug: 'loc-c', name: 'Location C' });
+const regionBoundaryLocation = makeLocation({
+    id: 'loc-region', slug: 'loc-region', name: 'Region Loc', type: 'Region',
+    boundaryGeoJson: boundary([[-23.0, 68.0], [-23.1, 68.1], [-23.2, 68.0], [-23.0, 68.0]]),
+});
 const multiPolygonLocation = makeLocation({
     id: 'loc-multi', slug: 'loc-multi', name: 'Location Multi',
     boundaryGeoJson: multiPolygonBoundary([
@@ -256,5 +274,37 @@ describe('EventMapView boundary hover highlight (#1776)', () => {
 
         expect(partOne.getAttribute('data-fill-opacity')).toBe('0.35');
         expect(partTwo.getAttribute('data-fill-opacity')).toBe('0.35');
+    });
+});
+
+// Tester review round 1 (PR #1778): EventMapView rendered simplemaps-sourced Region boundary
+// polygons without surfacing SIMPLEMAPS_CC_BY_ATTRIBUTION, unlike LocationsPage.tsx/
+// LocationDetailsPage.tsx, which gate on `location.type === 'Region'` and inject it via
+// MapAttributionSync — a CC BY 4.0 license-compliance gap. Asserted here via MapAttributionSync's
+// own addAttribution/removeAttribution calls (mocked through useMap's attributionControl stub)
+// rather than DOM output, since the real Leaflet attribution control isn't rendered in this suite.
+describe('EventMapView simplemaps CC BY attribution (#1778 review fix)', () => {
+    it('adds the simplemaps CC BY attribution when a Region boundary is among the rendered shapes', () => {
+        mockLocations.current = [regionBoundaryLocation];
+
+        renderEventMapView([makeEvent({ id: 'e1', locationId: 'loc-region' })]);
+
+        expect(mockAddAttribution).toHaveBeenCalledWith(SIMPLEMAPS_CC_BY_ATTRIBUTION);
+    });
+
+    it('does not add the simplemaps attribution when the only boundary is not a Region (e.g. a municipality)', () => {
+        mockLocations.current = [boundaryLocationA];
+
+        renderEventMapView([makeEvent({ id: 'e1', locationId: 'loc-a' })]);
+
+        expect(mockAddAttribution).not.toHaveBeenCalled();
+    });
+
+    it('does not add the simplemaps attribution when no event location has a boundary at all', () => {
+        mockLocations.current = [noBoundaryLocation];
+
+        renderEventMapView([makeEvent({ id: 'e1', locationId: 'loc-c' })]);
+
+        expect(mockAddAttribution).not.toHaveBeenCalled();
     });
 });

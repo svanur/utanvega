@@ -11,7 +11,8 @@ import type { EventSummary } from '../hooks/useEvents';
 import { useLocations } from '../hooks/useLocations';
 import { getCountdownColor, getCountdownLabel, isOngoingPastDayTwo } from '../utils/eventUtils';
 import { useLocalize } from '../utils/localize';
-import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions } from './locationBoundary';
+import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
+import { MapAttributionSync } from './TrailMapView';
 import MapFollowController from './MapFollowController';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -100,6 +101,14 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
             .filter((l): l is NonNullable<typeof l> & { boundaryGeoJson: string } => !!l?.boundaryGeoJson);
     }, [events, locations]);
 
+    // #1764/#1776: a landsvæði Region boundary is simplemaps.com (CC BY 4.0) — surface that credit
+    // whenever one is among the shapes currently rendered, same gate LocationsPage.tsx/
+    // LocationDetailsPage.tsx use for the same data.
+    const hasSimplemapsBoundary = useMemo(() =>
+        boundaryLocations.some(l => l.type === 'Region'),
+        [boundaryLocations]
+    );
+
     const markerCluster = useMemo(() => (
         <MarkerClusterGroup
             chunkedLoading
@@ -184,6 +193,7 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
+                <MapAttributionSync text={hasSimplemapsBoundary ? SIMPLEMAPS_CC_BY_ATTRIBUTION : null} />
                 <MapFollowController
                     followMe={followMe}
                     userLocation={userLocation}
