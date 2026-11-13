@@ -33,3 +33,29 @@ export function LeafletTooltipThemeStyles({ theme }: { theme: Theme }) {
         />
     );
 }
+
+// #1785: same root cause as #1781 above, for Leaflet's `<Popup>` instead of `<Tooltip>`. Leaflet's
+// bundled stylesheet hardcodes `.leaflet-popup-content-wrapper`/`.leaflet-popup-tip` to a white
+// background and `#333` text, and the close button to `#757575` (hover/focus `#585858`) — all fine
+// against a light page but unreadable (or a jarring white box) once the app switches to dark mode.
+// This overrides those rules with theme palette colors, shared so EventMapView and TrailMapView
+// (the two places rendering a Leaflet `<Popup>`) stay in sync with the active theme via one
+// mechanism rather than two separate copies of the same CSS.
+export function LeafletPopupThemeStyles({ theme }: { theme: Theme }) {
+    return (
+        <GlobalStyles
+            styles={{
+                '.leaflet-popup-content-wrapper, .leaflet-popup-tip': {
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                },
+                '.leaflet-container a.leaflet-popup-close-button': {
+                    color: theme.palette.text.secondary,
+                },
+                '.leaflet-container a.leaflet-popup-close-button:hover, .leaflet-container a.leaflet-popup-close-button:focus': {
+                    color: theme.palette.text.primary,
+                },
+            }}
+        />
+    );
+}
