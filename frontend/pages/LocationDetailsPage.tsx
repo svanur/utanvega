@@ -223,6 +223,25 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
 
     const locationName = loc(location.name, location.nameEn) ?? location.name;
 
+    // #1790: the map (and its boundary polygon, when saved) must render whenever the location
+    // itself has plottable geometry — a center point and/or a boundary — independent of whether
+    // any trail is currently linked to it. Previously gated on `trails.length > 0`, which hid even
+    // the location's own boundaryGeoJson for a location with zero linked trails.
+    // `!= null` (not `!== undefined`) — the backend serializes an unset latitude/longitude as
+    // explicit JSON `null`, not an omitted key, same pattern CompetitionDetailPage.tsx/
+    // EventMapView.tsx already use for the same reason.
+    const hasCenterPoint = location.latitude != null && location.longitude != null;
+    const fallbackCenter = hasCenterPoint
+        ? { lat: location.latitude as number, lng: location.longitude as number }
+        : null;
+    // Pre-#1790, the map was gated on `filteredTrails.length > 0` alone — TrailMapView's own
+    // `trailsWithLocation` filter (not re-done here) is what actually determines whether any of
+    // those trails has plottable coordinates; when none do, TrailMapView still mounts and falls
+    // back to its hardcoded default view, exactly as it did before #1790. Folding that gate in
+    // here too (alongside the location's own boundary/center) avoids a regression for a location
+    // with trails but no boundaryGeoJson/center of its own.
+    const showMap = Boolean(location.boundaryGeoJson) || hasCenterPoint || filteredTrails.length > 0;
+
     // Full ancestor path from the location tree, rendered in the sticky
     // breadcrumb. Falls back to just this location if the tree hasn't loaded.
     const locationCrumbs = [
@@ -413,34 +432,40 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     </Typography>
                 )}
 
+                {/* #1790: shown whenever the location has its own plottable geometry (boundary
+                    and/or center point), independent of `trails.length` below — a zero-trail
+                    location still has a boundary/center worth showing, and that geometry (via
+                    `fallbackCenter`/`locationBoundary`) is also what frames the map when there are
+                    no trail routes to frame it instead. */}
+                {showMap && (
+                    <Box mt={2} sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
+                       <TrailMapView
+                           trails={filteredTrails}
+                           userLocation={userLocation}
+                           height="400px"
+                           fallbackCenter={fallbackCenter}
+                           locationBoundary={location.boundaryGeoJson ? {
+                               geoJson: location.boundaryGeoJson,
+                               // #1764: landsvæði Region boundaries are simplemaps.com (CC
+                               // BY 4.0) — municipality boundaries (#1705) are LMÍ-sourced
+                               // and don't need this credit.
+                               attribution: location.type === 'Region' ? SIMPLEMAPS_CC_BY_ATTRIBUTION : undefined,
+                           } : null}
+                       />
+                    </Box>
+                )}
+
+                {showMap && <Divider sx={{ mb: 4 }} />}
+
                 {trails && trails.length > 0 ? (
                     filteredTrails.length > 0 ? (
-                        <Box mt={2}>
-                            <Box sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
-                               <TrailMapView
-                                   trails={filteredTrails}
-                                   userLocation={userLocation}
-                                   height="400px"
-                                   locationBoundary={location.boundaryGeoJson ? {
-                                       geoJson: location.boundaryGeoJson,
-                                       // #1764: landsvæði Region boundaries are simplemaps.com (CC
-                                       // BY 4.0) — municipality boundaries (#1705) are LMÍ-sourced
-                                       // and don't need this credit.
-                                       attribution: location.type === 'Region' ? SIMPLEMAPS_CC_BY_ATTRIBUTION : undefined,
-                                   } : null}
-                               />
-                            </Box>
-                            
-                            <Divider sx={{ mb: 4 }} />
-
-                            <Grid container spacing={1}>
-                                {filteredTrails.map(trail => (
-                                    <Grid item xs={12} key={trail.id}>
-                                        <TrailCard trail={trail} linkState={trailLinkState} />
-                                    </Grid>
-                                ))}
-                            </Grid>
-                        </Box>
+                        <Grid container spacing={1}>
+                            {filteredTrails.map(trail => (
+                                <Grid item xs={12} key={trail.id}>
+                                    <TrailCard trail={trail} linkState={trailLinkState} />
+                                </Grid>
+                            ))}
+                        </Grid>
                     ) : (
                         <Box textAlign="center" py={4}>
                             <Typography color="text.secondary" gutterBottom>

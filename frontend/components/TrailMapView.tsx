@@ -11,7 +11,7 @@ import { useTrailGeometries } from '../hooks/useTrailGeometries';
 import { useLocations } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
 import { computeMapBounds } from './trailMapBounds';
-import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
+import { flattenBoundaryParts, geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 import { LeafletTooltipThemeStyles, LeafletPopupThemeStyles } from './LeafletTooltipStyles';
 import { computeSortedSlugs, getTrailRouteStyle, toggleTrailSelection } from './trailRouteColors';
 import { Link as RouterLink } from 'react-router-dom';
@@ -36,7 +36,8 @@ interface TrailMapViewProps {
     userLocation: { lat: number; lng: number } | null;
     // #1309: shown as a marker (and used to center/zoom the map) only when `trails` resolves to
     // zero markers of its own — e.g. an event with no linked trail but a known gpxPointLat/Lng.
-    // Optional and unused by existing call sites (LocationDetailsPage), which keep today's behavior.
+    // #1790: LocationDetailsPage also passes this now — a location's own center point, used the
+    // same way when it has no trail markers of its own either.
     fallbackCenter?: { lat: number; lng: number } | null;
     // #1543: optional controlled selection — lets a sibling component (e.g. CompetitionDetailPage's
     // EventTrailLegend) read/drive the same highlight state as clicking a pin or a route. Omitted
@@ -241,11 +242,6 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
         [trails, geometries],
     );
 
-    const bounds = useMemo(() => {
-        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter);
-        return corners ? L.latLngBounds(corners[0], corners[1]) : null;
-    }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter]);
-
     // #1707/#1739: parsed once per geoJson string, not per render — the boundary itself never
     // changes while a location detail page is mounted. One part per polygon (Polygon: one part;
     // MultiPolygon: one part per disconnected shape, e.g. an exclave).
@@ -253,6 +249,20 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
         () => (locationBoundary ? geoJsonBoundaryToLatLngParts(locationBoundary.geoJson) : null),
         [locationBoundary],
     );
+
+    // #1790: flattened once per boundaryParts change, not per bounds recompute, feeding
+    // computeMapBounds's boundaryLatLngs param below — folds the boundary's own extent into the
+    // map's bounds so a boundary-only location (e.g. zero linked trails) frames on its boundary
+    // instead of the map's hardcoded default center/zoom.
+    const boundaryLatLngs = useMemo(
+        () => (boundaryParts ? flattenBoundaryParts(boundaryParts) : null),
+        [boundaryParts],
+    );
+
+    const bounds = useMemo(() => {
+        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter, boundaryLatLngs);
+        return corners ? L.latLngBounds(corners[0], corners[1]) : null;
+    }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter, boundaryLatLngs]);
     // Theme-driven default (secondary.main) rather than a hardcoded hex, per #1707 — must stay
     // legible in dark mode. Visually distinct from both TRAIL_ROUTE_PALETTE and the selected-track
     // highlight red by the dashed stroke + low fill opacity below, not by color alone.

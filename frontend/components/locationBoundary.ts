@@ -32,6 +32,16 @@ export function geoJsonBoundaryToLatLngParts(geoJson: string): L.LatLngExpressio
     }
 }
 
+// #1790: flattens geoJsonBoundaryToLatLngParts's output (one part per polygon, one ring-set per
+// part, holes included) into a single [lat, lng][] list — the shape computeMapBounds's
+// `boundaryLatLngs` param needs to min/max over, without caring about ring/part structure. Holes
+// are included too (their points still lie within the polygon's own extent, so they're harmless
+// here) rather than filtered out, since doing so would need the ring's position within its part
+// and buys nothing.
+export function flattenBoundaryParts(parts: L.LatLngExpression[][][]): [number, number][] {
+    return parts.flatMap(part => part.flatMap(ring => ring as unknown as [number, number][]));
+}
+
 // #1708: default vs. hover-highlighted boundary styling — same theme color (secondary),
 // brighter/more opaque on hover, so it reads as a state swap rather than a different shape.
 // Takes `theme` as a parameter (rather than closing over it) so it works the same from any
