@@ -13,6 +13,7 @@ import { getCountdownColor, getCountdownLabel, isOngoingPastDayTwo } from '../ut
 import { useLocalize } from '../utils/localize';
 import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 import { MapAttributionSync } from './TrailMapView';
+import { LeafletTooltipThemeStyles } from './LeafletTooltipStyles';
 import MapFollowController from './MapFollowController';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
@@ -193,6 +194,8 @@ const EventMapView: React.FC<EventMapViewProps> = ({ events }) => {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
+                {/* #1781: dark-mode-aware override for Leaflet's hardcoded-white .leaflet-tooltip */}
+                <LeafletTooltipThemeStyles theme={theme} />
                 <MapAttributionSync text={hasSimplemapsBoundary ? SIMPLEMAPS_CC_BY_ATTRIBUTION : null} />
                 <MapFollowController
                     followMe={followMe}
