@@ -11,7 +11,7 @@ import { useTrailGeometries } from '../hooks/useTrailGeometries';
 import { useLocations } from '../hooks/useLocations';
 import { useLocalize } from '../utils/localize';
 import { computeMapBounds } from './trailMapBounds';
-import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
+import { flattenBoundaryParts, geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 import { LeafletTooltipThemeStyles, LeafletPopupThemeStyles } from './LeafletTooltipStyles';
 import { computeSortedSlugs, getTrailRouteStyle, toggleTrailSelection } from './trailRouteColors';
 import { Link as RouterLink } from 'react-router-dom';
@@ -241,11 +241,6 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
         [trails, geometries],
     );
 
-    const bounds = useMemo(() => {
-        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter);
-        return corners ? L.latLngBounds(corners[0], corners[1]) : null;
-    }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter]);
-
     // #1707/#1739: parsed once per geoJson string, not per render — the boundary itself never
     // changes while a location detail page is mounted. One part per polygon (Polygon: one part;
     // MultiPolygon: one part per disconnected shape, e.g. an exclave).
@@ -253,6 +248,20 @@ export const TrailMapView: React.FC<TrailMapViewProps> = ({
         () => (locationBoundary ? geoJsonBoundaryToLatLngParts(locationBoundary.geoJson) : null),
         [locationBoundary],
     );
+
+    // #1790: flattened once per boundaryParts change, not per bounds recompute, feeding
+    // computeMapBounds's boundaryLatLngs param below — folds the boundary's own extent into the
+    // map's bounds so a boundary-only location (e.g. zero linked trails) frames on its boundary
+    // instead of the map's hardcoded default center/zoom.
+    const boundaryLatLngs = useMemo(
+        () => (boundaryParts ? flattenBoundaryParts(boundaryParts) : null),
+        [boundaryParts],
+    );
+
+    const bounds = useMemo(() => {
+        const corners = computeMapBounds(trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter, boundaryLatLngs);
+        return corners ? L.latLngBounds(corners[0], corners[1]) : null;
+    }, [trailsWithLocation, geometriesForTrails, userLocation, fallbackCenter, boundaryLatLngs]);
     // Theme-driven default (secondary.main) rather than a hardcoded hex, per #1707 — must stay
     // legible in dark mode. Visually distinct from both TRAIL_ROUTE_PALETTE and the selected-track
     // highlight red by the dashed stroke + low fill opacity below, not by color alone.

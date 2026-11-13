@@ -143,7 +143,7 @@ vi.mock('@changey/react-leaflet-markercluster', () => ({
 }));
 
 import { TrailMapView } from './TrailMapView';
-import { geoJsonBoundaryToLatLngParts, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
+import { flattenBoundaryParts, geoJsonBoundaryToLatLngParts, SIMPLEMAPS_CC_BY_ATTRIBUTION } from './locationBoundary';
 
 const noTrails: Trail[] = [];
 
@@ -303,6 +303,35 @@ describe('TrailMapView fallbackCenter marker (#1309)', () => {
         );
 
         expect(screen.queryAllByTestId('marker')).toHaveLength(0);
+    });
+});
+
+// #1790: a saved locationBoundary must frame the map's bounds (not just render as a <Polygon>)
+// even when there are no trails at all — previously the map only fit to trail
+// routes/start-points/userLocation/fallbackCenter, never the boundary's own extent.
+describe('TrailMapView boundary bounds (#1790)', () => {
+    beforeEach(() => {
+        mockFitBounds.mockClear();
+    });
+
+    it('fits bounds to the boundary extent when trails is empty', () => {
+        const geoJson = JSON.stringify({
+            type: 'Polygon',
+            coordinates: [[[-19.0, 64.0], [-19.5, 64.5], [-19.0, 64.0]]],
+        });
+
+        render(
+            <MemoryRouter>
+                <TrailMapView trails={noTrails} userLocation={null} locationBoundary={{ geoJson }} />
+            </MemoryRouter>
+        );
+
+        expect(mockFitBounds).toHaveBeenCalled();
+        const [bounds] = mockFitBounds.mock.calls[mockFitBounds.mock.calls.length - 1];
+        expect(bounds.getSouthWest().lat).toBeCloseTo(64.0);
+        expect(bounds.getSouthWest().lng).toBeCloseTo(-19.5);
+        expect(bounds.getNorthEast().lat).toBeCloseTo(64.5);
+        expect(bounds.getNorthEast().lng).toBeCloseTo(-19.0);
     });
 });
 
@@ -541,6 +570,34 @@ describe('geoJsonBoundaryToLatLngParts (#1739)', () => {
     it('returns null without throwing on valid JSON that is neither Polygon nor MultiPolygon', () => {
         expect(geoJsonBoundaryToLatLngParts(JSON.stringify({ type: 'Point', coordinates: [-19.0, 64.0] }))).toBeNull();
         expect(geoJsonBoundaryToLatLngParts(JSON.stringify({ type: 'MultiPolygon' }))).toBeNull();
+    });
+});
+
+// #1790: flattenBoundaryParts feeds computeMapBounds's boundaryLatLngs param — it only needs every
+// point across every ring/part, not the ring/part structure itself.
+describe('flattenBoundaryParts (#1790)', () => {
+    it('flattens a single-part, single-ring boundary to its points', () => {
+        const parts = geoJsonBoundaryToLatLngParts(JSON.stringify({
+            type: 'Polygon',
+            coordinates: [[[-19.0, 64.0], [-19.1, 64.1], [-19.2, 64.0], [-19.0, 64.0]]],
+        }))!;
+
+        expect(flattenBoundaryParts(parts)).toEqual([[64.0, -19.0], [64.1, -19.1], [64.0, -19.2], [64.0, -19.0]]);
+    });
+
+    it('flattens a MultiPolygon boundary across all parts into one list', () => {
+        const parts = geoJsonBoundaryToLatLngParts(JSON.stringify({
+            type: 'MultiPolygon',
+            coordinates: [
+                [[[-19.0, 64.0], [-19.1, 64.1], [-19.0, 64.0]]],
+                [[[-21.0, 64.3], [-21.1, 64.4], [-21.0, 64.3]]],
+            ],
+        }))!;
+
+        expect(flattenBoundaryParts(parts)).toEqual([
+            [64.0, -19.0], [64.1, -19.1], [64.0, -19.0],
+            [64.3, -21.0], [64.4, -21.1], [64.3, -21.0],
+        ]);
     });
 });
 
