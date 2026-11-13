@@ -187,10 +187,14 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     // it on. Declared above the `showMap` const (itself below the loading/error early-returns),
     // so the boundary/center-point predicate is duplicated inline here rather than reused —
     // keep both in lockstep if either changes.
+    // #1795: depends on `trails` (unfiltered), not `filteredTrails` — filteredTrails gets a new
+    // array reference from its useMemo on every filter-chip toggle, which was re-firing
+    // getCurrentPosition() on every chip tap. Whether there's a map to show at all does not
+    // depend on which filter chips are active.
     useEffect(() => {
         const hasOwnGeometry = Boolean(location?.boundaryGeoJson)
             || (location?.latitude != null && location?.longitude != null);
-        if (!hasOwnGeometry && filteredTrails.length === 0) return;
+        if (!hasOwnGeometry && (!trails || trails.length === 0)) return;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -204,7 +208,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 }
             );
         }
-    }, [location, filteredTrails]);
+    }, [location, trails]);
 
     if (loading) {
         return (
