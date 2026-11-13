@@ -227,7 +227,10 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     // itself has plottable geometry — a center point and/or a boundary — independent of whether
     // any trail is currently linked to it. Previously gated on `trails.length > 0`, which hid even
     // the location's own boundaryGeoJson for a location with zero linked trails.
-    const hasCenterPoint = location.latitude !== undefined && location.longitude !== undefined;
+    // `!= null` (not `!== undefined`) — the backend serializes an unset latitude/longitude as
+    // explicit JSON `null`, not an omitted key, same pattern CompetitionDetailPage.tsx/
+    // EventMapView.tsx already use for the same reason.
+    const hasCenterPoint = location.latitude != null && location.longitude != null;
     const fallbackCenter = hasCenterPoint
         ? { lat: location.latitude as number, lng: location.longitude as number }
         : null;

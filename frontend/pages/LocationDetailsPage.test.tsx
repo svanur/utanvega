@@ -162,6 +162,17 @@ describe('LocationDetailsPage map render gate (#1790)', () => {
         expect(screen.getByText(en.locations.noTrailsInLocation)).toBeDefined();
     });
 
+    // #1790 review: the backend serializes an unset latitude/longitude as explicit JSON `null`
+    // (GetLocationBySlugQuery), not an omitted key — `!== undefined` would wrongly treat that as
+    // "has a center point" (null !== undefined is true), so the map must stay hidden here too.
+    it('renders no map for a location with explicit null latitude/longitude and no boundary', () => {
+        const location = makeLocation({ latitude: null as unknown as number, longitude: null as unknown as number });
+
+        renderLocationDetailsPage(location, []);
+
+        expect(screen.queryByTestId('trail-map-view')).toBeNull();
+    });
+
     it('still renders the map with both boundary and trails together, with no "no trails" message (no regression)', () => {
         const location = makeLocation({ boundaryGeoJson });
         const trail = makeTrail();

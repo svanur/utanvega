@@ -36,7 +36,8 @@ interface TrailMapViewProps {
     userLocation: { lat: number; lng: number } | null;
     // #1309: shown as a marker (and used to center/zoom the map) only when `trails` resolves to
     // zero markers of its own — e.g. an event with no linked trail but a known gpxPointLat/Lng.
-    // Optional and unused by existing call sites (LocationDetailsPage), which keep today's behavior.
+    // #1790: LocationDetailsPage also passes this now — a location's own center point, used the
+    // same way when it has no trail markers of its own either.
     fallbackCenter?: { lat: number; lng: number } | null;
     // #1543: optional controlled selection — lets a sibling component (e.g. CompetitionDetailPage's
     // EventTrailLegend) read/drive the same highlight state as clicking a pin or a route. Omitted
