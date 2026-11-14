@@ -15,17 +15,22 @@ import {
     Divider,
     Card,
     CardActionArea,
-    CardContent
+    CardContent,
+    IconButton,
+    Tooltip
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import FolderIcon from '@mui/icons-material/Folder';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import RouteIcon from '@mui/icons-material/Route';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
 import PoolCard from '../components/PoolCard';
 import { findPoolsByLocationSlugs } from '../data/pools';
 import { useLocationBySlug, useLocationTree } from '../hooks/useLocations';
+import { useFavoriteLocations } from '../hooks/useFavoriteLocations';
 import type { Location, LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
 import { TrailMapView } from '../components/TrailMapView';
@@ -64,6 +69,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const navigate = useNavigate();
     const { location, childLocations, trails, loading, error } = useLocationBySlug(slug);
     const { tree: locationTree } = useLocationTree();
+    const { toggleFavoriteLocation, isFavoriteLocation } = useFavoriteLocations();
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [activeActivity, setActiveActivity] = useState<string | null>(null);
     const [activeTrailType, setActiveTrailType] = useState<string | null>(null);
@@ -243,6 +249,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     }
 
     const locationName = loc(location.name, location.nameEn) ?? location.name;
+    const isFavorited = isFavoriteLocation(location.slug);
 
     // hasCenterPoint narrows hasOwnGeometry (declared above the component) to just the
     // center-point half: fallbackCenter below needs a concrete lat/lng, which a boundary polygon
@@ -289,6 +296,15 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                         <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
                             {loc(location.name, location.nameEn)}
                         </Typography>
+                        <Tooltip title={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}>
+                            <IconButton
+                                onClick={() => toggleFavoriteLocation(location.slug)}
+                                aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
+                                sx={{ width: 44, height: 44 }}
+                            >
+                                {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                            </IconButton>
+                        </Tooltip>
                         {isEnabled('share_trail') && <ShareButtons title={loc(location.name, location.nameEn) ?? location.name} />}
                     </Stack>
                     
