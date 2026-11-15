@@ -310,12 +310,17 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                             size="small"
                             startIcon={<ArrowBackIcon sx={{ fontSize: 18 }} />}
                             onClick={() => setDrilldownLocation(null)}
-                            sx={{ minHeight: 44, minWidth: 44, textTransform: 'none' }}
+                            sx={{ minHeight: 44, minWidth: 44, textTransform: 'none', flexShrink: 0 }}
                         >
                             {t('locations.backToAllRegions')}
                         </Button>
-                        <Typography variant="body2" color="text.secondary">/</Typography>
-                        <Typography variant="body2" fontWeight="bold">
+                        <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>/</Typography>
+                        <Typography
+                            variant="body2"
+                            fontWeight="bold"
+                            noWrap
+                            sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                        >
                             {localize(drilldownLocation.name, drilldownLocation.nameEn) ?? drilldownLocation.name}
                         </Typography>
                     </Stack>
