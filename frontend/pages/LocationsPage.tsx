@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
@@ -243,24 +243,6 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         [drilldownLocation, filtered]
     );
 
-    const scrollToCard = useCallback((slug: string) => {
-        const el = cardRefs.current[slug];
-        if (!el) return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Direct DOM highlight — more reliable than React state
-        const card = el.querySelector('.MuiCard-root') as HTMLElement;
-        if (card) {
-            card.style.outline = `3px solid ${theme.palette.primary.main}`;
-            card.style.boxShadow = `0 0 16px rgba(25, 118, 210, 0.4)`;
-            card.style.transform = 'scale(1.02)';
-            setTimeout(() => {
-                card.style.outline = '';
-                card.style.boxShadow = '';
-                card.style.transform = '';
-            }, 3000);
-        }
-    }, [theme.palette.primary.main]);
-
     const getCircleColor = (loc: Location) => {
         const stats = statsMap[loc.slug];
         if (!stats || stats.trailCount === 0) return theme.palette.grey[400];
@@ -397,7 +379,19 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                         position={[loc.latitude!, loc.longitude!]}
                                         icon={icon}
                                         eventHandlers={{
-                                            click: () => scrollToCard(loc.slug),
+                                            // #1821: mirror the boundary Polygon's #1802 click branch so
+                                            // the dot-marker and its own boundary shape agree on what a
+                                            // click/tap does — a region (childrenCount > 0) drills down,
+                                            // a leaf (childrenCount === 0) navigates straight to its
+                                            // detail page, same destination the card click already uses.
+                                            // This replaces the old unconditional scrollToCard.
+                                            click: () => {
+                                                if (loc.childrenCount > 0) {
+                                                    setDrilldownLocation(loc);
+                                                } else {
+                                                    navigate(`/locations/${loc.slug}`);
+                                                }
+                                            },
                                         }}
                                     >
                                         <LeafletTooltip direction="top" offset={[0, -14]}>

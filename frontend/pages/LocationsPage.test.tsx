@@ -166,6 +166,15 @@ const childWithCoords = makeLocation({
     latitude: 65.3, longitude: -20.3,
 });
 
+// #1821: a region with children that also carries lat/long, so it renders a dot Marker (not just a
+// boundary Polygon) — needed to exercise the Marker's own drill-down branch, since `regionWithChildren`
+// above is boundary-only and never renders a Marker at all.
+const regionWithChildrenAndCoords = makeLocation({
+    id: 'loc-region', slug: 'region-coords', name: 'Region With Children And Coords', childrenCount: 2,
+    latitude: 65.6, longitude: -21.6,
+    boundaryGeoJson: boundary([[-21.6, 65.6], [-21.7, 65.7], [-21.8, 65.6], [-21.6, 65.6]]),
+});
+
 // #1809: a lightweight stand-in for the real /locations/:slug route (LocationDetailsPage has its
 // own data fetching and isn't under test here) — rendered alongside LocationsPage so a card's
 // CardActionArea click (LocationsPage.tsx:481, navigate(`/locations/${loc.slug}`)) is observable
@@ -326,21 +335,10 @@ describe('LocationsPage hover sync between boundary Polygon and card (#1741, #17
     });
 });
 
-// scrollToCard (LocationsPage.tsx:186-202) writes a temporary outline/boxShadow/transform directly
-// onto the matching `.MuiCard-root` element via the DOM. It's still wired to Marker clicks, but
-// #1802 replaced the boundary Polygon's unconditional scrollToCard with the childrenCount branch
-// below (drill-down vs. leaf-navigate) — a childless boundary now navigates instead of scrolling.
-describe('LocationsPage click/tap on a Marker scrolls to the matching card (#1741)', () => {
-    it('clicking a Marker applies the scroll-highlight style to the matching card only', () => {
-        renderLocationsPage();
-
-        fireEvent.click(markerFor('Coords Only')!);
-
-        expect(cardFor('Coords Only').style.outline).not.toBe('');
-        expect(cardFor('Both Loc').style.outline).toBe('');
-        expect(cardFor('Boundary Only').style.outline).toBe('');
-    });
-});
+// #1821: scrollToCard (the old unconditional Marker click behavior tested here previously) was
+// removed — the Marker's click handler now branches on childrenCount the same way the boundary
+// Polygon's has since #1802, so there is no longer a scroll-highlight case to cover; see the
+// 'LocationsPage marker click drill-down and leaf navigation (#1821)' describe block below instead.
 
 // #1802: the boundary Polygon's click handler now branches on childrenCount instead of always
 // calling scrollToCard — a childless shape (leaf) navigates straight to its detail page, same
@@ -420,6 +418,37 @@ describe('LocationsPage boundary click drill-down and leaf navigation (#1802)', 
         const callsAfterDrilldown = mockFitBounds.mock.calls.length;
         fireEvent.click(screen.getByRole('button', { name: en.locations.backToAllRegions }));
         expect(mockFitBounds.mock.calls.length).toBeGreaterThan(callsAfterDrilldown);
+    });
+});
+
+// #1821: the dot Marker's click handler now branches on childrenCount the same way the boundary
+// Polygon's has since #1802, instead of unconditionally calling scrollToCard — a leaf marker
+// navigates straight to its detail page, a region marker drills down. Mirrors the #1802 describe
+// block above, swapping polygonFor(...) for markerFor(...).
+describe('LocationsPage marker click drill-down and leaf navigation (#1821)', () => {
+    it('clicking a childless Marker navigates to /locations/:slug, same as a card click', () => {
+        renderLocationsPage();
+
+        fireEvent.click(markerFor('Both Loc')!);
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('both-loc');
+    });
+
+    it('clicking a region Marker with children drills down: narrows the card list to its children and shows the back control', () => {
+        mockLocations.current = [regionWithChildrenAndCoords, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        expect(cardFor('Region With Children And Coords')).toBeDefined();
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).toBeNull();
+
+        fireEvent.click(markerFor('Region With Children And Coords')!);
+
+        // The region itself is no longer a card or a Marker (it's now the drilled-into context,
+        // named in the breadcrumb instead) — only its children remain.
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).not.toBeNull();
+        expect(cardFor('Child With Boundary')).toBeDefined();
+        expect(cardFor('Child With Coords')).toBeDefined();
+        expect(markerFor('Region With Children And Coords')).toBeUndefined();
     });
 });
 
