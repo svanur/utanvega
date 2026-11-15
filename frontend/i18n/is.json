@@ -604,6 +604,7 @@
         "approximateLocation": "Áætlað gildi fyrir stórt svæði",
         "date": "Dagsetning",
         "basedOnYears": "Yfirlit yfir veðurfar á viðkomandi svæði síðustu {{years}} ár á þeim tíma sem viðburður er haldinn. — Ekki líkindareikningur eða spá um veðurfar næsta viðburðar. Þú getur smellt á 'Skoða leið' hér að ofan til að sjá veðurspá.",
+        "basedOnYearsLocation": "Yfirlit yfir veðurfar á viðkomandi svæði síðustu {{years}} ár, á þessum árstíma. — Ekki líkindareikningur eða veðurspá.",
         "unavailable": "Gögn um veðurfar því miður ekki tiltæk fyrir þetta svæði."
     },
     "privacy": {

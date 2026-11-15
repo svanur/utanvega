@@ -433,6 +433,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                             loading={climateLoading}
                             error={climateError}
                             locationName={locationName}
+                            context="location"
                         />
                     </Box>
                 )}
