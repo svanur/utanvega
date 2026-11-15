@@ -300,6 +300,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                             <IconButton
                                 onClick={() => toggleFavoriteLocation(location.slug)}
                                 aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
+                                aria-pressed={isFavorited}
                                 sx={{ width: 44, height: 44 }}
                             >
                                 {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
