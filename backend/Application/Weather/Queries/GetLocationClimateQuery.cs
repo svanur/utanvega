@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Net.Http.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -14,10 +12,9 @@ namespace Utanvega.Backend.Application.Weather.Queries;
 // GetLocationBySlugQuery) and reuses GetEventClimateQuery's public ClimateDto record plus its
 // internal static Aggregate (the aggregation math itself is identical either way — only how the
 // coordinate and isApproximate flag get resolved differs) rather than duplicating either.
-// GetEventClimateQuery.cs is explicitly out of scope for this change, so the small
-// archive-fetching wrapper around Aggregate (FetchClimateAsync/FetchArchiveAsync) is mirrored here
-// rather than extracted into a shared helper — only the two genuinely-shared, already-reusable
-// pieces (ClimateDto, Aggregate) are reused directly.
+// #1817: the archive-fetching wrapper around Aggregate (FetchClimateAsync/FetchArchiveAsync),
+// mirrored here by #1801 pending extraction, now lives once in OpenMeteoClimateFetcher and is
+// called from here and from GetEventClimateQueryHandler.
 public record GetLocationClimateQuery(string Slug, int TargetMonth, int TargetDay) : IRequest<ClimateDto?>;
 
 public class GetLocationClimateQueryHandler : IRequestHandler<GetLocationClimateQuery, ClimateDto?>
@@ -26,9 +23,6 @@ public class GetLocationClimateQueryHandler : IRequestHandler<GetLocationClimate
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMemoryCache _cache;
     private readonly ILogger<GetLocationClimateQueryHandler> _logger;
-
-    private const int YearsOfHistory = 15;
-    private const int WindowDays = 5;
 
     private static readonly TimeSpan CacheDuration = TimeSpan.FromDays(7);
 
@@ -67,7 +61,9 @@ public class GetLocationClimateQueryHandler : IRequestHandler<GetLocationClimate
         // is precise enough to trust as-is.
         var isApproximate = location.Type is LocationType.Country or LocationType.Area or LocationType.Region;
 
-        var result = await FetchClimateAsync(lat, lon, request.TargetMonth, request.TargetDay, isApproximate, cancellationToken);
+        // #1817: shared with GetEventClimateQueryHandler via OpenMeteoClimateFetcher — see that
+        // class for the fetch/aggregate pipeline (this used to be a mirrored private copy).
+        var result = await OpenMeteoClimateFetcher.FetchClimateAsync(_httpClientFactory, _logger, lat, lon, request.TargetMonth, request.TargetDay, isApproximate, cancellationToken);
 
         if (result == null)
             return null;
@@ -75,55 +71,5 @@ public class GetLocationClimateQueryHandler : IRequestHandler<GetLocationClimate
         _cache.Set(cacheKey, result, CacheDuration);
 
         return result;
-    }
-
-    private async Task<ClimateDto?> FetchClimateAsync(double lat, double lon, int targetMonth, int targetDay, bool isApproximate, CancellationToken cancellationToken)
-    {
-        var currentYear = DateTime.UtcNow.Year;
-        // Full past years only — the current year's target date may not have happened yet, which
-        // would make the archive API return a short/empty window for it.
-        var years = Enumerable.Range(currentYear - YearsOfHistory, YearsOfHistory).ToList();
-
-        // One wide call spanning the earliest year's window through the latest year's window —
-        // same #1356 approach GetEventClimateQueryHandler uses; Aggregate (reused below) does the
-        // ±WindowDays filtering per year client-side.
-        var firstYear = years[0];
-        var firstDay = Math.Min(targetDay, DateTime.DaysInMonth(firstYear, targetMonth));
-        var startDate = new DateTime(firstYear, targetMonth, firstDay).AddDays(-WindowDays);
-
-        var lastYear = years[^1];
-        var lastDay = Math.Min(targetDay, DateTime.DaysInMonth(lastYear, targetMonth));
-        var endDate = new DateTime(lastYear, targetMonth, lastDay).AddDays(WindowDays);
-
-        var response = await FetchArchiveAsync(lat, lon, startDate, endDate, cancellationToken);
-
-        // Aggregate is GetEventClimateQueryHandler's internal static aggregation math — reused
-        // as-is rather than duplicated, since the arithmetic doesn't depend on whether the
-        // coordinate came from an Event's Location or a Location directly.
-        return GetEventClimateQueryHandler.Aggregate(response, years, targetMonth, targetDay, WindowDays, lat, lon, isApproximate);
-    }
-
-    private async Task<OpenMeteoArchiveResponse?> FetchArchiveAsync(double lat, double lon, DateTime startDate, DateTime endDate, CancellationToken cancellationToken)
-    {
-        var client = _httpClientFactory.CreateClient("OpenMeteo");
-        var latStr = lat.ToString(CultureInfo.InvariantCulture);
-        var lonStr = lon.ToString(CultureInfo.InvariantCulture);
-        var startStr = startDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        var endStr = endDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-        var url = $"https://archive-api.open-meteo.com/v1/archive?latitude={latStr}&longitude={lonStr}" +
-                  $"&start_date={startStr}&end_date={endStr}" +
-                  "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_hours,sunshine_duration,wind_speed_10m_max" +
-                  "&timezone=Atlantic/Reykjavik&wind_speed_unit=ms";
-
-        try
-        {
-            return await client.GetFromJsonAsync<OpenMeteoArchiveResponse>(url, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Open-Meteo archive API call failed for coordinates ({Lat}, {Lon}), range {Start}–{End}", lat, lon, startStr, endStr);
-            return null;
-        }
     }
 }
