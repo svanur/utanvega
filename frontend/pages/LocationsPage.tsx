@@ -432,8 +432,8 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                         exclusive
                         onChange={(_, v) => v && setShowMap(v === 'map')}
                     >
-                        <ToggleButton value="map"><Tooltip title={t('locations.showMap')}><PlaceOutlinedIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
-                        <ToggleButton value="list"><Tooltip title={t('locations.hideMap')}><ViewListIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                        <ToggleButton value="map" sx={{ minWidth: 44, minHeight: 44 }}><Tooltip title={t('locations.showMap')}><PlaceOutlinedIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
+                        <ToggleButton value="list" sx={{ minWidth: 44, minHeight: 44 }}><Tooltip title={t('locations.hideMap')}><ViewListIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
                     </ToggleButtonGroup>
                     <Tooltip title={t('locations.favoritesOnly')}>
                         <IconButton
@@ -442,6 +442,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                             color={favoritesOnly ? 'warning' : 'default'}
                             aria-label={t('locations.favoritesOnly')}
                             aria-pressed={favoritesOnly}
+                            sx={{ minWidth: 44, minHeight: 44 }}
                         >
                             {favoritesOnly ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
                         </IconButton>
