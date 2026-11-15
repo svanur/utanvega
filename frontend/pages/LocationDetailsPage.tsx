@@ -28,8 +28,9 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
 import PoolCard from '../components/PoolCard';
+import ClimateCard from '../components/ClimateCard';
 import { findPoolsByLocationSlugs } from '../data/pools';
-import { useLocationBySlug, useLocationTree } from '../hooks/useLocations';
+import { useLocationBySlug, useLocationTree, useLocationClimate } from '../hooks/useLocations';
 import { useFavoriteLocations } from '../hooks/useFavoriteLocations';
 import type { Location, LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
@@ -70,6 +71,11 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const { location, childLocations, trails, loading, error } = useLocationBySlug(slug);
     const { tree: locationTree } = useLocationTree();
     const { toggleFavoriteLocation, isFavoriteLocation } = useFavoriteLocations();
+    // #1801: climate normals for this location — default-to-today only (no date picker), so
+    // month/day are left unset and the backend resolves against the current UTC date itself.
+    // Declared above the loading/error early-returns below (hooks must run unconditionally), same
+    // as CompetitionDetailPage's climate* hooks.
+    const { climate, loading: climateLoading, error: climateError } = useLocationClimate(slug);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [activeActivity, setActiveActivity] = useState<string | null>(null);
     const [activeTrailType, setActiveTrailType] = useState<string | null>(null);
@@ -413,6 +419,24 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                         </>
                     )}
                 </Paper>
+
+                {/* #1801: same ClimateCard component CompetitionDetailPage mounts for an event,
+                    reused unmodified here for a Location — same loading/error gating pattern:
+                    mount while loading, once data arrives, or when the backend came back with
+                    neither data nor an error (the "no usable climate data" case, which
+                    ClimateCard itself renders as an explicit unavailable message); a real fetch
+                    error suppresses the card entirely, same as the event path. */}
+                {isEnabled('climate_normals') && (climateLoading || climate || !climateError) && (
+                    <Box sx={{ mb: 4 }}>
+                        <ClimateCard
+                            climate={climate}
+                            loading={climateLoading}
+                            error={climateError}
+                            locationName={locationName}
+                            context="location"
+                        />
+                    </Box>
+                )}
 
                 {childLocations && childLocations.length > 0 && (
                     <Box mb={4}>

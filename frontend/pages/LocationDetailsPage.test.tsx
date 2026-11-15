@@ -42,6 +42,10 @@ const { mockLocationWithTrails } = vi.hoisted(() => ({
 vi.mock('../hooks/useLocations', () => ({
     useLocationBySlug: () => ({ ...mockLocationWithTrails.current, loading: false, error: null }),
     useLocationTree: () => ({ tree: [], loading: false, error: null }),
+    // #1801: isEnabled('climate_normals') is mocked to false below, so ClimateCard never mounts
+    // in this file's tests — this stub only needs to exist so the page's destructuring import
+    // doesn't throw "not a function".
+    useLocationClimate: () => ({ climate: null, loading: false, error: null }),
 }));
 
 // Every flag defaults false — this test only cares about the map gate, not share_trail/pools.
