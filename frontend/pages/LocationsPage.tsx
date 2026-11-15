@@ -587,6 +587,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                             <IconButton
                                                 onClick={() => toggleFavoriteLocation(loc.slug)}
                                                 aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
+                                                aria-pressed={isFavorited}
                                                 sx={{
                                                     position: 'absolute',
                                                     top: 8,
