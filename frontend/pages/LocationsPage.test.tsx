@@ -10,8 +10,8 @@
 // vitest.config.ts's global `environment: 'node'`.
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useParams } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -148,12 +148,25 @@ const both = makeLocation({
 });
 const neither = makeLocation({ id: 'loc-neither', slug: 'neither-loc', name: 'Neither Loc' });
 
+// #1809: a lightweight stand-in for the real /locations/:slug route (LocationDetailsPage has its
+// own data fetching and isn't under test here) — rendered alongside LocationsPage so a card's
+// CardActionArea click (LocationsPage.tsx:481, navigate(`/locations/${loc.slug}`)) is observable
+// as a real route change via react-router-dom, rather than mocking useNavigate. Mirrors the
+// Routes/Route convention in LocationDetailsPage.test.tsx:111-122.
+function LocationDetailsRouteStub() {
+    const { slug } = useParams();
+    return <div data-testid="location-details-stub">{slug}</div>;
+}
+
 function renderLocationsPage() {
     const theme = createAppTheme('light');
     return render(
-        <MemoryRouter>
+        <MemoryRouter initialEntries={['/']}>
             <ThemeProvider theme={theme}>
-                <LocationsPage mode="light" onToggleMode={() => {}} />
+                <Routes>
+                    <Route path="/" element={<LocationsPage mode="light" onToggleMode={() => {}} />} />
+                    <Route path="/locations/:slug" element={<LocationDetailsRouteStub />} />
+                </Routes>
             </ThemeProvider>
         </MemoryRouter>
     );
@@ -191,6 +204,9 @@ function cardIsHoverHighlighted(name: string): boolean {
 beforeEach(() => {
     mockLocations.current = [coordsOnly, boundaryOnly, both, neither];
     mockTrails.current = [];
+    // #1809: useFavoriteLocations is a real hook backed by localStorage (not mocked) — clear it
+    // so favorite state from one test never leaks into the next.
+    localStorage.clear();
 });
 
 describe('LocationsPage map Marker/Polygon rendering (#1741)', () => {
@@ -380,5 +396,41 @@ describe('LocationsPage FitBounds hover-safety (#1786)', () => {
         fireEvent.change(searchInput, { target: { value: 'Both' } });
 
         expect(mockFitBounds.mock.calls.length).toBeGreaterThan(1);
+    });
+});
+
+// #1809: regression coverage for the #1808 fix — the favorite-star IconButton (LocationsPage.tsx:
+// 587-603) sits as a sibling of the CardActionArea (:480-481), not nested inside it, specifically
+// so a star click toggles favorite state without also firing the card's navigate(). Nothing
+// previously exercised either click path.
+describe('LocationsPage favorite star vs. card navigation (#1809)', () => {
+    const FAVORITES_KEY = 'utanvega_favorite_locations';
+
+    it('clicking the favorite star toggles favorite state and does not navigate', () => {
+        renderLocationsPage();
+        const card = cardFor('Both Loc');
+        const starButton = within(card).getByRole('button', { name: en.locations.addFavorite });
+
+        fireEvent.click(starButton);
+
+        // aria-pressed flips and the icon's accessible name swaps to the "remove" label.
+        expect(within(card).getByRole('button', { name: en.locations.removeFavorite }).getAttribute('aria-pressed')).toBe('true');
+        expect(JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]')).toEqual(['both-loc']);
+
+        // No navigation: the route stub never mounted and LocationsPage's own content is still here.
+        expect(screen.queryByTestId('location-details-stub')).toBeNull();
+        expect(cardFor('Both Loc')).toBeDefined();
+    });
+
+    it('clicking elsewhere on the card navigates to /locations/:slug and leaves favorite state unchanged', () => {
+        renderLocationsPage();
+        const card = cardFor('Both Loc');
+
+        // The card's own title text, scoped to this card: "Both Loc" also appears in the Marker
+        // and Polygon map stand-ins (same disambiguation problem cardFor itself solves).
+        fireEvent.click(within(card).getByText('Both Loc'));
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('both-loc');
+        expect(localStorage.getItem(FAVORITES_KEY)).toBeNull();
     });
 });
