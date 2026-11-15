@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -50,9 +49,6 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
     private readonly IMemoryCache _cache;
     private readonly ILogger<GetEventClimateQueryHandler> _logger;
 
-    private const int YearsOfHistory = 15;
-    private const int WindowDays = 5;
-
     // #1446: a "rain day" is one with at least a full hour of measurable precipitation —
     // precipitation_hours is Open-Meteo's own count of hours within the day that crossed its
     // measurable-precipitation floor. Replaces the old precipitation_sum >= 0.1mm test, which
@@ -94,7 +90,9 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         // estimate — a Municipality/Place-type Location is precise enough to trust as-is.
         var isApproximate = @event.Location.Type is LocationType.Country or LocationType.Area or LocationType.Region;
 
-        var result = await FetchClimateAsync(lat, lon, request.TargetMonth, request.TargetDay, isApproximate, cancellationToken);
+        // #1817: FetchClimateAsync/FetchArchiveAsync moved to OpenMeteoClimateFetcher — shared
+        // verbatim with GetLocationClimateQueryHandler, which used to carry its own copy.
+        var result = await OpenMeteoClimateFetcher.FetchClimateAsync(_httpClientFactory, _logger, lat, lon, request.TargetMonth, request.TargetDay, isApproximate, cancellationToken);
 
         if (result == null)
             return null;
@@ -102,56 +100,6 @@ public class GetEventClimateQueryHandler : IRequestHandler<GetEventClimateQuery,
         _cache.Set(cacheKey, result, CacheDuration);
 
         return result;
-    }
-
-    private async Task<ClimateDto?> FetchClimateAsync(double lat, double lon, int targetMonth, int targetDay, bool isApproximate, CancellationToken cancellationToken)
-    {
-        var currentYear = DateTime.UtcNow.Year;
-        // Full past years only — the current year's target date may not have happened yet, which
-        // would make the archive API return a short/empty window for it.
-        var years = Enumerable.Range(currentYear - YearsOfHistory, YearsOfHistory).ToList();
-
-        // #1356: one wide call spanning the earliest year's window through the latest year's
-        // window, instead of YearsOfHistory separate narrow calls — Aggregate below does the
-        // ±WindowDays filtering per year client-side, since the response is no longer pre-windowed.
-        var firstYear = years[0];
-        var firstDay = Math.Min(targetDay, DateTime.DaysInMonth(firstYear, targetMonth));
-        var startDate = new DateTime(firstYear, targetMonth, firstDay).AddDays(-WindowDays);
-
-        var lastYear = years[^1];
-        var lastDay = Math.Min(targetDay, DateTime.DaysInMonth(lastYear, targetMonth));
-        var endDate = new DateTime(lastYear, targetMonth, lastDay).AddDays(WindowDays);
-
-        var response = await FetchArchiveAsync(lat, lon, startDate, endDate, cancellationToken);
-
-        return Aggregate(response, years, targetMonth, targetDay, WindowDays, lat, lon, isApproximate);
-    }
-
-    // #1356: a single wide-range call (startDate..endDate spans every year's ±WindowDays window)
-    // replaces the former YearsOfHistory per-year calls — Aggregate below does the per-year
-    // windowing that FetchArchiveAsync's start_date/end_date used to do per call.
-    private async Task<OpenMeteoArchiveResponse?> FetchArchiveAsync(double lat, double lon, DateTime startDate, DateTime endDate, CancellationToken cancellationToken)
-    {
-        var client = _httpClientFactory.CreateClient("OpenMeteo");
-        var latStr = lat.ToString(CultureInfo.InvariantCulture);
-        var lonStr = lon.ToString(CultureInfo.InvariantCulture);
-        var startStr = startDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        var endStr = endDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-
-        var url = $"https://archive-api.open-meteo.com/v1/archive?latitude={latStr}&longitude={lonStr}" +
-                  $"&start_date={startStr}&end_date={endStr}" +
-                  "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_hours,sunshine_duration,wind_speed_10m_max" +
-                  "&timezone=Atlantic/Reykjavik&wind_speed_unit=ms";
-
-        try
-        {
-            return await client.GetFromJsonAsync<OpenMeteoArchiveResponse>(url, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Open-Meteo archive API call failed for coordinates ({Lat}, {Lon}), range {Start}–{End}", lat, lon, startStr, endStr);
-            return null;
-        }
     }
 
     // Walks the single wide response's daily.Time array, keeping only the days that fall within
