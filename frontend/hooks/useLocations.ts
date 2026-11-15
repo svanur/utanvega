@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_URL, Trail } from './useTrails';
+import { API_URL, Trail, EventClimate } from './useTrails';
 
 export interface Location {
     id: string;
@@ -17,6 +17,9 @@ export interface Location {
     radius?: number;
     childrenCount: number;
     trailsCount: number;
+    // #1707: GeoJSON Polygon string for the location's saved boundary (#1705), null/omitted for
+    // the vast majority of locations that don't have one yet.
+    boundaryGeoJson?: string | null;
 }
 
 export interface LocationTreeNode {
@@ -36,7 +39,11 @@ export interface LocationWithTrails {
     trails: Trail[];
 }
 
-export function useLocations() {
+// #1780: `enabled` defaults to true so every caller that doesn't pass it (LocationsPage,
+// EventMapView, etc.) keeps fetching unconditionally; TrailMapView passes its own
+// showLocationBoundaries prop through so LocationDetailsPage/CompetitionDetailPage, which never
+// render location boundaries, skip the GET /api/v1/locations fetch entirely.
+export function useLocations(enabled = true) {
     const { data: locations = [], isPending, error: queryError } = useQuery<Location[]>({
         queryKey: ['locations'],
         queryFn: () => fetch(`${API_URL}/api/v1/locations`)
@@ -45,6 +52,7 @@ export function useLocations() {
                 return res.json() as Promise<Location[]>;
             }),
         staleTime: 10 * 60 * 1000,
+        enabled,
     });
     return {
         locations,
@@ -89,4 +97,30 @@ export function useLocationBySlug(slug: string | undefined) {
         loading: isPending && !!slug,
         error: queryError instanceof Error ? queryError.message : null,
     };
+}
+
+// #1801: Location-keyed sibling of useEventClimate (useTrails.ts) — same historical-climate-
+// normals shape/staleTime, reusing the EventClimate type as-is (the backend's ClimateDto is
+// identical either way, only how the coordinate gets resolved differs) rather than declaring a
+// second type for the same shape. month/day are optional here — unlike the event endpoint, the
+// backend defaults both to the current UTC date server-side when neither is supplied, since a
+// Location has no inherent target date the way an event's displayDate/nextEditionDate does; this
+// hook deliberately never passes a caller-picked date (no date picker — default-to-today only).
+export function useLocationClimate(locationSlug?: string, month?: number, day?: number) {
+    const { data: climate = null, isPending, error: queryError } = useQuery<EventClimate | null>({
+        queryKey: ['location-climate', locationSlug, month, day],
+        queryFn: () => {
+            const dateParams = month && day ? `?month=${month}&day=${day}` : '';
+            return fetch(`${API_URL}/api/v1/locations/${locationSlug}/climate${dateParams}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Climate data unavailable');
+                    return res.json() as Promise<EventClimate>;
+                });
+        },
+        enabled: !!locationSlug,
+        staleTime: 24 * 60 * 60 * 1000,
+    });
+    const loading = isPending && !!locationSlug;
+    const error = queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null;
+    return { climate, loading, error };
 }

@@ -2,6 +2,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using NetTopologySuite.IO;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Infrastructure.Persistence;
 
@@ -61,14 +62,19 @@ public class GetLocationsQueryHandler : IRequestHandler<GetLocationsQuery, List<
                 ChildrenCount = l.Children.Count,
                 TrailsCount = l.TrailLocations.Count,
                 l.TranslationHashes,
+                l.Boundary,
             })
             .ToListAsync(cancellationToken);
 
+        // Boundary is a Polygon — can't convert to GeoJSON inside the EF projection above, so
+        // it's done here in memory (same two-pass approach as GpxData in GetLocationBySlugQuery).
+        var geoJsonWriter = new GeoJsonWriter();
         var result = raw.Select(l => new LocationDto(
             l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
             l.Type, l.ParentId, l.ParentName, l.ParentNameEn, l.Latitude, l.Longitude, l.Radius,
             l.ChildrenCount, l.TrailsCount,
-            l.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(l.TranslationHashes)
+            l.TranslationHashes == null ? null : JsonSerializer.Deserialize<Dictionary<string, string>>(l.TranslationHashes),
+            l.Boundary == null ? null : geoJsonWriter.Write(l.Boundary)
         )).ToList();
 
         if (isCacheable)

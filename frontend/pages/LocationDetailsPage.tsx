@@ -15,20 +15,27 @@ import {
     Divider,
     Card,
     CardActionArea,
-    CardContent
+    CardContent,
+    IconButton,
+    Tooltip
 } from '@mui/material';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import FolderIcon from '@mui/icons-material/Folder';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import TerrainIcon from '@mui/icons-material/Terrain';
 import RouteIcon from '@mui/icons-material/Route';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import Layout from '../components/Layout';
 import PoolCard from '../components/PoolCard';
+import ClimateCard from '../components/ClimateCard';
 import { findPoolsByLocationSlugs } from '../data/pools';
-import { useLocationBySlug, useLocationTree } from '../hooks/useLocations';
-import type { LocationTreeNode } from '../hooks/useLocations';
+import { useLocationBySlug, useLocationTree, useLocationClimate } from '../hooks/useLocations';
+import { useFavoriteLocations } from '../hooks/useFavoriteLocations';
+import type { Location, LocationTreeNode } from '../hooks/useLocations';
 import { TrailCard } from '../components/TrailCard';
 import { TrailMapView } from '../components/TrailMapView';
+import { SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/locationBoundary';
 import RunningLoader from '../components/RunningLoader';
 import ShareButtons from '../components/ShareButtons';
 import LostLocation from '../components/LostLocation';
@@ -41,6 +48,20 @@ type LocationDetailsPageProps = {
     onToggleMode: () => void;
 };
 
+// Shared by the geolocation effect and `showMap` below (#1796 — previously duplicated inline in
+// both places, see #1790/#1792/#1794): true when the location has its own plottable geometry — a
+// saved boundary polygon (#1705) and/or a center point (#1790) — independent of whether any trail
+// is linked to it. A plain function taking `location` as an argument, not a component-scoped
+// useMemo, so it also works in the geolocation effect, which runs above the loading/error
+// early-returns where `location` may still be null.
+// `!= null` (not `!== undefined`) — the backend serializes an unset latitude/longitude as explicit
+// JSON `null`, not an omitted key, same pattern CompetitionDetailPage.tsx/EventMapView.tsx already
+// use for the same reason.
+function hasOwnGeometry(location: Location | null | undefined): boolean {
+    return Boolean(location?.boundaryGeoJson)
+        || (location?.latitude != null && location?.longitude != null);
+}
+
 export default function LocationDetailsPage({ mode, onToggleMode }: LocationDetailsPageProps) {
     const { t } = useTranslation();
     const loc = useLocalize();
@@ -49,6 +70,12 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     const navigate = useNavigate();
     const { location, childLocations, trails, loading, error } = useLocationBySlug(slug);
     const { tree: locationTree } = useLocationTree();
+    const { toggleFavoriteLocation, isFavoriteLocation } = useFavoriteLocations();
+    // #1801: climate normals for this location — default-to-today only (no date picker), so
+    // month/day are left unset and the backend resolves against the current UTC date itself.
+    // Declared above the loading/error early-returns below (hooks must run unconditionally), same
+    // as CompetitionDetailPage's climate* hooks.
+    const { climate, loading: climateLoading, error: climateError } = useLocationClimate(slug);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [activeActivity, setActiveActivity] = useState<string | null>(null);
     const [activeTrailType, setActiveTrailType] = useState<string | null>(null);
@@ -181,10 +208,17 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
         return findPath(locationTree, slug) || [];
     }, [slug, locationTree]);
 
-    // Gated on the same condition that renders the map section below (#1253) so visitors
-    // landing on a location with no trails never see a geolocation permission prompt.
+    // Gated on the same condition that renders the map section below (#1253, extended by #1790/
+    // #1792) so visitors never see a geolocation permission prompt on a page with no map to show
+    // it on. Declared above the `showMap` const (itself below the loading/error early-returns);
+    // uses the module-level hasOwnGeometry() helper (#1796) rather than a component-scoped value,
+    // so it also works here, before `location` is guaranteed non-null.
+    // #1795: depends on `trails` (unfiltered), not `filteredTrails` — filteredTrails gets a new
+    // array reference from its useMemo on every filter-chip toggle, which was re-firing
+    // getCurrentPosition() on every chip tap. Whether there's a map to show at all does not
+    // depend on which filter chips are active.
     useEffect(() => {
-        if (!(trails && trails.length > 0)) return;
+        if (!hasOwnGeometry(location) && (!trails || trails.length === 0)) return;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -198,7 +232,7 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                 }
             );
         }
-    }, [trails]);
+    }, [location, trails]);
 
     if (loading) {
         return (
@@ -221,6 +255,24 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
     }
 
     const locationName = loc(location.name, location.nameEn) ?? location.name;
+    const isFavorited = isFavoriteLocation(location.slug);
+
+    // hasCenterPoint narrows hasOwnGeometry (declared above the component) to just the
+    // center-point half: fallbackCenter below needs a concrete lat/lng, which a boundary polygon
+    // alone doesn't give it. Same `!= null` reasoning as hasOwnGeometry — the backend serializes
+    // an unset latitude/longitude as explicit JSON `null`, not an omitted key.
+    const hasCenterPoint = location.latitude != null && location.longitude != null;
+    const fallbackCenter = hasCenterPoint
+        ? { lat: location.latitude as number, lng: location.longitude as number }
+        : null;
+    // Pre-#1790, the map was gated on `filteredTrails.length > 0` alone — TrailMapView's own
+    // `trailsWithLocation` filter (not re-done here) is what actually determines whether any of
+    // those trails has plottable coordinates; when none do, TrailMapView still mounts and falls
+    // back to its hardcoded default view, exactly as it did before #1790. hasOwnGeometry(location)
+    // covers the location's own boundary/center (#1790); filteredTrails.length > 0 is OR'd in
+    // alongside it to avoid a regression for a location with trails but no boundaryGeoJson/center
+    // of its own.
+    const showMap = hasOwnGeometry(location) || filteredTrails.length > 0;
 
     // Full ancestor path from the location tree, rendered in the sticky
     // breadcrumb. Falls back to just this location if the tree hasn't loaded.
@@ -250,6 +302,16 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                         <Typography variant="h4" component="h1" fontWeight="bold" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' }, flex: 1 }}>
                             {loc(location.name, location.nameEn)}
                         </Typography>
+                        <Tooltip title={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}>
+                            <IconButton
+                                onClick={() => toggleFavoriteLocation(location.slug)}
+                                aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
+                                aria-pressed={isFavorited}
+                                sx={{ width: 44, height: 44 }}
+                            >
+                                {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                            </IconButton>
+                        </Tooltip>
                         {isEnabled('share_trail') && <ShareButtons title={loc(location.name, location.nameEn) ?? location.name} />}
                     </Stack>
                     
@@ -358,6 +420,24 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     )}
                 </Paper>
 
+                {/* #1801: same ClimateCard component CompetitionDetailPage mounts for an event,
+                    reused unmodified here for a Location — same loading/error gating pattern:
+                    mount while loading, once data arrives, or when the backend came back with
+                    neither data nor an error (the "no usable climate data" case, which
+                    ClimateCard itself renders as an explicit unavailable message); a real fetch
+                    error suppresses the card entirely, same as the event path. */}
+                {isEnabled('climate_normals') && (climateLoading || climate || !climateError) && (
+                    <Box sx={{ mb: 4 }}>
+                        <ClimateCard
+                            climate={climate}
+                            loading={climateLoading}
+                            error={climateError}
+                            locationName={locationName}
+                            context="location"
+                        />
+                    </Box>
+                )}
+
                 {childLocations && childLocations.length > 0 && (
                     <Box mb={4}>
                         <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -412,23 +492,41 @@ export default function LocationDetailsPage({ mode, onToggleMode }: LocationDeta
                     </Typography>
                 )}
 
+                {/* #1790: shown whenever the location has its own plottable geometry (boundary
+                    and/or center point), independent of `trails.length` below — a zero-trail
+                    location still has a boundary/center worth showing, and that geometry (via
+                    `fallbackCenter`/`locationBoundary`) is also what frames the map when there are
+                    no trail routes to frame it instead. */}
+                {showMap && (
+                    <Box mt={2} sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
+                       <TrailMapView
+                           trails={filteredTrails}
+                           userLocation={userLocation}
+                           height="400px"
+                           fallbackCenter={fallbackCenter}
+                           fallbackCenterLabelKey="map.locationCenter"
+                           locationBoundary={location.boundaryGeoJson ? {
+                               geoJson: location.boundaryGeoJson,
+                               // #1764: landsvæði Region boundaries are simplemaps.com (CC
+                               // BY 4.0) — municipality boundaries (#1705) are LMÍ-sourced
+                               // and don't need this credit.
+                               attribution: location.type === 'Region' ? SIMPLEMAPS_CC_BY_ATTRIBUTION : undefined,
+                           } : null}
+                       />
+                    </Box>
+                )}
+
+                {showMap && <Divider sx={{ mb: 4 }} />}
+
                 {trails && trails.length > 0 ? (
                     filteredTrails.length > 0 ? (
-                        <Box mt={2}>
-                            <Box sx={{ mb: 4, borderRadius: '16px', overflow: 'hidden' }}>
-                               <TrailMapView trails={filteredTrails} userLocation={userLocation} height="400px" />
-                            </Box>
-                            
-                            <Divider sx={{ mb: 4 }} />
-
-                            <Grid container spacing={1}>
-                                {filteredTrails.map(trail => (
-                                    <Grid item xs={12} key={trail.id}>
-                                        <TrailCard trail={trail} linkState={trailLinkState} />
-                                    </Grid>
-                                ))}
-                            </Grid>
-                        </Box>
+                        <Grid container spacing={1}>
+                            {filteredTrails.map(trail => (
+                                <Grid item xs={12} key={trail.id}>
+                                    <TrailCard trail={trail} linkState={trailLinkState} />
+                                </Grid>
+                            ))}
+                        </Grid>
                     ) : (
                         <Box textAlign="center" py={4}>
                             <Typography color="text.secondary" gutterBottom>

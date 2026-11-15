@@ -1,0 +1,626 @@
+// @vitest-environment jsdom
+//
+// #1741: backfills page-level test coverage for LocationsPage.tsx, which composes several pieces
+// introduced across #1705/#1708/#1739 (boundary Polygon outlines, dot Markers, a single
+// hoveredSlug shared between the map and the list Cards, and scrollToCard's click-to-scroll DOM
+// highlight) with zero coverage of their own — only the underlying pure helper
+// geoJsonBoundaryToLatLngParts has unit tests, in TrailMapView.test.tsx. Follows
+// TrailMapView.test.tsx's react-leaflet mocking pattern and RacesPage.test.tsx's jsdom/RTL/real-i18n
+// /Layout-passthrough page-level precedent; the rest of the frontend suite runs under
+// vitest.config.ts's global `environment: 'node'`.
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useParams } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import en from '../i18n/en.json';
+import { createAppTheme } from '../theme';
+import type { Location } from '../hooks/useLocations';
+import type { Trail, LocationInfo } from '../hooks/useTrails';
+
+// vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
+// afterEach(cleanup) registration never fires — without this, a later test's screen queries can
+// match leftover DOM nodes still mounted from an earlier test in this file. Mirrors
+// TrailMapView.test.tsx:20 / RacesPage.test.tsx:35.
+afterEach(() => {
+    cleanup();
+    mockFitBounds.mockClear();
+});
+
+// LocationsPage's t()/useLocalize() calls need a real, initialized i18next instance — initialized
+// once with the real EN resources, same as RacesPage.test.tsx, rather than a hand-rolled stub.
+void i18n.use(initReactI18next).init({
+    resources: { en: { translation: en } },
+    lng: 'en',
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
+});
+
+// Layout pulls in useMediaQuery (jsdom has no window.matchMedia implementation, so a real Layout
+// render throws) plus a dozen data-fetching hooks that have nothing to do with the map/card
+// composition under test — mocked to a bare passthrough, same as RacesPage.test.tsx:55-57.
+vi.mock('../components/Layout', () => ({
+    default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+}));
+
+const { mockLocations, mockTrails, mockFitBounds, mockMap } = vi.hoisted(() => {
+    const fitBounds = vi.fn();
+    return {
+        // Mutable so individual tests can swap fixtures without re-mocking; .current is read fresh
+        // on every useLocations()/useTrails() call below.
+        mockLocations: { current: [] as Location[] },
+        mockTrails: { current: [] as Trail[] },
+        mockFitBounds: fitBounds,
+        // #1786: a stable object, not a fresh literal per useMap() call — real Leaflet's useMap()
+        // always returns the same map instance, so FitBounds's `useEffect([bounds, map], ...)`
+        // (LocationsPage.tsx) only re-fires on an actual bounds change. A new literal per call
+        // would make `map` look like a changed dependency on every re-render, masking the
+        // hover-resets-zoom/pan bug behind an unrelated false positive. Mirrors
+        // TrailMapView.test.tsx's mockMap.
+        mockMap: { fitBounds },
+    };
+});
+
+vi.mock('../hooks/useLocations', () => ({
+    useLocations: () => ({ locations: mockLocations.current, loading: false, error: null }),
+}));
+vi.mock('../hooks/useTrails', () => ({
+    useTrails: () => ({ trails: mockTrails.current, loading: false, error: null }),
+}));
+
+vi.mock('@changey/react-leaflet-markercluster', () => ({
+    default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+}));
+
+// Thin, queryable stand-ins rather than real Leaflet rendering — mirrors TrailMapView.test.tsx's
+// react-leaflet mock. Marker/Polygon forward their eventHandlers.click/mouseover/mouseout to plain
+// DOM handlers so fireEvent can invoke the exact same closures LocationsPage wires up
+// (LocationsPage.tsx:318-320 for Marker, :349-353 for Polygon), and surface pathOptions.fillOpacity
+// /weight as data-* attributes so a hover test can assert the isHovered argument's effect without
+// needing Leaflet's real SVG renderer.
+vi.mock('react-leaflet', () => ({
+    MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map-container">{children}</div>,
+    TileLayer: () => null,
+    useMap: () => mockMap,
+    LayersControl: Object.assign(
+        ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+        { BaseLayer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> },
+    ),
+    Tooltip: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Marker: (props: { children?: React.ReactNode; eventHandlers?: { click?: () => void } }) => (
+        <div data-testid="marker" onClick={() => props.eventHandlers?.click?.()}>
+            {props.children}
+        </div>
+    ),
+    Polygon: (props: {
+        children?: React.ReactNode;
+        pathOptions?: { fillOpacity?: number; weight?: number; dashArray?: string };
+        eventHandlers?: { mouseover?: () => void; mouseout?: () => void; click?: () => void };
+    }) => (
+        <div
+            data-testid="polygon"
+            data-fill-opacity={props.pathOptions?.fillOpacity}
+            data-weight={props.pathOptions?.weight}
+            data-dash={props.pathOptions?.dashArray ?? ''}
+            onMouseOver={() => props.eventHandlers?.mouseover?.()}
+            onMouseOut={() => props.eventHandlers?.mouseout?.()}
+            onClick={() => props.eventHandlers?.click?.()}
+        >
+            {props.children}
+        </div>
+    ),
+}));
+
+import LocationsPage from './LocationsPage';
+
+function makeLocation(overrides: Partial<Location> = {}): Location {
+    return {
+        id: 'loc-1',
+        name: 'Location',
+        nameEn: null,
+        slug: 'loc-1',
+        type: 'Area',
+        childrenCount: 0,
+        trailsCount: 0,
+        boundaryGeoJson: null,
+        ...overrides,
+    };
+}
+
+function boundary(coords: [number, number][]): string {
+    return JSON.stringify({ type: 'Polygon', coordinates: [coords] });
+}
+
+// #1822: a minimal Trail fixture — only the fields computeLocationStats/the subtitle count
+// actually read (locations, length, elevationGain, activityType, difficulty) need real values.
+function makeTrail(overrides: Partial<Trail> & { locations: LocationInfo[] }): Trail {
+    return {
+        id: 'trail-1',
+        name: 'Trail',
+        slug: 'trail-1',
+        length: 1000,
+        elevationGain: 100,
+        elevationLoss: 100,
+        status: 'Published',
+        activityType: 'TrailRunning',
+        trailType: 'Loop',
+        difficulty: 'Moderate',
+        startLatitude: null,
+        startLongitude: null,
+        ...overrides,
+    };
+}
+
+function locationInfo(slug: string): LocationInfo {
+    return { name: slug, nameEn: null, slug, order: 0, role: 'Primary', centerLatitude: null, centerLongitude: null };
+}
+
+const coordsOnly = makeLocation({
+    id: 'loc-coords', slug: 'coords-only', name: 'Coords Only',
+    latitude: 64.0, longitude: -19.0,
+});
+const boundaryOnly = makeLocation({
+    id: 'loc-boundary', slug: 'boundary-only', name: 'Boundary Only',
+    boundaryGeoJson: boundary([[-19.0, 64.0], [-19.1, 64.1], [-19.2, 64.0], [-19.0, 64.0]]),
+});
+const both = makeLocation({
+    id: 'loc-both', slug: 'both-loc', name: 'Both Loc',
+    latitude: 64.2, longitude: -19.2,
+    boundaryGeoJson: boundary([[-19.3, 64.3], [-19.4, 64.4], [-19.5, 64.3], [-19.3, 64.3]]),
+});
+const neither = makeLocation({ id: 'loc-neither', slug: 'neither-loc', name: 'Neither Loc' });
+
+// #1802: a region with children, plus two of its children — one boundary-bearing (so its own
+// Polygon's childrenCount === 0 leaf-navigate path is exercised at the drilled-in level too, not
+// just at the top level), one coordinate-only (so it only ever renders as a Marker, same as
+// `coordsOnly` above). `regionWithChildren.id` matches both children's `parentId`, mirroring how
+// the real /api/v1/locations response links a child to its parent.
+const regionWithChildren = makeLocation({
+    id: 'loc-region', slug: 'region', name: 'Region With Children', childrenCount: 2,
+    boundaryGeoJson: boundary([[-20.0, 65.0], [-20.5, 65.5], [-21.0, 65.0], [-20.0, 65.0]]),
+});
+const childWithBoundary = makeLocation({
+    id: 'loc-child-boundary', slug: 'child-boundary', name: 'Child With Boundary', parentId: 'loc-region',
+    boundaryGeoJson: boundary([[-20.1, 65.1], [-20.2, 65.2], [-20.3, 65.1], [-20.1, 65.1]]),
+});
+const childWithCoords = makeLocation({
+    id: 'loc-child-coords', slug: 'child-coords', name: 'Child With Coords', parentId: 'loc-region',
+    latitude: 65.3, longitude: -20.3,
+});
+
+// #1821: a region with children that also carries lat/long, so it renders a dot Marker (not just a
+// boundary Polygon) — needed to exercise the Marker's own drill-down branch, since `regionWithChildren`
+// above is boundary-only and never renders a Marker at all.
+const regionWithChildrenAndCoords = makeLocation({
+    id: 'loc-region', slug: 'region-coords', name: 'Region With Children And Coords', childrenCount: 2,
+    latitude: 65.6, longitude: -21.6,
+    boundaryGeoJson: boundary([[-21.6, 65.6], [-21.7, 65.7], [-21.8, 65.6], [-21.6, 65.6]]),
+});
+
+// #1809: a lightweight stand-in for the real /locations/:slug route (LocationDetailsPage has its
+// own data fetching and isn't under test here) — rendered alongside LocationsPage so a card's
+// CardActionArea click (LocationsPage.tsx:481, navigate(`/locations/${loc.slug}`)) is observable
+// as a real route change via react-router-dom, rather than mocking useNavigate. Mirrors the
+// Routes/Route convention in LocationDetailsPage.test.tsx:111-122.
+function LocationDetailsRouteStub() {
+    const { slug } = useParams();
+    return <div data-testid="location-details-stub">{slug}</div>;
+}
+
+function renderLocationsPage() {
+    const theme = createAppTheme('light');
+    return render(
+        <MemoryRouter initialEntries={['/']}>
+            <ThemeProvider theme={theme}>
+                <Routes>
+                    <Route path="/" element={<LocationsPage mode="light" onToggleMode={() => {}} />} />
+                    <Route path="/locations/:slug" element={<LocationDetailsRouteStub />} />
+                </Routes>
+            </ThemeProvider>
+        </MemoryRouter>
+    );
+}
+
+// Each fixture's name string only ever appears once per rendered map stand-in (a boundary-only
+// location has no marker, a coords-only location has no polygon), plus once more in its list Card
+// — so scoping by the nearest ancestor testid/class disambiguates which of the (up to three) text
+// matches is which.
+function cardFor(name: string): HTMLElement {
+    const node = screen.getAllByText(name).find(n =>
+        n.closest('.MuiCard-root') && !n.closest('[data-testid="marker"]') && !n.closest('[data-testid="polygon"]')
+    );
+    if (!node) throw new Error(`card not found for "${name}"`);
+    return node.closest('.MuiCard-root') as HTMLElement;
+}
+function markerFor(name: string): HTMLElement | undefined {
+    const node = screen.getAllByText(name).find(n => n.closest('[data-testid="marker"]'));
+    return node?.closest('[data-testid="marker"]') as HTMLElement | undefined;
+}
+function polygonFor(name: string): HTMLElement | undefined {
+    const node = screen.getAllByText(name).find(n => n.closest('[data-testid="polygon"]'));
+    return node?.closest('[data-testid="polygon"]') as HTMLElement | undefined;
+}
+
+// jsdom's CSSOM doesn't expand the `outline` shorthand into `outlineStyle`/`outlineWidth`/etc
+// sub-properties the way a real browser would (verified against this repo's own emotion+MUI
+// setup) — `outline` itself still resolves to the full shorthand string, e.g. "3px solid
+// #9c27b0" when hovered, "" when not, driven by the card's conditional sx
+// (LocationsPage.tsx:434-437).
+function cardIsHoverHighlighted(name: string): boolean {
+    return getComputedStyle(cardFor(name)).outline !== '';
+}
+
+beforeEach(() => {
+    mockLocations.current = [coordsOnly, boundaryOnly, both, neither];
+    mockTrails.current = [];
+    // #1809: useFavoriteLocations is a real hook backed by localStorage (not mocked) — clear it
+    // so favorite state from one test never leaks into the next.
+    localStorage.clear();
+});
+
+describe('LocationsPage map Marker/Polygon rendering (#1741)', () => {
+    it('renders a Polygon stand-in only for locations with boundaryGeoJson', () => {
+        renderLocationsPage();
+
+        expect(screen.getAllByTestId('polygon')).toHaveLength(2);
+        expect(polygonFor('Boundary Only')).not.toBeUndefined();
+        expect(polygonFor('Both Loc')).not.toBeUndefined();
+        expect(polygonFor('Coords Only')).toBeUndefined();
+        expect(polygonFor('Neither Loc')).toBeUndefined();
+    });
+
+    it('renders a Marker stand-in only for locations with latitude and longitude', () => {
+        renderLocationsPage();
+
+        expect(screen.getAllByTestId('marker')).toHaveLength(2);
+        expect(markerFor('Coords Only')).not.toBeUndefined();
+        expect(markerFor('Both Loc')).not.toBeUndefined();
+        expect(markerFor('Boundary Only')).toBeUndefined();
+        expect(markerFor('Neither Loc')).toBeUndefined();
+    });
+
+    it('a location with neither coordinates nor a boundary renders no Marker or Polygon', () => {
+        renderLocationsPage();
+
+        expect(markerFor('Neither Loc')).toBeUndefined();
+        expect(polygonFor('Neither Loc')).toBeUndefined();
+    });
+});
+
+// #1708: hoveredSlug is shared between the boundary Polygon's mouseover/mouseout handlers
+// (LocationsPage.tsx:350-351) and the list Card's onMouseEnter/onMouseLeave (:426-427) — hovering
+// either one must highlight both.
+describe('LocationsPage hover sync between boundary Polygon and card (#1741, #1708)', () => {
+    it('hovering the Polygon brightens its own pathOptions and highlights the matching card', () => {
+        renderLocationsPage();
+        const polygon = polygonFor('Boundary Only')!;
+
+        // Default (unhovered) styling first, per getBoundaryPathOptions(false).
+        expect(polygon.getAttribute('data-fill-opacity')).toBe('0.08');
+        expect(polygon.getAttribute('data-weight')).toBe('2');
+        expect(cardIsHoverHighlighted('Boundary Only')).toBe(false);
+
+        fireEvent.mouseOver(polygon);
+
+        // getBoundaryPathOptions(true): brighter fill, thicker line, no dash.
+        expect(polygon.getAttribute('data-fill-opacity')).toBe('0.35');
+        expect(polygon.getAttribute('data-weight')).toBe('3');
+        expect(polygon.getAttribute('data-dash')).toBe('');
+        expect(cardIsHoverHighlighted('Boundary Only')).toBe(true);
+
+        // The other boundary location must be unaffected — hoveredSlug is per-slug, not global.
+        expect(polygonFor('Both Loc')!.getAttribute('data-fill-opacity')).toBe('0.08');
+        expect(cardIsHoverHighlighted('Both Loc')).toBe(false);
+    });
+
+    it('moving the pointer away (mouseout) reverts the highlight on both the Polygon and the card', () => {
+        renderLocationsPage();
+        const polygon = polygonFor('Boundary Only')!;
+
+        fireEvent.mouseOver(polygon);
+        expect(polygon.getAttribute('data-fill-opacity')).toBe('0.35');
+        expect(cardIsHoverHighlighted('Boundary Only')).toBe(true);
+
+        fireEvent.mouseOut(polygon);
+
+        expect(polygon.getAttribute('data-fill-opacity')).toBe('0.08');
+        expect(polygon.getAttribute('data-weight')).toBe('2');
+        expect(cardIsHoverHighlighted('Boundary Only')).toBe(false);
+    });
+
+    it('hovering the card highlights the matching Polygon via the isHovered pathOptions argument (reverse direction)', () => {
+        renderLocationsPage();
+        const card = cardFor('Both Loc');
+        const polygon = polygonFor('Both Loc')!;
+
+        expect(polygon.getAttribute('data-fill-opacity')).toBe('0.08');
+
+        fireEvent.mouseEnter(card);
+
+        expect(polygon.getAttribute('data-fill-opacity')).toBe('0.35');
+        expect(polygon.getAttribute('data-weight')).toBe('3');
+
+        fireEvent.mouseLeave(card);
+
+        expect(polygon.getAttribute('data-fill-opacity')).toBe('0.08');
+        expect(polygon.getAttribute('data-weight')).toBe('2');
+    });
+
+    it('leaves a location with neither coordinates nor a boundary unaffected by hover on another card', () => {
+        renderLocationsPage();
+        const neitherCard = cardFor('Neither Loc');
+
+        fireEvent.mouseOver(polygonFor('Boundary Only')!);
+        fireEvent.mouseEnter(cardFor('Both Loc'));
+
+        expect(getComputedStyle(neitherCard).outline).toBe('');
+    });
+});
+
+// #1821: scrollToCard (the old unconditional Marker click behavior tested here previously) was
+// removed — the Marker's click handler now branches on childrenCount the same way the boundary
+// Polygon's has since #1802, so there is no longer a scroll-highlight case to cover; see the
+// 'LocationsPage marker click drill-down and leaf navigation (#1821)' describe block below instead.
+
+// #1802: the boundary Polygon's click handler now branches on childrenCount instead of always
+// calling scrollToCard — a childless shape (leaf) navigates straight to its detail page, same
+// destination the card click already uses; a shape with children drills down (zoom + narrow the
+// card list), with a breadcrumb/back control to return to the full top-level view. Hover-highlight
+// (#1708) must keep working at the drilled-in level too, not just top-level.
+describe('LocationsPage boundary click drill-down and leaf navigation (#1802)', () => {
+    it('clicking a childless boundary Polygon navigates to /locations/:slug, same as a card click', () => {
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Boundary Only')!);
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('boundary-only');
+    });
+
+    it('clicking a region boundary Polygon with children drills down: narrows the card list to its children and shows the back control', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        expect(cardFor('Region With Children')).toBeDefined();
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).toBeNull();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+
+        // The region itself is no longer a card or a Polygon (it's now the drilled-into context,
+        // named in the breadcrumb instead) — only its children remain.
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).not.toBeNull();
+        expect(cardFor('Child With Boundary')).toBeDefined();
+        expect(cardFor('Child With Coords')).toBeDefined();
+        expect(polygonFor('Region With Children')).toBeUndefined();
+    });
+
+    it('the back-to-all-regions control restores the full top-level list and hides itself again', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        fireEvent.click(screen.getByRole('button', { name: en.locations.backToAllRegions }));
+
+        expect(cardFor('Region With Children')).toBeDefined();
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).toBeNull();
+    });
+
+    it('clicking a childless child boundary Polygon navigates, even while drilled in (not another drill-down)', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        fireEvent.click(polygonFor('Child With Boundary')!);
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('child-boundary');
+    });
+
+    it('hover-highlight (#1708) still syncs Polygon <-> card after drilling in', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+        fireEvent.click(polygonFor('Region With Children')!);
+
+        const childPolygon = polygonFor('Child With Boundary')!;
+        expect(cardIsHoverHighlighted('Child With Boundary')).toBe(false);
+
+        fireEvent.mouseOver(childPolygon);
+        expect(cardIsHoverHighlighted('Child With Boundary')).toBe(true);
+
+        fireEvent.mouseOut(childPolygon);
+        expect(cardIsHoverHighlighted('Child With Boundary')).toBe(false);
+    });
+
+    it('drilling in re-fits bounds to the clicked region, and returning via the back control re-fits again', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(1);
+
+        const callsAfterDrilldown = mockFitBounds.mock.calls.length;
+        fireEvent.click(screen.getByRole('button', { name: en.locations.backToAllRegions }));
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(callsAfterDrilldown);
+    });
+});
+
+// #1821: the dot Marker's click handler now branches on childrenCount the same way the boundary
+// Polygon's has since #1802, instead of unconditionally calling scrollToCard — a leaf marker
+// navigates straight to its detail page, a region marker drills down. Mirrors the #1802 describe
+// block above, swapping polygonFor(...) for markerFor(...).
+describe('LocationsPage marker click drill-down and leaf navigation (#1821)', () => {
+    it('clicking a childless Marker navigates to /locations/:slug, same as a card click', () => {
+        renderLocationsPage();
+
+        fireEvent.click(markerFor('Both Loc')!);
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('both-loc');
+    });
+
+    it('clicking a region Marker with children drills down: narrows the card list to its children and shows the back control', () => {
+        mockLocations.current = [regionWithChildrenAndCoords, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        expect(cardFor('Region With Children And Coords')).toBeDefined();
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).toBeNull();
+
+        fireEvent.click(markerFor('Region With Children And Coords')!);
+
+        // The region itself is no longer a card or a Marker (it's now the drilled-into context,
+        // named in the breadcrumb instead) — only its children remain.
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).not.toBeNull();
+        expect(cardFor('Child With Boundary')).toBeDefined();
+        expect(cardFor('Child With Coords')).toBeDefined();
+        expect(markerFor('Region With Children And Coords')).toBeUndefined();
+    });
+});
+
+// #1754: the Map Hero render gate (LocationsPage.tsx:254) originally only checked
+// locationsWithCoords.length > 0, so a dataset where every location is boundary-only (no
+// lat/long anywhere) never mounted MapContainer at all — hiding the boundary Polygon outlines,
+// markers, and FitBounds (#1740/#1753) that would otherwise render fine once mounted.
+describe('LocationsPage Map Hero render gate (#1754)', () => {
+    it('renders the Map Hero when every location is boundary-only (no lat/long anywhere)', () => {
+        mockLocations.current = [boundaryOnly];
+        renderLocationsPage();
+
+        expect(screen.getByTestId('map-container')).toBeDefined();
+        expect(polygonFor('Boundary Only')).not.toBeUndefined();
+    });
+
+    it('hides the Map Hero when every location has neither coordinates nor a boundary', () => {
+        mockLocations.current = [neither];
+        renderLocationsPage();
+
+        expect(screen.queryByTestId('map-container')).toBeNull();
+    });
+
+    it('still renders the Map Hero for a coordinate-bearing dataset (no regression)', () => {
+        mockLocations.current = [coordsOnly];
+        renderLocationsPage();
+
+        expect(screen.getByTestId('map-container')).toBeDefined();
+        expect(markerFor('Coords Only')).not.toBeUndefined();
+    });
+});
+
+// #1786: FitBounds (LocationsPage.tsx) used to call map.fitBounds directly in its render body
+// with no guard, so any LocationsPage re-render — including hoveredSlug flipping on every Polygon
+// mouseover/mouseout (#1708) — reset the user's zoom/pan. Fixed to call fitBounds from a
+// useEffect keyed on a bounds value memoized off `locations` alone, mirroring TrailMapView's
+// ChangeView.
+describe('LocationsPage FitBounds hover-safety (#1786)', () => {
+    it('fits bounds once on initial render and not again on hover-only state changes', () => {
+        renderLocationsPage();
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        // Polygon hover (mouseover/mouseout) and Card hover (mouseenter/mouseleave) both only
+        // flip hoveredSlug — neither should trigger a re-fit.
+        fireEvent.mouseOver(polygonFor('Boundary Only')!);
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.mouseOut(polygonFor('Boundary Only')!);
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.mouseEnter(cardFor('Both Loc'));
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.mouseLeave(cardFor('Both Loc'));
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-fits bounds when the shown location set changes (search/filter)', () => {
+        renderLocationsPage();
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        const searchInput = screen.getByPlaceholderText(en.locations.searchPlaceholder);
+        fireEvent.change(searchInput, { target: { value: 'Both' } });
+
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(1);
+    });
+});
+
+// #1822: the subtitle (LocationsPage.tsx, right below the page title) used to always render
+// site-wide totals (locations.length / trails.length) regardless of drill-down state — fixed to
+// scope both numbers to the drilled-into region's children (`filtered`) and their summed trail
+// counts (`statsMap`) while drilled in, reverting to site-wide totals once backed out.
+describe('LocationsPage subtitle drill-down counts (#1822)', () => {
+    it('shows site-wide location/trail totals when not drilled into a region', () => {
+        mockLocations.current = [coordsOnly, boundaryOnly];
+        mockTrails.current = [makeTrail({ locations: [locationInfo('coords-only')] })];
+        renderLocationsPage();
+
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 2, trailCount: 1 }))).toBeDefined();
+    });
+
+    it('narrows the subtitle to the drilled-into region\'s children and their summed trail counts', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        mockTrails.current = [
+            makeTrail({ id: 't1', slug: 't1', locations: [locationInfo('child-boundary')] }),
+            makeTrail({ id: 't2', slug: 't2', locations: [locationInfo('child-coords')] }),
+            makeTrail({ id: 't3', slug: 't3', locations: [locationInfo('child-coords')] }),
+            // Belongs to the region itself, not either child — must not be counted once drilled in.
+            makeTrail({ id: 't4', slug: 't4', locations: [locationInfo('region')] }),
+        ];
+        renderLocationsPage();
+
+        // Before drill-down: site-wide totals (3 locations, 4 trails).
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 3, trailCount: 4 }))).toBeDefined();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+
+        // Drilled in: 2 children, 1 + 2 = 3 trails scoped to those children only.
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 2, trailCount: 3 }))).toBeDefined();
+    });
+
+    it('restores the site-wide subtitle after backing out via the back-to-all-regions control', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        mockTrails.current = [makeTrail({ locations: [locationInfo('child-boundary')] })];
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        fireEvent.click(screen.getByRole('button', { name: en.locations.backToAllRegions }));
+
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 3, trailCount: 1 }))).toBeDefined();
+    });
+});
+
+// #1809: regression coverage for the #1808 fix — the favorite-star IconButton (LocationsPage.tsx:
+// 587-603) sits as a sibling of the CardActionArea (:480-481), not nested inside it, specifically
+// so a star click toggles favorite state without also firing the card's navigate(). Nothing
+// previously exercised either click path.
+describe('LocationsPage favorite star vs. card navigation (#1809)', () => {
+    const FAVORITES_KEY = 'utanvega_favorite_locations';
+
+    it('clicking the favorite star toggles favorite state and does not navigate', () => {
+        renderLocationsPage();
+        const card = cardFor('Both Loc');
+        const starButton = within(card).getByRole('button', { name: en.locations.addFavorite });
+
+        fireEvent.click(starButton);
+
+        // aria-pressed flips and the icon's accessible name swaps to the "remove" label.
+        expect(within(card).getByRole('button', { name: en.locations.removeFavorite }).getAttribute('aria-pressed')).toBe('true');
+        expect(JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]')).toEqual(['both-loc']);
+
+        // No navigation: the route stub never mounted, and LocationsPage-only UI (the search
+        // input, absent from the details stub) is still on screen. Uses the queryBy variant, not
+        // getBy/cardFor, so a regression that swaps the route to the stub makes this assertion
+        // actually fail (null) instead of throwing before the expect runs.
+        expect(screen.queryByTestId('location-details-stub')).toBeNull();
+        expect(screen.queryByPlaceholderText(en.locations.searchPlaceholder)).not.toBeNull();
+    });
+
+    it('clicking elsewhere on the card navigates to /locations/:slug and leaves favorite state unchanged', () => {
+        renderLocationsPage();
+        const card = cardFor('Both Loc');
+
+        // The card's own title text, scoped to this card: "Both Loc" also appears in the Marker
+        // and Polygon map stand-ins (same disambiguation problem cardFor itself solves).
+        fireEvent.click(within(card).getByText('Both Loc'));
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('both-loc');
+        expect(localStorage.getItem(FAVORITES_KEY)).toBeNull();
+    });
+});

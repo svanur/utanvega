@@ -1,11 +1,20 @@
+using Microsoft.Extensions.Caching.Memory;
+using Coordinate = NetTopologySuite.Geometries.Coordinate;
+using GeometryFactory = NetTopologySuite.Geometries.GeometryFactory;
+using Polygon = NetTopologySuite.Geometries.Polygon;
+using PrecisionModel = NetTopologySuite.Geometries.PrecisionModel;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
+using Utanvega.Backend.Application.Locations.Queries.GetLocations;
+using Utanvega.Backend.Application.Locations.Queries.GetLocationById;
 using Utanvega.Backend.Core.Entities;
 
 namespace Utanvega.Backend.Tests.Handlers;
 
 public class LocationQueryHandlerTests : IDisposable
 {
+    private static readonly GeometryFactory Factory = new(new PrecisionModel(), 4326);
+
     private readonly TestDbContextFactory _factory;
 
     public LocationQueryHandlerTests()
@@ -26,6 +35,17 @@ public class LocationQueryHandlerTests : IDisposable
             ParentId = parentId
         };
     }
+
+    // Small closed square, matching the shape (not the real coordinates) of the IS 50V
+    // municipality boundaries imported under #1705.
+    private static Polygon SimpleSquare() => Factory.CreatePolygon(new[]
+    {
+        new Coordinate(-21.95, 64.10),
+        new Coordinate(-21.90, 64.10),
+        new Coordinate(-21.90, 64.15),
+        new Coordinate(-21.95, 64.15),
+        new Coordinate(-21.95, 64.10),
+    });
 
     private Trail CreatePublishedTrail(string name)
     {
@@ -343,6 +363,198 @@ public class LocationQueryHandlerTests : IDisposable
         var handler = new GetLocationBySlugQueryHandler(ctx);
         var result = await handler.Handle(
             new GetLocationBySlugQuery("nonexistent"), CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    // --- #1707: BoundaryGeoJson conversion ---
+
+    [Fact]
+    public async Task GetLocationBySlug_LocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var location = CreateLocation("Reykjavik", LocationType.Municipality);
+        location.Boundary = SimpleSquare();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationBySlugQueryHandler(ctx);
+            var result = await handler.Handle(
+                new GetLocationBySlugQuery("reykjavik"), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.NotNull(result.Location.BoundaryGeoJson);
+            Assert.Contains("\"type\":\"Polygon\"", result.Location.BoundaryGeoJson);
+        }
+    }
+
+    [Fact]
+    public async Task GetLocationBySlug_LocationWithoutBoundary_ReturnsNullBoundaryGeoJson()
+    {
+        var location = CreateLocation("Vik", LocationType.Place);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationBySlugQueryHandler(ctx);
+            var result = await handler.Handle(
+                new GetLocationBySlugQuery("vik"), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.Null(result.Location.BoundaryGeoJson);
+        }
+    }
+
+    [Fact]
+    public async Task GetLocationBySlug_ChildLocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var parent = CreateLocation("Sudurland", LocationType.Region);
+        var child = CreateLocation("Vik", LocationType.Municipality, parent.Id);
+        child.Boundary = SimpleSquare();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.AddRange(parent, child);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationBySlugQueryHandler(ctx);
+            var result = await handler.Handle(
+                new GetLocationBySlugQuery("sudurland"), CancellationToken.None);
+
+            Assert.NotNull(result);
+            var childDto = result.ChildLocations.Single(l => l.Name == "Vik");
+            Assert.NotNull(childDto.BoundaryGeoJson);
+            Assert.Contains("\"type\":\"Polygon\"", childDto.BoundaryGeoJson);
+        }
+    }
+
+    [Fact]
+    public async Task GetLocations_LocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var withBoundary = CreateLocation("Kopavogur", LocationType.Municipality);
+        withBoundary.Boundary = SimpleSquare();
+        var withoutBoundary = CreateLocation("Vik", LocationType.Place);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.AddRange(withBoundary, withoutBoundary);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationsQueryHandler(ctx, new MemoryCache(new MemoryCacheOptions()));
+            var result = await handler.Handle(new GetLocationsQuery(), CancellationToken.None);
+
+            var kopavogur = result.Single(l => l.Name == "Kopavogur");
+            var vik = result.Single(l => l.Name == "Vik");
+
+            Assert.NotNull(kopavogur.BoundaryGeoJson);
+            Assert.Contains("\"type\":\"Polygon\"", kopavogur.BoundaryGeoJson);
+            Assert.Null(vik.BoundaryGeoJson);
+        }
+    }
+
+    // --- #1729: GetLocationById ---
+
+    [Fact]
+    public async Task GetLocationById_ReturnsLocation_WhenFound()
+    {
+        var location = CreateLocation("Vik", LocationType.Place);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationByIdQueryHandler(ctx);
+            var result = await handler.Handle(new GetLocationByIdQuery(location.Id.ToString()), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.Equal(location.Id, result.Id);
+            Assert.Equal("Vik", result.Name);
+        }
+    }
+
+    [Fact]
+    public async Task GetLocationById_ReturnsNull_WhenNotFound()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new GetLocationByIdQueryHandler(ctx);
+        var result = await handler.Handle(new GetLocationByIdQuery(Guid.NewGuid().ToString()), CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetLocationById_LocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var location = CreateLocation("Reykjavik", LocationType.Municipality);
+        location.Boundary = SimpleSquare();
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationByIdQueryHandler(ctx);
+            var result = await handler.Handle(new GetLocationByIdQuery(location.Id.ToString()), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.NotNull(result.BoundaryGeoJson);
+            Assert.Contains("\"type\":\"Polygon\"", result.BoundaryGeoJson);
+        }
+    }
+
+    // --- #1746: GetLocationById by slug ---
+
+    [Fact]
+    public async Task GetLocationById_ReturnsLocation_WhenFoundBySlug()
+    {
+        var location = CreateLocation("Akranes", LocationType.Municipality);
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            await ctx.SaveChangesAsync();
+        }
+
+        using (var ctx = _factory.CreateContext())
+        {
+            var handler = new GetLocationByIdQueryHandler(ctx);
+            var result = await handler.Handle(new GetLocationByIdQuery("akranes"), CancellationToken.None);
+
+            Assert.NotNull(result);
+            Assert.Equal(location.Id, result.Id);
+            Assert.Equal("Akranes", result.Name);
+        }
+    }
+
+    [Fact]
+    public async Task GetLocationById_ReturnsNull_WhenSlugUnknown()
+    {
+        using var ctx = _factory.CreateContext();
+        var handler = new GetLocationByIdQueryHandler(ctx);
+        var result = await handler.Handle(new GetLocationByIdQuery("no-such-location"), CancellationToken.None);
 
         Assert.Null(result);
     }

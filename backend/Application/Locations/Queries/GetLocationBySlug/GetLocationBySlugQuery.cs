@@ -6,6 +6,7 @@ using Utanvega.Backend.Application.Locations.Queries.GetLocations;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
 
 namespace Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 
@@ -44,12 +45,17 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
                 ParentName = l.Parent != null ? l.Parent.Name : null,
                 ParentNameEn = l.Parent != null ? l.Parent.NameEn : null,
                 ChildrenCount = l.Children.Count,
+                l.Boundary,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (location == null) return null;
 
         var trailCount = await _context.TrailLocations.CountAsync(tl => tl.LocationId == location.Id, cancellationToken);
+
+        // Boundary is a Polygon — can't convert to GeoJSON inside the EF projection above, so
+        // it's done here in memory, same two-pass approach as the GpxData/LineString handling below.
+        var boundaryGeoJson = location.Boundary == null ? null : new GeoJsonWriter().Write(location.Boundary);
 
         var locationDto = new LocationDto(
             location.Id,
@@ -66,11 +72,13 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
             location.Longitude,
             location.Radius,
             location.ChildrenCount,
-            trailCount
+            trailCount,
+            BoundaryGeoJson: boundaryGeoJson
         );
 
         // Build child location DTOs
         var childRaw = await _context.Locations
+            .AsNoTracking()
             .Where(l => l.ParentId == location.Id)
             .OrderBy(l => l.Name)
             .Select(l => new {
@@ -81,12 +89,15 @@ public class GetLocationBySlugQueryHandler : IRequestHandler<GetLocationBySlugQu
                 l.Radius,
                 ChildrenCount = l.Children.Count,
                 TrailsCount = l.TrailLocations.Count,
+                l.Boundary,
             })
             .ToListAsync(cancellationToken);
+        // Boundary is a Polygon — same two-pass GeoJSON conversion as the primary location above.
         var childDtos = childRaw.Select(l => new LocationDto(
             l.Id, l.Name, l.NameEn, l.Slug, l.Description, l.DescriptionEn,
             l.Type, l.ParentId, location.Name, location.NameEn, l.Latitude, l.Longitude, l.Radius,
-            l.ChildrenCount, l.TrailsCount
+            l.ChildrenCount, l.TrailsCount,
+            BoundaryGeoJson: l.Boundary == null ? null : new GeoJsonWriter().Write(l.Boundary)
         )).ToList();
 
         // Collect all descendant location IDs for ancestor-aware trail query

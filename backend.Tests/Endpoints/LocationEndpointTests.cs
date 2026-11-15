@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using Utanvega.Backend.Application.Locations;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Tests.WebHost;
 
@@ -314,5 +315,246 @@ public class LocationEndpointTests : IDisposable
         Assert.True(body.Errors.ContainsKey("Id"));
     }
 
+    private async Task<Guid> SeedLocationWithBoundaryAsync()
+    {
+        const string boundaryGeoJson = """
+            {"type":"Polygon","coordinates":[[[-21.95,64.10],[-21.90,64.10],[-21.90,64.15],[-21.95,64.15],[-21.95,64.10]]]}
+            """;
+        Assert.True(LocationBoundaryParser.TryParse(boundaryGeoJson, out var polygon, out _));
+
+        using var db = _factory.CreateDbContext();
+        var location = new Location
+        {
+            Name = "Bounded Location",
+            Slug = $"bounded-location-{Guid.NewGuid():N}",
+            Type = LocationType.Municipality,
+            Boundary = polygon,
+            CreatedBy = "seed-user",
+        };
+        db.Locations.Add(location);
+        await db.SaveChangesAsync();
+        return location.Id;
+    }
+
+    /// <summary>
+    /// Endpoint-level test for <c>GET /api/v1/admin/locations/{id:guid}/boundary</c> (#1706) —
+    /// proves a saved <see cref="Location.Boundary"/> round-trips back out as GeoJSON via
+    /// <c>GetLocationBoundaryQuery</c>'s <c>GeoJsonWriter</c>, for the admin LocationDialog to load
+    /// into an editable Geoman layer.
+    /// </summary>
+    [Fact]
+    public async Task GetLocationBoundary_LocationWithBoundary_ReturnsBoundaryGeoJson()
+    {
+        var locationId = await SeedLocationWithBoundaryAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<BoundaryResponse>();
+        Assert.NotNull(body);
+        Assert.NotNull(body!.BoundaryGeoJson);
+        Assert.Contains("Polygon", body.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public async Task GetLocationBoundary_LocationWithoutBoundary_ReturnsNullBoundaryGeoJson()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<BoundaryResponse>();
+        Assert.NotNull(body);
+        Assert.Null(body!.BoundaryGeoJson);
+    }
+
+    [Fact]
+    public async Task GetLocationBoundary_AnonymousRequest_IsRejected()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLocationBoundary_NonAdminRole_IsForbidden()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("some-user", role: "member");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}/boundary");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>
+    /// #1706 review fix: before this, <c>UpdateLocationCommandHandler</c> only ever parsed a
+    /// non-null <c>BoundaryGeoJson</c> and otherwise left <see cref="Location.Boundary"/> alone —
+    /// so the admin dialog sending <c>boundaryGeoJson: null</c> after a Geoman removal (the only
+    /// value it ever sent, since <c>JSON.stringify</c>'d removal state is <c>null</c>) silently
+    /// left the stale Boundary in the DB. <c>""</c> (empty string) is now the explicit clear
+    /// sentinel the handler acts on.
+    /// </summary>
+    [Fact]
+    public async Task UpdateLocation_EmptyStringBoundaryGeoJson_ClearsExistingBoundary()
+    {
+        var locationId = await SeedLocationWithBoundaryAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/admin/locations/{locationId}",
+            new
+            {
+                Id = locationId,
+                Name = "Bounded Location",
+                Slug = $"bounded-location-{Guid.NewGuid():N}",
+                Description = (string?)null,
+                Type = "Municipality",
+                ParentId = (Guid?)null,
+                Latitude = (double?)null,
+                Longitude = (double?)null,
+                Radius = (double?)null,
+                BoundaryGeoJson = "",
+                UpdatedBy = "admin-user",
+            });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var db = _factory.CreateDbContext();
+        var location = await db.Locations.FindAsync(locationId);
+        Assert.NotNull(location);
+        Assert.Null(location!.Boundary);
+    }
+
+    /// <summary>
+    /// Regression guard alongside the fix above: omitting <c>BoundaryGeoJson</c> entirely (binds to
+    /// <c>null</c>) must still leave an already-set <see cref="Location.Boundary"/> untouched — the
+    /// "" clear sentinel must not have widened to cover plain <c>null</c> too.
+    /// </summary>
+    [Fact]
+    public async Task UpdateLocation_NullBoundaryGeoJson_LeavesExistingBoundaryUntouched()
+    {
+        var locationId = await SeedLocationWithBoundaryAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/v1/admin/locations/{locationId}",
+            new
+            {
+                Id = locationId,
+                Name = "Bounded Location",
+                Slug = $"bounded-location-{Guid.NewGuid():N}",
+                Description = (string?)null,
+                Type = "Municipality",
+                ParentId = (Guid?)null,
+                Latitude = (double?)null,
+                Longitude = (double?)null,
+                Radius = (double?)null,
+                UpdatedBy = "admin-user",
+            });
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var db = _factory.CreateDbContext();
+        var location = await db.Locations.FindAsync(locationId);
+        Assert.NotNull(location);
+        Assert.NotNull(location!.Boundary);
+    }
+
+    /// <summary>
+    /// Endpoint-level test for <c>GET /api/v1/admin/locations/{id:guid}</c> (#1729) — resolves one
+    /// Location without the client having to fetch the entire unfiltered admin locations list.
+    /// </summary>
+    [Fact]
+    public async Task GetLocationById_LocationExists_ReturnsLocation()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<LocationResponse>();
+        Assert.NotNull(body);
+        Assert.Equal(locationId, body!.Id);
+        Assert.Equal("Test Location", body.Name);
+    }
+
+    [Fact]
+    public async Task GetLocationById_UnknownId_ReturnsNotFound()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>
+    /// #1746: the same <c>GET /api/v1/admin/locations/{idOrSlug}</c> route must resolve a slug
+    /// to the identical record — and identical JSON shape — as the id lookup above.
+    /// </summary>
+    [Fact]
+    public async Task GetLocationById_BySlug_ReturnsSameLocationAsById()
+    {
+        var locationId = await SeedLocationAsync();
+        string slug;
+        using (var db = _factory.CreateDbContext())
+        {
+            slug = (await db.Locations.FindAsync(locationId))!.Slug;
+        }
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var byId = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+        var bySlug = await client.GetAsync($"/api/v1/admin/locations/{slug}");
+
+        Assert.Equal(HttpStatusCode.OK, bySlug.StatusCode);
+        var byIdBody = await byId.Content.ReadAsStringAsync();
+        var bySlugBody = await bySlug.Content.ReadAsStringAsync();
+        Assert.Equal(byIdBody, bySlugBody);
+    }
+
+    [Fact]
+    public async Task GetLocationById_UnknownSlug_ReturnsNotFound()
+    {
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+
+        var response = await client.GetAsync("/api/v1/admin/locations/no-such-location");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLocationById_AnonymousRequest_IsRejected()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLocationById_NonAdminRole_IsForbidden()
+    {
+        var locationId = await SeedLocationAsync();
+        var client = _factory.CreateAuthenticatedClient("some-user", role: "member");
+
+        var response = await client.GetAsync($"/api/v1/admin/locations/{locationId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private record BoundaryResponse(string? BoundaryGeoJson);
+
     private record CreatedLocationResponse(Guid Id);
+
+    private record LocationResponse(Guid Id, string Name);
 }

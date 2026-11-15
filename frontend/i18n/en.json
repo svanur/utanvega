@@ -348,6 +348,7 @@
         "stopFollowing": "Stop following my location",
         "youAreHere": "You are here",
         "eventLocation": "Event location",
+        "locationCenter": "Location",
         "viewDetails": "View Details",
         "showTracks": "Show trail tracks",
         "hideTracks": "Hide trail tracks",
@@ -371,7 +372,13 @@
         "trailCount": "{{count}} trails",
         "noMatch": "No locations match your search.",
         "noLocations": "No locations found.",
+        "addFavorite": "Add Favorite",
+        "removeFavorite": "Remove Favorite",
+        "favoritesOnly": "Show favorites only",
+        "noFavorites": "No favorite locations found.",
+        "showAllLocations": "Show all locations",
         "backToLocations": "Back to Locations",
+        "backToAllRegions": "Back to all regions",
         "locationNotFound": "Location not found",
         "trailsIn": "Trails in {{name}} ({{count}})",
         "noTrailsInLocation": "No trails found in this location yet.",
@@ -598,6 +605,7 @@
         "approximateLocation": "Estimated for a broad area",
         "date": "Date",
         "basedOnYears": "An overview of weather conditions in the area over the past {{years}} years, during the time the event takes place. — This is not a probability calculation or a forecast for the weather at the next event. You can click 'View trail' above to see weather forecast.",
+        "basedOnYearsLocation": "An overview of weather conditions in the area over the past {{years}} years, around this time of year. — This is not a probability calculation or a weather forecast.",
         "unavailable": "Historical climate data unavailable"
     },
     "privacy": {
@@ -811,6 +819,10 @@
             }
         },
         "changelog": {
+            "v1_18_0": {
+                "title": "Favorite locations, clickable map boundaries, and climate normals for locations",
+                "description": "You can now favorite a location, just like a race. On the /locations map, clicking a boundary shape — or its marker — drills down into that region, with a breadcrumb trail and counts that match. Location pages now show a climate normals card, and locations with no trails but their own boundary or center point get a map too. Leaflet maps also got proper dark-mode colors for popups and tooltips, plus assorted touch-target and polish fixes."
+            },
             "v1_17_10": {
                 "title": "Feedback privacy, per-race share cards, and an admin ordering fix",
                 "description": "Feedback screenshots and browser info you submit are now automatically cleared after a retention window. Sharing a race within a series now reflects that race's own race-week status instead of the whole series'. Admin's keyboard j/k navigation through a series' expanded races now matches the order you last dragged them into. A service-worker bug that could serve the app shell instead of the actual file for some file-style request paths has been fixed, and the stale, unused /challenge/2026 page has been removed."
@@ -1043,6 +1055,7 @@
                 "editions": "Editions",
                 "races": "Races",
                 "trails": "Trails",
+                "locations": "Locations",
                 "historyPage": "Past Events",
                 "photographers": "Photographers"
             }

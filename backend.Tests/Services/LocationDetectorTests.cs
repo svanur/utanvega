@@ -106,6 +106,147 @@ public class LocationDetectorTests : IDisposable
         Assert.Empty(results);
     }
 
+    // ─── Boundary-mode (#1705): Boundary.Contains instead of circle math ───
+
+    private static Polygon MakeSquareBoundary(double minLng, double minLat, double maxLng, double maxLat) =>
+        new(new LinearRing(new[]
+        {
+            new Coordinate(minLng, minLat),
+            new Coordinate(maxLng, minLat),
+            new Coordinate(maxLng, maxLat),
+            new Coordinate(minLng, maxLat),
+            new Coordinate(minLng, minLat),
+        }))
+        { SRID = 4326 };
+
+    [Fact]
+    public async Task DetectLocationsAsync_PointInsideBoundary_IsReturned()
+    {
+        // A square "municipality" boundary around Hafnarfjörður-ish coordinates — no Radius set,
+        // since Boundary (not the circle) is what should decide the match here.
+        var location = new Core.Entities.Location
+        {
+            Name = "Hafnarfjörður",
+            Slug = "hafnarfjordur-boundary",
+            Type = LocationType.Municipality,
+            Center = new Point(-21.95, 64.05) { SRID = 4326 },
+            Boundary = MakeSquareBoundary(-22.0, 64.0, -21.9, 64.1),
+            Radius = null,
+        };
+
+        using (var seedCtx = _factory.CreateContext())
+        {
+            seedCtx.Locations.Add(location);
+            await seedCtx.SaveChangesAsync();
+        }
+
+        using var ctx = _factory.CreateContext();
+        var detector = new LocationDetector(ctx, _memoryCache);
+
+        // Well inside the square.
+        var results = await detector.DetectLocationsAsync(64.05, -21.95);
+
+        var hit = Assert.Single(results);
+        Assert.Equal(location.Id, hit.Id);
+    }
+
+    [Fact]
+    public async Task DetectLocationsAsync_PointOutsideBoundary_IsNotReturned()
+    {
+        var location = new Core.Entities.Location
+        {
+            Name = "Hafnarfjörður",
+            Slug = "hafnarfjordur-boundary-2",
+            Type = LocationType.Municipality,
+            Center = new Point(-21.95, 64.05) { SRID = 4326 },
+            Boundary = MakeSquareBoundary(-22.0, 64.0, -21.9, 64.1),
+            Radius = null,
+        };
+
+        using (var seedCtx = _factory.CreateContext())
+        {
+            seedCtx.Locations.Add(location);
+            await seedCtx.SaveChangesAsync();
+        }
+
+        using var ctx = _factory.CreateContext();
+        var detector = new LocationDetector(ctx, _memoryCache);
+
+        // Well outside the square (same point the circle-mode tests above use).
+        var results = await detector.DetectLocationsAsync(64.1270, -21.9200);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task DetectLocationsAsync_LocationWithoutBoundary_StillUsesRadiusCircle()
+    {
+        // Regression guard: a location with no migrated Boundary must still fall back to the
+        // Haversine <= Radius circle check, not be silently excluded by the dual-mode change.
+        var location = new Core.Entities.Location
+        {
+            Name = "Öskjuhlíð",
+            Slug = "oskjuhlid-fallback",
+            Type = LocationType.Place,
+            Center = new Point(-21.9174, 64.1286) { SRID = 4326 },
+            Radius = 500,
+            Boundary = null,
+        };
+
+        using (var seedCtx = _factory.CreateContext())
+        {
+            seedCtx.Locations.Add(location);
+            await seedCtx.SaveChangesAsync();
+        }
+
+        using var ctx = _factory.CreateContext();
+        var detector = new LocationDetector(ctx, _memoryCache);
+
+        var results = await detector.DetectLocationsAsync(64.1270, -21.9200);
+
+        var hit = Assert.Single(results);
+        Assert.Equal(location.Id, hit.Id);
+    }
+
+    [Fact]
+    public async Task DetectAlongRouteAsync_RouteInsideBoundary_DetectsLocation()
+    {
+        var location = new Core.Entities.Location
+        {
+            Name = "Hafnarfjörður",
+            Slug = "hafnarfjordur-boundary-route",
+            Type = LocationType.Municipality,
+            Center = new Point(-21.95, 64.05) { SRID = 4326 },
+            Boundary = MakeSquareBoundary(-22.0, 64.0, -21.9, 64.1),
+            Radius = null,
+        };
+
+        using (var seedCtx = _factory.CreateContext())
+        {
+            seedCtx.Locations.Add(location);
+            await seedCtx.SaveChangesAsync();
+        }
+
+        var trail = new Trail
+        {
+            Name = "Route inside boundary",
+            Slug = "route-inside-boundary",
+            GpxData = new LineString(new[]
+            {
+                new Coordinate(-21.96, 64.01),
+                new Coordinate(-21.94, 64.09),
+            }),
+        };
+
+        using var ctx = _factory.CreateContext();
+        var detector = new LocationDetector(ctx, _memoryCache);
+
+        var results = await detector.DetectAlongRouteAsync(trail);
+
+        var hit = Assert.Single(results);
+        Assert.Equal(location.Id, hit.Id);
+    }
+
     // ─── Haversine distance formula ───
 
     [Fact]

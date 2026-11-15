@@ -24,6 +24,7 @@ using Utanvega.Backend.Application.Trails.Commands.BackfillElevationProfiles;
 using Utanvega.Backend.Application.Trails.Queries.GetTrails;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometry;
 using Utanvega.Backend.Application.Locations.Queries.GetLocations;
+using Utanvega.Backend.Application.Locations.Queries.GetLocationById;
 using Utanvega.Backend.Application.Locations.Commands.CreateLocation;
 using Utanvega.Backend.Application.Locations.Commands.UpdateLocation;
 using Utanvega.Backend.Application.Locations.Commands.DeleteLocation;
@@ -34,6 +35,7 @@ using Utanvega.Backend.Application.Trails.Queries.GetTrailBySlug;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailSuggestions;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationBySlug;
 using Utanvega.Backend.Application.Locations.Queries.GetLocationTree;
+using Utanvega.Backend.Application.Locations.Queries.GetLocationBoundary;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGpx;
 using Utanvega.Backend.Application.Trails.Queries.GetTrailGeometries;
 using Utanvega.Backend.Application.Trails.Queries.GetTrendingTrails;
@@ -766,6 +768,30 @@ app.MapGet("/api/v1/locations/{slug}", async (string slug, IMediator mediator) =
 })
 .WithName("GetPublicLocationBySlug");
 
+app.MapGet("/api/v1/locations/{slug}/climate", async (string slug, int? month, int? day, IMediator mediator) =>
+{
+    // #1801: unlike GetEventClimate (always given a concrete event date), a Location has no
+    // inherent target date of its own — when neither month nor day is supplied, this defaults to
+    // "what's it usually like here around now" using the current UTC date, rather than requiring
+    // the caller to pass one. If either is supplied, both must be present and valid, same 1-12/
+    // 1-31 validation GetEventClimate already applies.
+    if (month is null && day is null)
+    {
+        var today = DateTime.UtcNow;
+        month = today.Month;
+        day = today.Day;
+    }
+    else if (month is null or < 1 or > 12 || day is null or < 1 or > 31)
+    {
+        return Results.BadRequest("Invalid month/day. Month must be 1-12 and day must be 1-31.");
+    }
+
+    var climate = await mediator.Send(new GetLocationClimateQuery(slug, month.Value, day.Value));
+    if (climate == null) return Results.NotFound();
+    return Results.Ok(climate);
+})
+.WithName("GetLocationClimate");
+
 app.MapGet("/api/v1/health", () => Results.Ok(new
 {
     status = "healthy",
@@ -1310,6 +1336,13 @@ app.MapGet("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (G
 })
 .WithName("GetLocations");
 
+app.MapGet("/api/v1/admin/locations/{idOrSlug}", [Authorize(Policy = "AdminOnly")] async (string idOrSlug, IMediator mediator) =>
+{
+    var location = await mediator.Send(new GetLocationByIdQuery(idOrSlug));
+    return location is null ? Results.NotFound() : Results.Ok(location);
+})
+.WithName("GetLocationById");
+
 app.MapPost("/api/v1/admin/locations", [Authorize(Policy = "AdminOnly")] async (CreateLocationCommand command, IMediator mediator, HttpContext httpContext) =>
 {
     try
@@ -1337,6 +1370,13 @@ app.MapPut("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")
     return Results.NoContent();
 })
 .WithName("UpdateLocation");
+
+app.MapGet("/api/v1/admin/locations/{id:guid}/boundary", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator) =>
+{
+    var boundary = await mediator.Send(new GetLocationBoundaryQuery(id));
+    return Results.Ok(boundary);
+})
+.WithName("GetLocationBoundary");
 
 app.MapDelete("/api/v1/admin/locations/{id:guid}", [Authorize(Policy = "AdminOnly")] async (Guid id, IMediator mediator, ILogger<Program> logger, HttpContext httpContext) =>
 {

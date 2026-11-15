@@ -28,6 +28,13 @@ interface ClimateCardProps {
     loading: boolean;
     error: string | null;
     locationName?: string | null;
+    // #1816 review fix: the footer caption below (climate.basedOnYears) was written for the event
+    // page specifically — it mentions "the event" and a "View trail" button, neither of which
+    // exists on LocationDetailsPage. Defaults to 'event' so every existing event-page call site
+    // keeps its exact original copy/behavior unchanged; LocationDetailsPage passes 'location' to
+    // get climate.basedOnYearsLocation instead, a generically-worded sibling key (not a rewrite
+    // of the event key) added alongside it in both en.json and is.json.
+    context?: 'event' | 'location';
 }
 
 // Unlike WeatherCard, there's no WMO weatherCode to key off — climate normals are an aggregate
@@ -72,7 +79,7 @@ function formatCoordinate(lat: number, lon: number): string {
 // Historical climate normals card — deliberately visually distinct from WeatherCard (different
 // icon, "usually" framing, no condition chip) so a visitor can't mistake a 15-year average for
 // today's forecast when both cards render on the same event-detail page (#1335).
-export default function ClimateCard({ climate, loading, error, locationName }: ClimateCardProps) {
+export default function ClimateCard({ climate, loading, error, locationName, context = 'event' }: ClimateCardProps) {
     const { t, i18n } = useTranslation();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -291,7 +298,7 @@ export default function ClimateCard({ climate, loading, error, locationName }: C
                     <Divider sx={{ my: 2 }} />
 
                     <Typography variant="caption" color="text.secondary">
-                        {t('climate.basedOnYears', { years: climate.yearsOfData })}
+                        {t(context === 'location' ? 'climate.basedOnYearsLocation' : 'climate.basedOnYears', { years: climate.yearsOfData })}
                     </Typography>
                 </Box>
             </Collapse>

@@ -18,5 +18,9 @@ public record LocationDto(
     double? Radius,
     int ChildrenCount,
     int TrailsCount,
-    Dictionary<string, string>? TranslationHashes = null
+    Dictionary<string, string>? TranslationHashes = null,
+    // #1707: GeoJSON Polygon, converted from Location.Boundary (#1705) when present, so the
+    // public detail page can render the municipality outline. Null for the vast majority of
+    // locations that don't have a saved boundary yet.
+    string? BoundaryGeoJson = null
 );

@@ -100,4 +100,42 @@ describe('computeMapBounds', () => {
             expect(computeMapBounds([], [], null, null)).toBeNull();
         });
     });
+
+    // #1790: a saved boundary polygon's own extent must fold into the bounds — both so a
+    // boundary-only location (zero linked trails) frames on its boundary instead of the map's
+    // hardcoded default, and so a location with both a boundary and trails frames them together.
+    describe('boundaryLatLngs (#1790)', () => {
+        it('uses the boundary extent as the bounds when there are no trails, no userLocation, and no fallbackCenter', () => {
+            const boundary: [number, number][] = [[64.0, -19.0], [64.5, -19.5], [64.2, -19.8]];
+
+            const result = computeMapBounds([], [], null, null, boundary);
+
+            expect(result).toEqual([[64.0, -19.8], [64.5, -19.0]]);
+        });
+
+        it('frames the boundary together with a trail, not either alone', () => {
+            const trail = makeTrail({ slug: 'test-trail', startLatitude: 64.0, startLongitude: -20.0 });
+            const boundary: [number, number][] = [[65.0, -18.0], [65.2, -18.2]];
+
+            const result = computeMapBounds([trail], [], null, null, boundary);
+
+            expect(result).toEqual([[64.0, -20.0], [65.2, -18.0]]);
+        });
+
+        it('is ignored when null', () => {
+            const trail = makeTrail({ slug: 'test-trail', startLatitude: 64.0, startLongitude: -20.0 });
+
+            const result = computeMapBounds([trail], [], null, null, null);
+
+            expect(result).toEqual([[64.0, -20.0], [64.0, -20.0]]);
+        });
+
+        it('takes precedence over fallbackCenter when both are present but there are no trails/userLocation', () => {
+            const boundary: [number, number][] = [[64.0, -19.0], [64.1, -19.1]];
+
+            const result = computeMapBounds([], [], null, { lat: 10, lng: 10 }, boundary);
+
+            expect(result).toEqual([[64.0, -19.1], [64.1, -19.0]]);
+        });
+    });
 });

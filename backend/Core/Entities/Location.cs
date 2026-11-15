@@ -33,6 +33,12 @@ public class Location
     // Spatial
     public Point? Center { get; set; }
     public double? Radius { get; set; } // in meters
+    // #1705: a real municipality boundary, imported once from IS 50V (not drawn in the admin UI
+    // yet). When set, LocationDetector tests Boundary.Contains instead of the Haversine/Radius
+    // circle, and Center is kept as the boundary's centroid (see CreateLocationCommand /
+    // UpdateLocationCommand) so existing Center consumers (e.g. GetEventClimateQuery) keep working
+    // unchanged. Radius is left in place but unused once a location has a Boundary.
+    public Polygon? Boundary { get; set; }
     
     // Auditing
     public string? CreatedBy { get; set; }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using NetTopologySuite.Geometries;
 using Utanvega.Backend.Application.Caching;
 using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Infrastructure.Persistence;
@@ -24,17 +25,25 @@ public class LocationDetector
     }
 
     /// <summary>
-    /// Find all locations whose center is within their radius of the given point.
-    /// Returns matches sorted by distance (closest first).
+    /// Find all locations containing the given point. A location with a real Boundary polygon
+    /// (#1705) is tested with Boundary.Contains; everything else falls back to the original
+    /// Haversine distance &lt;= Radius circle check.
+    /// Returns matches sorted by distance (closest first; a Boundary hit sorts as distance 0).
     /// </summary>
     public async Task<List<DetectedLocation>> DetectLocationsAsync(
         double lat, double lng, CancellationToken ct = default)
     {
         var locations = await GetAllLocationCenters(ct);
+        var point = new Point(lng, lat) { SRID = 4326 };
 
         return locations
-            .Select(l => new { l.Id, l.Name, l.Type, Distance = HaversineMeters(lat, lng, l.CenterY, l.CenterX), l.Radius })
-            .Where(l => l.Distance <= l.Radius)
+            .Select(l => new
+            {
+                l.Id, l.Name, l.Type,
+                Distance = l.Boundary != null ? 0 : HaversineMeters(lat, lng, l.CenterY, l.CenterX),
+                IsMatch = l.Boundary != null ? l.Boundary.Contains(point) : l.Radius.HasValue && HaversineMeters(lat, lng, l.CenterY, l.CenterX) <= l.Radius.Value,
+            })
+            .Where(l => l.IsMatch)
             .OrderBy(l => l.Distance)
             .Select(l => new DetectedLocation(l.Id, l.Name, l.Type.ToString(), Math.Round(l.Distance, 0)))
             .ToList();
@@ -60,9 +69,19 @@ public class LocationDetector
         for (int i = 0; i < samplePoints.Count; i++)
         {
             var (lat, lng) = samplePoints[i];
+            var samplePoint = new Point(lng, lat) { SRID = 4326 };
+            // #1705: dual-mode — a location with a real Boundary polygon is tested with
+            // Boundary.Contains (distance reported as 0, there's no meaningful "distance to
+            // centroid" the role-assignment logic below needs); everything else keeps the
+            // original Haversine <= Radius circle check unchanged.
             var hits = locations
-                .Select(l => new { l.Id, l.Name, l.Type, Distance = HaversineMeters(lat, lng, l.CenterY, l.CenterX), l.Radius })
-                .Where(l => l.Distance <= l.Radius);
+                .Select(l => new
+                {
+                    l.Id, l.Name, l.Type,
+                    Distance = l.Boundary != null ? 0 : HaversineMeters(lat, lng, l.CenterY, l.CenterX),
+                    IsMatch = l.Boundary != null ? l.Boundary.Contains(samplePoint) : l.Radius.HasValue && HaversineMeters(lat, lng, l.CenterY, l.CenterX) <= l.Radius.Value,
+                })
+                .Where(l => l.IsMatch);
 
             foreach (var hit in hits)
             {
@@ -244,17 +263,27 @@ public class LocationDetector
         if (_cache.TryGetValue(CacheKeys.LocationCentersAll, out List<LocationCenter>? cached) && cached is not null)
             return cached;
 
+        // #1705: a location now qualifies either the old way (Center + a positive Radius) or via
+        // a real Boundary polygon — Radius is allowed to be null/unset once a Boundary exists.
         var centers = await _context.Locations
             .AsNoTracking()
-            .Where(l => l.Center != null && l.Radius != null && l.Radius > 0)
-            .Select(l => new LocationCenter(l.Id, l.Name, l.Type, l.Center!.Y, l.Center!.X, l.Radius!.Value, l.ParentId))
+            .Where(l => l.Boundary != null || (l.Center != null && l.Radius != null && l.Radius > 0))
+            .Select(l => new LocationCenter(
+                l.Id, l.Name, l.Type,
+                l.Center != null ? l.Center.Y : 0,
+                l.Center != null ? l.Center.X : 0,
+                l.Radius,
+                l.ParentId,
+                l.Boundary))
             .ToListAsync(ct);
 
         _cache.Set(CacheKeys.LocationCentersAll, centers, TimeSpan.FromHours(1));
         return centers;
     }
 
-    private record LocationCenter(Guid Id, string Name, LocationType Type, double CenterY, double CenterX, double Radius, Guid? ParentId);
+    private record LocationCenter(
+        Guid Id, string Name, LocationType Type, double CenterY, double CenterX,
+        double? Radius, Guid? ParentId, Polygon? Boundary);
 
     private class LocationHitInfo
     {

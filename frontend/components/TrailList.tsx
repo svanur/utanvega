@@ -1593,7 +1593,7 @@ export const TrailList: React.FC<TrailListProps> = ({ tagSlug, onViewModeChange 
                         <CircularProgress />
                     </Box>
                 }>
-                    <TrailMapView trails={filteredTrails} userLocation={userLocation} />
+                    <TrailMapView trails={filteredTrails} userLocation={userLocation} showLocationBoundaries />
                 </React.Suspense>
             )}
 

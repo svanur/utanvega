@@ -37,5 +37,6 @@ export default defineConfig({
     environment: 'node',
     include: ['**/*.test.ts', '**/*.test.tsx'],
     fileParallelism: false,
+    setupFiles: ['./test-setup.ts'],
   },
 });
