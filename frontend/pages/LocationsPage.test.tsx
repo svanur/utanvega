@@ -417,9 +417,12 @@ describe('LocationsPage favorite star vs. card navigation (#1809)', () => {
         expect(within(card).getByRole('button', { name: en.locations.removeFavorite }).getAttribute('aria-pressed')).toBe('true');
         expect(JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]')).toEqual(['both-loc']);
 
-        // No navigation: the route stub never mounted and LocationsPage's own content is still here.
+        // No navigation: the route stub never mounted, and LocationsPage-only UI (the search
+        // input, absent from the details stub) is still on screen. Uses the queryBy variant, not
+        // getBy/cardFor, so a regression that swaps the route to the stub makes this assertion
+        // actually fail (null) instead of throwing before the expect runs.
         expect(screen.queryByTestId('location-details-stub')).toBeNull();
-        expect(cardFor('Both Loc')).toBeDefined();
+        expect(screen.queryByPlaceholderText(en.locations.searchPlaceholder)).not.toBeNull();
     });
 
     it('clicking elsewhere on the card navigates to /locations/:slug and leaves favorite state unchanged', () => {
