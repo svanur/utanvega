@@ -19,6 +19,7 @@ import {
     ToggleButtonGroup,
     ToggleButton,
     Tooltip,
+    Button,
     alpha,
     useTheme
 } from '@mui/material';
@@ -29,6 +30,8 @@ import SortIcon from '@mui/icons-material/Sort';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import ViewListIcon from '@mui/icons-material/ViewList';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { MapContainer, TileLayer, Marker, Polygon, Tooltip as LeafletTooltip, useMap, LayersControl } from 'react-leaflet';
 import MarkerClusterGroup from '@changey/react-leaflet-markercluster';
 import L from 'leaflet';
@@ -41,6 +44,7 @@ import { LeafletTooltipThemeStyles } from '../components/LeafletTooltipStyles';
 import { geoJsonBoundaryToLatLngParts, getBoundaryPathOptions, SIMPLEMAPS_CC_BY_ATTRIBUTION } from '../components/locationBoundary';
 import { computeFitBoundsPoints } from './locationsFitBounds';
 import { useLocations, Location } from '../hooks/useLocations';
+import { useFavoriteLocations } from '../hooks/useFavoriteLocations';
 import { useLocalize } from '../utils/localize';
 import { useTrails, Trail } from '../hooks/useTrails';
 import RunningLoader from '../components/RunningLoader';
@@ -141,12 +145,14 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     const localize = useLocalize();
     const { locations, loading, error } = useLocations();
     const { trails } = useTrails();
+    const { favoriteLocations, toggleFavoriteLocation, isFavoriteLocation } = useFavoriteLocations();
     const navigate = useNavigate();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState<SortField>('trails');
     const [showMap, setShowMap] = useState(true);
+    const [favoritesOnly, setFavoritesOnly] = useState(false);
     // #1708: shared between the map's boundary Polygon layer and the list Cards — hovering (or
     // tapping, via click) either one highlights both, independent of MarkerClusterGroup's own
     // marker state.
@@ -173,6 +179,9 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                 (l.descriptionEn?.toLowerCase().includes(q) ?? false)
             );
         }
+        if (favoritesOnly) {
+            result = result.filter(l => favoriteLocations.includes(l.slug));
+        }
         result.sort((a, b) => {
             const sa = statsMap[a.slug];
             const sb = statsMap[b.slug];
@@ -181,7 +190,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
             return (localize(a.name, a.nameEn) ?? a.name).localeCompare(localize(b.name, b.nameEn) ?? b.name, 'is');
         });
         return result;
-    }, [locations, search, sortBy, statsMap, localize]);
+    }, [locations, search, sortBy, favoritesOnly, favoriteLocations, statsMap, localize]);
 
     const locationsWithCoords = useMemo(() =>
         filtered.filter(l => l.latitude && l.longitude),
@@ -426,12 +435,24 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                         <ToggleButton value="map"><Tooltip title={t('locations.showMap')}><PlaceOutlinedIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
                         <ToggleButton value="list"><Tooltip title={t('locations.hideMap')}><ViewListIcon sx={{ fontSize: 18 }} /></Tooltip></ToggleButton>
                     </ToggleButtonGroup>
+                    <Tooltip title={t('locations.favoritesOnly')}>
+                        <IconButton
+                            size="small"
+                            onClick={() => setFavoritesOnly(f => !f)}
+                            color={favoritesOnly ? 'warning' : 'default'}
+                            aria-label={t('locations.favoritesOnly')}
+                            aria-pressed={favoritesOnly}
+                        >
+                            {favoritesOnly ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
+                        </IconButton>
+                    </Tooltip>
                 </Stack>
 
                 {/* Location Cards */}
                 <Grid container spacing={2}>
                     {filtered.map(loc => {
                         const stats = statsMap[loc.slug];
+                        const isFavorited = isFavoriteLocation(loc.slug);
                         return (
                             <Grid item xs={12} sm={6} key={loc.id}>
                                 <div ref={el => { cardRefs.current[loc.slug] = el; }}>
@@ -462,9 +483,21 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                 {/* Header */}
                                                 <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                                                     <LocationOnIcon color="primary" />
-                                                    <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
+                                                    <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3, flex: 1 }}>
                                                         {localize(loc.name, loc.nameEn) ?? loc.name}
                                                     </Typography>
+                                                    <Tooltip title={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}>
+                                                        <IconButton
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleFavoriteLocation(loc.slug);
+                                                            }}
+                                                            aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
+                                                            sx={{ width: 44, height: 44, m: -1 }}
+                                                        >
+                                                            {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 </Stack>
 
                                                 {/* Type & Parent */}
@@ -571,8 +604,13 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                     <Box sx={{ textAlign: 'center', py: 8 }}>
                         <LocationOnIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
                         <Typography variant="h6" color="text.secondary">
-                            {search ? t('locations.noMatch') : t('locations.noLocations')}
+                            {favoritesOnly ? t('locations.noFavorites') : (search ? t('locations.noMatch') : t('locations.noLocations'))}
                         </Typography>
+                        {favoritesOnly && (
+                            <Button size="small" sx={{ mt: 1 }} onClick={() => setFavoritesOnly(false)}>
+                                {t('locations.showAllLocations')}
+                            </Button>
+                        )}
                     </Box>
                 )}
             </Container>
