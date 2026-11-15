@@ -279,7 +279,15 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                     {t('locations.title')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {t('locations.subtitle', { locationCount: locations.length, trailCount: trails.length })}
+                    {/* #1822: once drilled into a region, the site-wide totals above are
+                        misleading — scope both numbers to the region's own children (`filtered`)
+                        and their trail counts (`statsByLocation`, i.e. `statsMap` here), summed. */}
+                    {drilldownLocation
+                        ? t('locations.subtitle', {
+                            locationCount: filtered.length,
+                            trailCount: filtered.reduce((sum, l) => sum + (statsMap[l.slug]?.trailCount || 0), 0),
+                        })
+                        : t('locations.subtitle', { locationCount: locations.length, trailCount: trails.length })}
                 </Typography>
 
                 {/* #1802: drill-down breadcrumb — only visible once a region has been clicked into

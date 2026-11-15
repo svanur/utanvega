@@ -18,7 +18,7 @@ import { initReactI18next } from 'react-i18next';
 import en from '../i18n/en.json';
 import { createAppTheme } from '../theme';
 import type { Location } from '../hooks/useLocations';
-import type { Trail } from '../hooks/useTrails';
+import type { Trail, LocationInfo } from '../hooks/useTrails';
 
 // vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
 // afterEach(cleanup) registration never fires — without this, a later test's screen queries can
@@ -131,6 +131,30 @@ function makeLocation(overrides: Partial<Location> = {}): Location {
 
 function boundary(coords: [number, number][]): string {
     return JSON.stringify({ type: 'Polygon', coordinates: [coords] });
+}
+
+// #1822: a minimal Trail fixture — only the fields computeLocationStats/the subtitle count
+// actually read (locations, length, elevationGain, activityType, difficulty) need real values.
+function makeTrail(overrides: Partial<Trail> & { locations: LocationInfo[] }): Trail {
+    return {
+        id: 'trail-1',
+        name: 'Trail',
+        slug: 'trail-1',
+        length: 1000,
+        elevationGain: 100,
+        elevationLoss: 100,
+        status: 'Published',
+        activityType: 'TrailRunning',
+        trailType: 'Loop',
+        difficulty: 'Moderate',
+        startLatitude: null,
+        startLongitude: null,
+        ...overrides,
+    };
+}
+
+function locationInfo(slug: string): LocationInfo {
+    return { name: slug, nameEn: null, slug, order: 0, role: 'Primary', centerLatitude: null, centerLongitude: null };
 }
 
 const coordsOnly = makeLocation({
@@ -514,6 +538,51 @@ describe('LocationsPage FitBounds hover-safety (#1786)', () => {
         fireEvent.change(searchInput, { target: { value: 'Both' } });
 
         expect(mockFitBounds.mock.calls.length).toBeGreaterThan(1);
+    });
+});
+
+// #1822: the subtitle (LocationsPage.tsx, right below the page title) used to always render
+// site-wide totals (locations.length / trails.length) regardless of drill-down state — fixed to
+// scope both numbers to the drilled-into region's children (`filtered`) and their summed trail
+// counts (`statsMap`) while drilled in, reverting to site-wide totals once backed out.
+describe('LocationsPage subtitle drill-down counts (#1822)', () => {
+    it('shows site-wide location/trail totals when not drilled into a region', () => {
+        mockLocations.current = [coordsOnly, boundaryOnly];
+        mockTrails.current = [makeTrail({ locations: [locationInfo('coords-only')] })];
+        renderLocationsPage();
+
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 2, trailCount: 1 }))).toBeDefined();
+    });
+
+    it('narrows the subtitle to the drilled-into region\'s children and their summed trail counts', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        mockTrails.current = [
+            makeTrail({ id: 't1', slug: 't1', locations: [locationInfo('child-boundary')] }),
+            makeTrail({ id: 't2', slug: 't2', locations: [locationInfo('child-coords')] }),
+            makeTrail({ id: 't3', slug: 't3', locations: [locationInfo('child-coords')] }),
+            // Belongs to the region itself, not either child — must not be counted once drilled in.
+            makeTrail({ id: 't4', slug: 't4', locations: [locationInfo('region')] }),
+        ];
+        renderLocationsPage();
+
+        // Before drill-down: site-wide totals (3 locations, 4 trails).
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 3, trailCount: 4 }))).toBeDefined();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+
+        // Drilled in: 2 children, 1 + 2 = 3 trails scoped to those children only.
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 2, trailCount: 3 }))).toBeDefined();
+    });
+
+    it('restores the site-wide subtitle after backing out via the back-to-all-regions control', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        mockTrails.current = [makeTrail({ locations: [locationInfo('child-boundary')] })];
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        fireEvent.click(screen.getByRole('button', { name: en.locations.backToAllRegions }));
+
+        expect(screen.getByText(i18n.t('locations.subtitle', { locationCount: 3, trailCount: 1 }))).toBeDefined();
     });
 });
 
