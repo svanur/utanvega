@@ -462,6 +462,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                         onMouseLeave={() => setHoveredSlug(null)}
                                         sx={{
                                             borderRadius: '16px',
+                                            position: 'relative',
                                             transition: 'transform 0.3s ease, box-shadow 0.3s ease, outline 0.3s ease',
                                             '&:hover': { transform: 'translateY(-3px)', boxShadow: 6 },
                                             // #1708: mirrors the map boundary Polygon's hover state back onto
@@ -483,21 +484,9 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                 {/* Header */}
                                                 <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
                                                     <LocationOnIcon color="primary" />
-                                                    <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3, flex: 1 }}>
+                                                    <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3, flex: 1, pr: 4.5 }}>
                                                         {localize(loc.name, loc.nameEn) ?? loc.name}
                                                     </Typography>
-                                                    <Tooltip title={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}>
-                                                        <IconButton
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleFavoriteLocation(loc.slug);
-                                                            }}
-                                                            aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
-                                                            sx={{ width: 44, height: 44, m: -1 }}
-                                                        >
-                                                            {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
-                                                        </IconButton>
-                                                    </Tooltip>
                                                 </Stack>
 
                                                 {/* Type & Parent */}
@@ -593,6 +582,24 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                                 </Box>
                                             </CardContent>
                                         </CardActionArea>
+                                        <Tooltip title={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}>
+                                            <IconButton
+                                                onClick={() => toggleFavoriteLocation(loc.slug)}
+                                                aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 8,
+                                                    right: 8,
+                                                    zIndex: 1,
+                                                    bgcolor: 'background.paper',
+                                                    '&:hover': { bgcolor: 'action.hover' },
+                                                    width: 44,
+                                                    height: 44,
+                                                }}
+                                            >
+                                                {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                                            </IconButton>
+                                        </Tooltip>
                                     </Card>
                                 </div>
                             </Grid>
