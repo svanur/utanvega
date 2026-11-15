@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
@@ -167,7 +167,6 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     // `id` (to filter children by parentId) and `boundaryGeoJson` (to zoom to its extent) without a
     // second lookup. Cleared by the breadcrumb/back control to return to the full top-level view.
     const [drilldownLocation, setDrilldownLocation] = useState<Location | null>(null);
-    const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
     const statsMap = useMemo(() => {
         const m: Record<string, LocationStats> = {};
@@ -532,154 +531,152 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                         const isFavorited = isFavoriteLocation(loc.slug);
                         return (
                             <Grid item xs={12} sm={6} key={loc.id}>
-                                <div ref={el => { cardRefs.current[loc.slug] = el; }}>
-                                    <Card
-                                        elevation={2}
-                                        onMouseEnter={() => setHoveredSlug(loc.slug)}
-                                        onMouseLeave={() => setHoveredSlug(null)}
-                                        sx={{
-                                            borderRadius: '16px',
-                                            position: 'relative',
-                                            transition: 'transform 0.3s ease, box-shadow 0.3s ease, outline 0.3s ease',
-                                            '&:hover': { transform: 'translateY(-3px)', boxShadow: 6 },
-                                            // #1708: mirrors the map boundary Polygon's hover state back onto
-                                            // the card, so hovering either one highlights both together.
-                                            ...(hoveredSlug === loc.slug && {
-                                                outline: `3px solid ${theme.palette.secondary.main}`,
-                                                boxShadow: 6,
-                                            }),
-                                            height: '100%',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                        }}
+                                <Card
+                                    elevation={2}
+                                    onMouseEnter={() => setHoveredSlug(loc.slug)}
+                                    onMouseLeave={() => setHoveredSlug(null)}
+                                    sx={{
+                                        borderRadius: '16px',
+                                        position: 'relative',
+                                        transition: 'transform 0.3s ease, box-shadow 0.3s ease, outline 0.3s ease',
+                                        '&:hover': { transform: 'translateY(-3px)', boxShadow: 6 },
+                                        // #1708: mirrors the map boundary Polygon's hover state back onto
+                                        // the card, so hovering either one highlights both together.
+                                        ...(hoveredSlug === loc.slug && {
+                                            outline: `3px solid ${theme.palette.secondary.main}`,
+                                            boxShadow: 6,
+                                        }),
+                                        height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                    }}
+                                >
+                                    <CardActionArea
+                                        onClick={() => navigate(`/locations/${loc.slug}`)}
+                                        sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
                                     >
-                                        <CardActionArea
-                                            onClick={() => navigate(`/locations/${loc.slug}`)}
-                                            sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
-                                        >
-                                            <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                {/* Header */}
-                                                <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
-                                                    <LocationOnIcon color="primary" />
-                                                    <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3, flex: 1, pr: 4.5 }}>
-                                                        {localize(loc.name, loc.nameEn) ?? loc.name}
-                                                    </Typography>
-                                                </Stack>
+                                        <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                            {/* Header */}
+                                            <Stack direction="row" alignItems="center" spacing={1} mb={0.5}>
+                                                <LocationOnIcon color="primary" />
+                                                <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.3, flex: 1, pr: 4.5 }}>
+                                                    {localize(loc.name, loc.nameEn) ?? loc.name}
+                                                </Typography>
+                                            </Stack>
 
-                                                {/* Type & Parent */}
-                                                <Stack direction="row" spacing={0.5} mb={1} flexWrap="wrap">
-                                                    <Chip label={t(`locations.type${loc.type}`)} size="small" variant="outlined" color="secondary" />
-                                                    {loc.parentName && (
-                                                        <Chip label={loc.parentName} size="small" variant="outlined" />
-                                                    )}
-                                                </Stack>
+                                            {/* Type & Parent */}
+                                            <Stack direction="row" spacing={0.5} mb={1} flexWrap="wrap">
+                                                <Chip label={t(`locations.type${loc.type}`)} size="small" variant="outlined" color="secondary" />
+                                                {loc.parentName && (
+                                                    <Chip label={loc.parentName} size="small" variant="outlined" />
+                                                )}
+                                            </Stack>
 
-                                                {/* Description */}
-                                                {(loc.description || loc.descriptionEn) && (
-                                                    <Typography variant="body2" color="text.secondary" sx={{
-                                                        mb: 1.5,
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 2,
-                                                        WebkitBoxOrient: 'vertical',
-                                                    }}>
-                                                        {localize(loc.description, loc.descriptionEn)}
-                                                    </Typography>
+                                            {/* Description */}
+                                            {(loc.description || loc.descriptionEn) && (
+                                                <Typography variant="body2" color="text.secondary" sx={{
+                                                    mb: 1.5,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                }}>
+                                                    {localize(loc.description, loc.descriptionEn)}
+                                                </Typography>
+                                            )}
+
+                                            {/* Stats (pushed to bottom) */}
+                                            <Box sx={{ mt: 'auto' }}>
+                                                {/* Activity Breakdown */}
+                                                {stats && Object.keys(stats.activityCounts).length > 0 && (
+                                                    <Stack direction="row" spacing={1} mb={1} flexWrap="wrap" useFlexGap>
+                                                        {Object.entries(stats.activityCounts).map(([act, count]) => (
+                                                            <Chip
+                                                                key={act}
+                                                                label={`${activityEmoji[act] || '🏞️'} ${count}`}
+                                                                size="small"
+                                                                sx={{
+                                                                    bgcolor: alpha(theme.palette.primary.main, 0.08),
+                                                                    fontWeight: 500,
+                                                                    fontSize: '0.75rem',
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </Stack>
                                                 )}
 
-                                                {/* Stats (pushed to bottom) */}
-                                                <Box sx={{ mt: 'auto' }}>
-                                                    {/* Activity Breakdown */}
-                                                    {stats && Object.keys(stats.activityCounts).length > 0 && (
-                                                        <Stack direction="row" spacing={1} mb={1} flexWrap="wrap" useFlexGap>
-                                                            {Object.entries(stats.activityCounts).map(([act, count]) => (
-                                                                <Chip
-                                                                    key={act}
-                                                                    label={`${activityEmoji[act] || '🏞️'} ${count}`}
-                                                                    size="small"
-                                                                    sx={{
-                                                                        bgcolor: alpha(theme.palette.primary.main, 0.08),
-                                                                        fontWeight: 500,
-                                                                        fontSize: '0.75rem',
-                                                                    }}
-                                                                />
+                                                {/* Difficulty dots */}
+                                                {stats && Object.keys(stats.difficulties).length > 0 && (
+                                                    <Stack direction="row" spacing={0.5} mb={1} alignItems="center">
+                                                        {['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme']
+                                                            .filter(d => stats.difficulties[d])
+                                                            .map(d => (
+                                                                <Tooltip key={d} title={`${d}: ${stats.difficulties[d]}`}>
+                                                                    <Box sx={{
+                                                                        width: 8,
+                                                                        height: 8,
+                                                                        borderRadius: '50%',
+                                                                        bgcolor: difficultyColors[d],
+                                                                    }} />
+                                                                </Tooltip>
                                                             ))}
-                                                        </Stack>
-                                                    )}
-
-                                                    {/* Difficulty dots */}
-                                                    {stats && Object.keys(stats.difficulties).length > 0 && (
-                                                        <Stack direction="row" spacing={0.5} mb={1} alignItems="center">
-                                                            {['Easy', 'Moderate', 'Hard', 'Expert', 'Extreme']
-                                                                .filter(d => stats.difficulties[d])
-                                                                .map(d => (
-                                                                    <Tooltip key={d} title={`${d}: ${stats.difficulties[d]}`}>
-                                                                        <Box sx={{
-                                                                            width: 8,
-                                                                            height: 8,
-                                                                            borderRadius: '50%',
-                                                                            bgcolor: difficultyColors[d],
-                                                                        }} />
-                                                                    </Tooltip>
-                                                                ))}
-                                                        </Stack>
-                                                    )}
-
-                                                    {/* Summary line */}
-                                                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                                                        <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                                            {stats?.trailCount || loc.trailsCount} {t('locations.trails')}
-                                                        </Typography>
-                                                        {stats && stats.totalKm > 0 && (
-                                                            <>
-                                                                <Typography variant="caption" color="text.secondary">·</Typography>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    {stats.totalKm} km
-                                                                </Typography>
-                                                            </>
-                                                        )}
-                                                        {stats && stats.totalElevationGain > 0 && (
-                                                            <>
-                                                                <Typography variant="caption" color="text.secondary">·</Typography>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    ↑ {stats.totalElevationGain} m
-                                                                </Typography>
-                                                            </>
-                                                        )}
-                                                        {loc.childrenCount > 0 && (
-                                                            <>
-                                                                <Typography variant="caption" color="text.secondary">·</Typography>
-                                                                <Typography variant="caption" color="text.secondary">
-                                                                    {t('locations.subLocations', { count: loc.childrenCount })}
-                                                                </Typography>
-                                                            </>
-                                                        )}
                                                     </Stack>
-                                                </Box>
-                                            </CardContent>
-                                        </CardActionArea>
-                                        <Tooltip title={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}>
-                                            <IconButton
-                                                onClick={() => toggleFavoriteLocation(loc.slug)}
-                                                aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
-                                                aria-pressed={isFavorited}
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 8,
-                                                    right: 8,
-                                                    zIndex: 1,
-                                                    bgcolor: 'background.paper',
-                                                    '&:hover': { bgcolor: 'action.hover' },
-                                                    width: 44,
-                                                    height: 44,
-                                                }}
-                                            >
-                                                {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
-                                            </IconButton>
-                                        </Tooltip>
-                                    </Card>
-                                </div>
+                                                )}
+
+                                                {/* Summary line */}
+                                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                        {stats?.trailCount || loc.trailsCount} {t('locations.trails')}
+                                                    </Typography>
+                                                    {stats && stats.totalKm > 0 && (
+                                                        <>
+                                                            <Typography variant="caption" color="text.secondary">·</Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {stats.totalKm} km
+                                                            </Typography>
+                                                        </>
+                                                    )}
+                                                    {stats && stats.totalElevationGain > 0 && (
+                                                        <>
+                                                            <Typography variant="caption" color="text.secondary">·</Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                ↑ {stats.totalElevationGain} m
+                                                            </Typography>
+                                                        </>
+                                                    )}
+                                                    {loc.childrenCount > 0 && (
+                                                        <>
+                                                            <Typography variant="caption" color="text.secondary">·</Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {t('locations.subLocations', { count: loc.childrenCount })}
+                                                            </Typography>
+                                                        </>
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                        </CardContent>
+                                    </CardActionArea>
+                                    <Tooltip title={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}>
+                                        <IconButton
+                                            onClick={() => toggleFavoriteLocation(loc.slug)}
+                                            aria-label={isFavorited ? t('locations.removeFavorite') : t('locations.addFavorite')}
+                                            aria-pressed={isFavorited}
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 8,
+                                                right: 8,
+                                                zIndex: 1,
+                                                bgcolor: 'background.paper',
+                                                '&:hover': { bgcolor: 'action.hover' },
+                                                width: 44,
+                                                height: 44,
+                                            }}
+                                        >
+                                            {isFavorited ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                                        </IconButton>
+                                    </Tooltip>
+                                </Card>
                             </Grid>
                         );
                     })}
