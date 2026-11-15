@@ -148,6 +148,24 @@ const both = makeLocation({
 });
 const neither = makeLocation({ id: 'loc-neither', slug: 'neither-loc', name: 'Neither Loc' });
 
+// #1802: a region with children, plus two of its children — one boundary-bearing (so its own
+// Polygon's childrenCount === 0 leaf-navigate path is exercised at the drilled-in level too, not
+// just at the top level), one coordinate-only (so it only ever renders as a Marker, same as
+// `coordsOnly` above). `regionWithChildren.id` matches both children's `parentId`, mirroring how
+// the real /api/v1/locations response links a child to its parent.
+const regionWithChildren = makeLocation({
+    id: 'loc-region', slug: 'region', name: 'Region With Children', childrenCount: 2,
+    boundaryGeoJson: boundary([[-20.0, 65.0], [-20.5, 65.5], [-21.0, 65.0], [-20.0, 65.0]]),
+});
+const childWithBoundary = makeLocation({
+    id: 'loc-child-boundary', slug: 'child-boundary', name: 'Child With Boundary', parentId: 'loc-region',
+    boundaryGeoJson: boundary([[-20.1, 65.1], [-20.2, 65.2], [-20.3, 65.1], [-20.1, 65.1]]),
+});
+const childWithCoords = makeLocation({
+    id: 'loc-child-coords', slug: 'child-coords', name: 'Child With Coords', parentId: 'loc-region',
+    latitude: 65.3, longitude: -20.3,
+});
+
 // #1809: a lightweight stand-in for the real /locations/:slug route (LocationDetailsPage has its
 // own data fetching and isn't under test here) — rendered alongside LocationsPage so a card's
 // CardActionArea click (LocationsPage.tsx:481, navigate(`/locations/${loc.slug}`)) is observable
@@ -309,20 +327,10 @@ describe('LocationsPage hover sync between boundary Polygon and card (#1741, #17
 });
 
 // scrollToCard (LocationsPage.tsx:186-202) writes a temporary outline/boxShadow/transform directly
-// onto the matching `.MuiCard-root` element via the DOM, wired to both Marker and Polygon click
-// handlers. Asserted via that direct style write (the "Direct DOM highlight" scrollToCard itself
-// comments on) rather than real scrollIntoView, which jsdom only stubs as a no-op.
-describe('LocationsPage click/tap on a Marker or Polygon scrolls to the matching card (#1741)', () => {
-    it('clicking a boundary Polygon applies the scroll-highlight style to the matching card only', () => {
-        renderLocationsPage();
-
-        fireEvent.click(polygonFor('Boundary Only')!);
-
-        expect(cardFor('Boundary Only').style.outline).not.toBe('');
-        expect(cardFor('Both Loc').style.outline).toBe('');
-        expect(cardFor('Coords Only').style.outline).toBe('');
-    });
-
+// onto the matching `.MuiCard-root` element via the DOM. It's still wired to Marker clicks, but
+// #1802 replaced the boundary Polygon's unconditional scrollToCard with the childrenCount branch
+// below (drill-down vs. leaf-navigate) — a childless boundary now navigates instead of scrolling.
+describe('LocationsPage click/tap on a Marker scrolls to the matching card (#1741)', () => {
     it('clicking a Marker applies the scroll-highlight style to the matching card only', () => {
         renderLocationsPage();
 
@@ -331,6 +339,87 @@ describe('LocationsPage click/tap on a Marker or Polygon scrolls to the matching
         expect(cardFor('Coords Only').style.outline).not.toBe('');
         expect(cardFor('Both Loc').style.outline).toBe('');
         expect(cardFor('Boundary Only').style.outline).toBe('');
+    });
+});
+
+// #1802: the boundary Polygon's click handler now branches on childrenCount instead of always
+// calling scrollToCard — a childless shape (leaf) navigates straight to its detail page, same
+// destination the card click already uses; a shape with children drills down (zoom + narrow the
+// card list), with a breadcrumb/back control to return to the full top-level view. Hover-highlight
+// (#1708) must keep working at the drilled-in level too, not just top-level.
+describe('LocationsPage boundary click drill-down and leaf navigation (#1802)', () => {
+    it('clicking a childless boundary Polygon navigates to /locations/:slug, same as a card click', () => {
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Boundary Only')!);
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('boundary-only');
+    });
+
+    it('clicking a region boundary Polygon with children drills down: narrows the card list to its children and shows the back control', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        expect(cardFor('Region With Children')).toBeDefined();
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).toBeNull();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+
+        // The region itself is no longer a card or a Polygon (it's now the drilled-into context,
+        // named in the breadcrumb instead) — only its children remain.
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).not.toBeNull();
+        expect(cardFor('Child With Boundary')).toBeDefined();
+        expect(cardFor('Child With Coords')).toBeDefined();
+        expect(polygonFor('Region With Children')).toBeUndefined();
+    });
+
+    it('the back-to-all-regions control restores the full top-level list and hides itself again', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        fireEvent.click(screen.getByRole('button', { name: en.locations.backToAllRegions }));
+
+        expect(cardFor('Region With Children')).toBeDefined();
+        expect(screen.queryByRole('button', { name: en.locations.backToAllRegions })).toBeNull();
+    });
+
+    it('clicking a childless child boundary Polygon navigates, even while drilled in (not another drill-down)', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        fireEvent.click(polygonFor('Child With Boundary')!);
+
+        expect(screen.getByTestId('location-details-stub').textContent).toBe('child-boundary');
+    });
+
+    it('hover-highlight (#1708) still syncs Polygon <-> card after drilling in', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+        fireEvent.click(polygonFor('Region With Children')!);
+
+        const childPolygon = polygonFor('Child With Boundary')!;
+        expect(cardIsHoverHighlighted('Child With Boundary')).toBe(false);
+
+        fireEvent.mouseOver(childPolygon);
+        expect(cardIsHoverHighlighted('Child With Boundary')).toBe(true);
+
+        fireEvent.mouseOut(childPolygon);
+        expect(cardIsHoverHighlighted('Child With Boundary')).toBe(false);
+    });
+
+    it('drilling in re-fits bounds to the clicked region, and returning via the back control re-fits again', () => {
+        mockLocations.current = [regionWithChildren, childWithBoundary, childWithCoords];
+        renderLocationsPage();
+        expect(mockFitBounds).toHaveBeenCalledTimes(1);
+
+        fireEvent.click(polygonFor('Region With Children')!);
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(1);
+
+        const callsAfterDrilldown = mockFitBounds.mock.calls.length;
+        fireEvent.click(screen.getByRole('button', { name: en.locations.backToAllRegions }));
+        expect(mockFitBounds.mock.calls.length).toBeGreaterThan(callsAfterDrilldown);
     });
 });
 

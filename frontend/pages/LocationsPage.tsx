@@ -28,6 +28,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import SortIcon from '@mui/icons-material/Sort';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import StarIcon from '@mui/icons-material/Star';
@@ -116,7 +117,11 @@ type SortField = 'trails' | 'distance' | 'name';
 // computed bounds, not directly in the render body, or every re-render (e.g. hoveredSlug changing
 // on Polygon mouseover/mouseout, #1708) resets the user's zoom/pan. `bounds` is memoized off
 // `locations` alone, so hover-only state changes elsewhere in LocationsPage don't recompute it.
-function FitBounds({ locations }: { locations: Location[] }) {
+// #1802: `locations` is typed as the narrower Pick (not the full `Location`) because the
+// drill-down click handler passes a one-item array with only `boundaryGeoJson` set (latitude/
+// longitude deliberately omitted) to force computeFitBoundsPoints's boundary-ring branch — see
+// `fitBoundsLocations` below.
+function FitBounds({ locations }: { locations: Pick<Location, 'latitude' | 'longitude' | 'boundaryGeoJson'>[] }) {
     const map = useMap();
     const bounds = useMemo(() => {
         const points = computeFitBoundsPoints(locations);
@@ -157,6 +162,11 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     // tapping, via click) either one highlights both, independent of MarkerClusterGroup's own
     // marker state.
     const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
+    // #1802: set when a top-level boundary shape with children is clicked (drill-down). Holds the
+    // clicked Location itself (not just its slug) so both the card list and FitBounds can read its
+    // `id` (to filter children by parentId) and `boundaryGeoJson` (to zoom to its extent) without a
+    // second lookup. Cleared by the breadcrumb/back control to return to the full top-level view.
+    const [drilldownLocation, setDrilldownLocation] = useState<Location | null>(null);
     const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
     const statsMap = useMemo(() => {
@@ -167,8 +177,16 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
         return m;
     }, [locations, trails]);
 
+    // #1802: the drilled-into region's own children, or the full flat list when nothing is
+    // drilled into — this (not `locations` directly) is what search/sort/favorites filter below,
+    // so a drill-down also narrows the card list, per the issue's acceptance criteria.
+    const baseLocations = useMemo(
+        () => drilldownLocation ? locations.filter(l => l.parentId === drilldownLocation.id) : locations,
+        [locations, drilldownLocation]
+    );
+
     const filtered = useMemo(() => {
-        let result = [...locations];
+        let result = [...baseLocations];
         if (search.trim()) {
             const q = search.toLowerCase();
             result = result.filter(l =>
@@ -190,7 +208,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
             return (localize(a.name, a.nameEn) ?? a.name).localeCompare(localize(b.name, b.nameEn) ?? b.name, 'is');
         });
         return result;
-    }, [locations, search, sortBy, favoritesOnly, favoriteLocations, statsMap, localize]);
+    }, [baseLocations, search, sortBy, favoritesOnly, favoriteLocations, statsMap, localize]);
 
     const locationsWithCoords = useMemo(() =>
         filtered.filter(l => l.latitude && l.longitude),
@@ -209,6 +227,20 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
     const hasSimplemapsBoundary = useMemo(() =>
         locationsWithBoundary.some(l => l.type === 'Region'),
         [locationsWithBoundary]
+    );
+
+    // #1802: what FitBounds zooms to. Drilled into a region → fit its own boundary extent (the
+    // shape that was just clicked), not `filtered` (now its children) — a region can carry both a
+    // center point and a boundary, and computeFitBoundsPoints prefers the point when present, so
+    // latitude/longitude are left out here to force its boundary-ring branch. Not drilled in → the
+    // existing top-level behavior, fitting around everything currently shown. Memoized (not a
+    // fresh array literal every render) so the #1786 effect-guard inside FitBounds still holds —
+    // hover-only re-renders (hoveredSlug) must not recompute this and re-trigger fitBounds.
+    const fitBoundsLocations = useMemo(
+        () => drilldownLocation
+            ? [{ latitude: undefined, longitude: undefined, boundaryGeoJson: drilldownLocation.boundaryGeoJson }]
+            : filtered,
+        [drilldownLocation, filtered]
     );
 
     const scrollToCard = useCallback((slug: string) => {
@@ -267,6 +299,27 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {t('locations.subtitle', { locationCount: locations.length, trailCount: trails.length })}
                 </Typography>
+
+                {/* #1802: drill-down breadcrumb — only visible once a region has been clicked into
+                    (drilldownLocation set). The button is the only way back to the full top-level
+                    map + card list; it's a real 44px touch target (sx minHeight/minWidth), not a
+                    small text link, per the issue's mobile-tap requirement. */}
+                {drilldownLocation && (
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 2 }} aria-label="breadcrumb">
+                        <Button
+                            size="small"
+                            startIcon={<ArrowBackIcon sx={{ fontSize: 18 }} />}
+                            onClick={() => setDrilldownLocation(null)}
+                            sx={{ minHeight: 44, minWidth: 44, textTransform: 'none' }}
+                        >
+                            {t('locations.backToAllRegions')}
+                        </Button>
+                        <Typography variant="body2" color="text.secondary">/</Typography>
+                        <Typography variant="body2" fontWeight="bold">
+                            {localize(drilldownLocation.name, drilldownLocation.nameEn) ?? drilldownLocation.name}
+                        </Typography>
+                    </Stack>
+                )}
 
                 {/* Map Hero */}
                 {/* #1754: gate on boundary-only locations too (#1708), not just coord-bearing ones,
@@ -355,7 +408,17 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                             {/* #1708: boundary outlines — a separate layer outside MarkerClusterGroup
                                 so shapes never join/affect dot-marker clustering. Interactive (unlike
                                 TrailMapView's static context polygon): hover/tap highlights the shape
-                                and its list card together. */}
+                                and its list card together.
+                                #1802: click/tap branches on childrenCount — a region (childrenCount >
+                                0) drills down (zoom to its extent + narrow the card list to its
+                                children, via drilldownLocation/fitBoundsLocations/baseLocations
+                                above) rather than scrolling to its own card, which no longer exists
+                                as a separate concept once drilled in; a leaf (childrenCount === 0)
+                                navigates straight to its detail page, same destination the card
+                                click below already uses. This replaces the old unconditional
+                                scrollToCard — Leaflet already forwards touch taps as `click` here,
+                                same as before, so tap-to-drill/tap-to-navigate works without extra
+                                touch handling. */}
                             {locationsWithBoundary.flatMap(loc => {
                                 const parts = geoJsonBoundaryToLatLngParts(loc.boundaryGeoJson!);
                                 if (!parts) return [];
@@ -372,7 +435,13 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                         eventHandlers={{
                                             mouseover: () => setHoveredSlug(loc.slug),
                                             mouseout: () => setHoveredSlug(null),
-                                            click: () => scrollToCard(loc.slug),
+                                            click: () => {
+                                                if (loc.childrenCount > 0) {
+                                                    setDrilldownLocation(loc);
+                                                } else {
+                                                    navigate(`/locations/${loc.slug}`);
+                                                }
+                                            },
                                         }}
                                     >
                                         <LeafletTooltip direction="center" sticky>
@@ -381,7 +450,7 @@ export default function LocationsPage({ mode, onToggleMode }: LocationsPageProps
                                     </Polygon>
                                 ));
                             })}
-                            <FitBounds locations={filtered} />
+                            <FitBounds locations={fitBoundsLocations} />
                         </MapContainer>
                     </Box>
                 )}

@@ -378,6 +378,7 @@
         "noFavorites": "No favorite locations found.",
         "showAllLocations": "Show all locations",
         "backToLocations": "Back to Locations",
+        "backToAllRegions": "Back to all regions",
         "locationNotFound": "Location not found",
         "trailsIn": "Trails in {{name}} ({{count}})",
         "noTrailsInLocation": "No trails found in this location yet.",

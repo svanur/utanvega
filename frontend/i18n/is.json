@@ -378,6 +378,7 @@
         "noFavorites": "Engar eftirlætisstaðsetningar fundust.",
         "showAllLocations": "Sýna allar staðsetningar",
         "backToLocations": "Til baka",
+        "backToAllRegions": "Til allra svæða",
         "locationNotFound": "Staðsetning fannst ekki",
         "trailsIn": "Leiðir í {{name}} ({{count}})",
         "noTrailsInLocation": "Engar leiðir fundust á þessum stað.",
