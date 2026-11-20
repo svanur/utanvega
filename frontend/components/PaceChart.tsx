@@ -125,6 +125,13 @@ export default function PaceChart() {
     }, [searchStr]);
 
     useEffect(() => {
+        // #1835 audit: ToolsPage passes `breadcrumb` to Layout, so this call was checked against
+        // the same sticky AppBar+breadcrumb bar as #1830. block:'center' (see RaceCalendarPage's
+        // goToToday for the general reasoning) means the row's center, not its top edge, is what
+        // gets aligned to the viewport center — and a table row is a few tens of px tall against a
+        // viewport several hundred px tall, so it lands well clear of the sticky bars. The row also
+        // sits inside this component's own `overflow: auto` table wrapper (below), which absorbs
+        // most of the scroll before the outer page scroll container is involved at all.
         if (highlightRef.current) {
             highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
