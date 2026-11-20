@@ -292,6 +292,7 @@ export interface EditionHistoryRow {
     rowDate: string;
     rowEndDate: string | null;
     locationName: string | null;
+    locationSlug: string | null;
     organizerName: string | null;
     organizerNameEn: string | null;
     organizerSlug: string | null;
