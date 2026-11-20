@@ -40,6 +40,8 @@ import XIcon from '@mui/icons-material/X';
 import YouTubeIcon from '@mui/icons-material/YouTube';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { breadcrumbContext } from '../utils/breadcrumbContext';
+import { STAGING_BANNER_HEIGHT } from '../components/Layout';
+import { isStagingHost } from '../utils/hostEnv';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -318,6 +320,19 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
     }, [event, locations]);
     const confettiFiredForEvent = useRef<string | null>(null);
     const racesHeadingRef = useRef<HTMLHeadingElement>(null);
+    // #1830 round 2: scrollIntoView({block:'start'}) alone lands this heading at viewport y=0,
+    // hidden under Layout's two stacked sticky elements above page content — the DynamicHeader
+    // AppBar (Toolbar height 56px/64px per theme breakpoint, same 56/64 Layout.tsx:363 itself
+    // adds for its breadcrumb bar's sticky `top`) and that breadcrumb bar directly below it
+    // (Layout.tsx:359-370: 12px vertical padding + ~20px caption line-height + 1px border ≈
+    // 34px, +8px breathing room so the heading isn't flush against the bar) — plus the staging
+    // banner (Layout.tsx exported STAGING_BANNER_HEIGHT) on staging hosts only. Applied as
+    // scroll-margin-top below so native scrollIntoView already lands correctly.
+    const isStaging = isStagingHost(window.location.hostname);
+    const racesHeadingScrollOffset = {
+        xs: `${(isStaging ? STAGING_BANNER_HEIGHT : 0) + 56 + 34 + 8}px`,
+        sm: `${(isStaging ? STAGING_BANNER_HEIGHT : 0) + 64 + 34 + 8}px`,
+    };
 
     // Uses the flattened event.editionEffectiveCancelled (not primaryEdition) since primaryEdition
     // is computed later and itself depends on isPostRace below — going through primaryEdition here
@@ -1187,7 +1202,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 )}
 
                 {(event.type === 'Race' || event.type === 'Series') && (
-                    <Typography ref={racesHeadingRef} variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                    <Typography ref={racesHeadingRef} variant="h5" fontWeight={700} sx={{ mb: 2, scrollMarginTop: racesHeadingScrollOffset }}>
                         {t('races.racesHeading')}
                     </Typography>
                 )}
