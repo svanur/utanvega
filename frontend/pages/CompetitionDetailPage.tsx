@@ -898,8 +898,8 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                     label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName}
                                     size="small"
                                     variant="outlined"
-                                    component="a"
-                                    href={`/organizers/${event.organizerSlug}`}
+                                    component={RouterLink}
+                                    to={`/organizers/${event.organizerSlug}`}
                                     clickable
                                   />
                                 : <Chip label={loc(event.organizerName, event.organizerNameEn) ?? event.organizerName} size="small" variant="outlined" />
