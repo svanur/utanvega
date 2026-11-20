@@ -864,7 +864,17 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                             variant="outlined"
                         />
                         {event.locationName && locationsEnabled && (
-                            <Chip icon={<LocationOnIcon />} label={event.locationName} size="small" variant="outlined" />
+                            event.locationSlug
+                                ? <Chip
+                                    icon={<LocationOnIcon />}
+                                    label={event.locationName}
+                                    size="small"
+                                    variant="outlined"
+                                    component={RouterLink}
+                                    to={`/locations/${event.locationSlug}`}
+                                    clickable
+                                  />
+                                : <Chip icon={<LocationOnIcon />} label={event.locationName} size="small" variant="outlined" />
                         )}
                         {event.organizerName && (
                             event.organizerSlug

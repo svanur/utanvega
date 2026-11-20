@@ -2129,6 +2129,113 @@ public class EventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetEvent_BySlug_WithLocation_PopulatesLocationSlug()
+    {
+        // #1829: EventDetailDto must carry LocationSlug the same way it already carries
+        // OrganizerSlug, so the public location chip has a navigation target.
+        var location = new Location
+        {
+            Name = "Test Location",
+            Slug = $"test-location-{Guid.NewGuid():N}",
+            Type = LocationType.Region,
+            CreatedBy = "seed-user",
+        };
+        var ev = CreateTestEvent("Location Slugged Event");
+        ev.Slug = "location-slugged-event";
+        ev.LocationId = location.Id;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("location-slugged-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(location.Slug, result!.LocationSlug);
+    }
+
+    [Fact]
+    public async Task GetEvent_BySlug_WithoutLocation_LocationSlugIsNull()
+    {
+        var ev = CreateTestEvent("No Location Slug Event");
+        ev.Slug = "no-location-slug-event";
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetEventQuery("no-location-slug-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.LocationSlug);
+    }
+
+    [Fact]
+    public async Task GetPublicEvent_BySlug_WithLocation_PopulatesLocationSlug()
+    {
+        // Mirrors GetEvent_BySlug_WithLocation_PopulatesLocationSlug for the public-facing
+        // DTO/handler pair (#1829) — the public events/{slug} endpoint is the one actually
+        // consumed by CompetitionDetailPage's location chip.
+        var location = new Location
+        {
+            Name = "Public Test Location",
+            Slug = $"public-test-location-{Guid.NewGuid():N}",
+            Type = LocationType.Region,
+            CreatedBy = "seed-user",
+        };
+        var ev = CreateTestEvent("Public Location Slugged Event");
+        ev.Slug = "public-location-slugged-event";
+        ev.LocationId = location.Id;
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetPublicEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetPublicEventQuery("public-location-slugged-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(location.Slug, result!.LocationSlug);
+    }
+
+    [Fact]
+    public async Task GetPublicEvent_BySlug_WithoutLocation_LocationSlugIsNull()
+    {
+        var ev = CreateTestEvent("No Public Location Slug Event");
+        ev.Slug = "no-public-location-slug-event";
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetPublicEventQueryHandler(queryCtx, _scheduleEngine);
+        var result = await handler.Handle(
+            new GetPublicEventQuery("no-public-location-slug-event"), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.LocationSlug);
+    }
+
+    [Fact]
     public async Task GetEvent_NonExistentSlug_ReturnsNull()
     {
         using var ctx = _factory.CreateContext();
