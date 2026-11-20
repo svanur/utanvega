@@ -12,7 +12,7 @@
 // non-cancelled event fixture — not a general-purpose page harness (out of scope per #1442).
 import React from 'react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, cleanup, screen } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -47,9 +47,12 @@ void i18n.use(initReactI18next).init({
 
 // Layout pulls in useMediaQuery (jsdom has no window.matchMedia) plus a dozen more
 // data-fetching hooks unrelated to the two sections under test — mocked to a bare passthrough,
-// same as RacesPage.test.tsx:44-46.
+// same as RacesPage.test.tsx:44-46. STAGING_BANNER_HEIGHT is re-exported with Layout's own
+// value (not a guessed stand-in) since #1830 round 2 imports it directly for the races
+// heading's scroll-margin-top offset — a bare default-only mock would leave it undefined.
 vi.mock('../components/Layout', () => ({
     default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    STAGING_BANNER_HEIGHT: 28,
 }));
 
 const { mockEvent } = vi.hoisted(() => ({
@@ -434,6 +437,34 @@ describe('CompetitionDetailPage location chip (#1829)', () => {
 
         expect(screen.getByText('Thingvellir')).not.toBeNull();
         expect(screen.queryByRole('link', { name: 'Thingvellir' })).toBeNull();
+    });
+});
+
+// #1830: the header-level race-count pill (CompetitionDetailPage.tsx:891-897) was purely
+// informational, with no way to jump to the "Distances" heading (:1187-1191) it summarizes.
+describe('CompetitionDetailPage race-count pill scroll (#1830)', () => {
+    it('smooth-scrolls the Distances heading into view when the race-count pill is clicked', () => {
+        const scrollIntoViewMock = vi.fn();
+        Element.prototype.scrollIntoView = scrollIntoViewMock;
+        renderCompetitionDetailPage(makeEvent({ type: 'Race' }));
+
+        fireEvent.click(screen.getByText('0 races'));
+
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+        expect(screen.getByText('Distances').tagName).toBe('H5');
+        // #1830 round 2: the sticky-header/breadcrumb offset itself (scroll-margin-top on this
+        // heading, computed from Layout.tsx's own Toolbar/breadcrumb-bar dimensions) is CSS
+        // applied via emotion at media-query breakpoints — jsdom's CSSOM doesn't evaluate
+        // emotion-injected stylesheets or media queries, so getComputedStyle() here can't
+        // observe it reliably; verified instead by reading the sx value directly in source
+        // and manually in a real browser at a 375px viewport (see PR description).
+    });
+
+    it('renders neither the pill nor the Distances heading for a non-Race/Series event (same gate on both)', () => {
+        renderCompetitionDetailPage(makeEvent({ type: 'Single' }));
+
+        expect(screen.queryByText('0 races')).toBeNull();
+        expect(screen.queryByText('Distances')).toBeNull();
     });
 });
 
