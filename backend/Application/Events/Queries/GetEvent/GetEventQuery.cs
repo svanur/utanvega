@@ -49,7 +49,8 @@ public record EventDetailDto(
     List<string>? ActivityTypes = null,
     string? EditionStatus = null,
     bool EditionEffectiveCancelled = false,
-    string? OrganizerSlug = null
+    string? OrganizerSlug = null,
+    string? LocationSlug = null
 );
 
 public record GetEventQuery(string Slug, bool IncludeHidden = false) : IRequest<EventDetailDto?>, ICacheable
@@ -188,7 +189,8 @@ public class GetEventQueryHandler : IRequestHandler<GetEventQuery, EventDetailDt
             ActivityTypes: computed.ActivityTypes,
             EditionStatus: computed.EditionStatus,
             EditionEffectiveCancelled: computed.EditionEffectiveCancelled,
-            OrganizerSlug: ev.Organizer != null ? ev.Organizer.Slug : null
+            OrganizerSlug: ev.Organizer != null ? ev.Organizer.Slug : null,
+            LocationSlug: ev.Location != null ? ev.Location.Slug : null
         );
     }
 }

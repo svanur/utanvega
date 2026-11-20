@@ -26,6 +26,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         alertSeverity: null,
         locationId: null,
         locationName: null,
+        locationSlug: null,
         scheduleRule: null,
         socialLinks: null,
         nextEditionDate: null,

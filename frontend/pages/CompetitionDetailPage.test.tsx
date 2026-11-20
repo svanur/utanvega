@@ -161,6 +161,7 @@ function makeEvent(overrides: Partial<EventDetail> = {}): EventDetail {
         alertSeverity: null,
         locationId: null,
         locationName: 'Thingvellir',
+        locationSlug: null,
         scheduleRule: null,
         socialLinks: null,
         nextEditionDate: '2026-11-15',
@@ -410,6 +411,29 @@ describe('CompetitionDetailPage climate section (#1460)', () => {
         renderCompetitionDetailPage(makeEvent({ locationName: null, gpxPointLat: 64.25, gpxPointLng: -21.13 }));
 
         expect(climateCardMock).not.toHaveBeenCalled();
+    });
+});
+
+// #1829: the location Chip must link to /locations/<slug> only when the backend actually sent one
+// (OrganizerSlug's long-standing precedent); without it, the chip must stay exactly as it rendered
+// before this change — plain text, not a link.
+describe('CompetitionDetailPage location chip (#1829)', () => {
+    beforeEach(() => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'locations_page']);
+    });
+
+    it('renders the location chip as a link to /locations/<slug> when locationSlug is present', () => {
+        renderCompetitionDetailPage(makeEvent({ locationName: 'Thingvellir', locationSlug: 'thingvellir' }));
+
+        const link = screen.getByRole('link', { name: 'Thingvellir' });
+        expect(link.getAttribute('href')).toBe('/locations/thingvellir');
+    });
+
+    it('renders the location chip as plain, non-clickable text when locationSlug is null', () => {
+        renderCompetitionDetailPage(makeEvent({ locationName: 'Thingvellir', locationSlug: null }));
+
+        expect(screen.getByText('Thingvellir')).not.toBeNull();
+        expect(screen.queryByRole('link', { name: 'Thingvellir' })).toBeNull();
     });
 });
 
