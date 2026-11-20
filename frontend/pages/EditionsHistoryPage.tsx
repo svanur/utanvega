@@ -311,7 +311,21 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                         {row.locationName && (
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
                                                                 <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                <Typography variant="body2" color="text.secondary" noWrap>{row.locationName}</Typography>
+                                                                {row.locationSlug ? (
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        color="text.secondary"
+                                                                        noWrap
+                                                                        component="a"
+                                                                        href={`/locations/${row.locationSlug}`}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                                    >
+                                                                        {row.locationName}
+                                                                    </Typography>
+                                                                ) : (
+                                                                    <Typography variant="body2" color="text.secondary" noWrap>{row.locationName}</Typography>
+                                                                )}
                                                             </Stack>
                                                         )}
                                                         {row.organizerName && (
