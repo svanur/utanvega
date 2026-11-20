@@ -12,7 +12,7 @@
 // non-cancelled event fixture — not a general-purpose page harness (out of scope per #1442).
 import React from 'react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, cleanup, screen } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -434,6 +434,28 @@ describe('CompetitionDetailPage location chip (#1829)', () => {
 
         expect(screen.getByText('Thingvellir')).not.toBeNull();
         expect(screen.queryByRole('link', { name: 'Thingvellir' })).toBeNull();
+    });
+});
+
+// #1830: the header-level race-count pill (CompetitionDetailPage.tsx:891-897) was purely
+// informational, with no way to jump to the "Distances" heading (:1187-1191) it summarizes.
+describe('CompetitionDetailPage race-count pill scroll (#1830)', () => {
+    it('smooth-scrolls the Distances heading into view when the race-count pill is clicked', () => {
+        const scrollIntoViewMock = vi.fn();
+        Element.prototype.scrollIntoView = scrollIntoViewMock;
+        renderCompetitionDetailPage(makeEvent({ type: 'Race' }));
+
+        fireEvent.click(screen.getByText('0 races'));
+
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+        expect(screen.getByText('Distances').tagName).toBe('H5');
+    });
+
+    it('renders neither the pill nor the Distances heading for a non-Race/Series event (same gate on both)', () => {
+        renderCompetitionDetailPage(makeEvent({ type: 'Single' }));
+
+        expect(screen.queryByText('0 races')).toBeNull();
+        expect(screen.queryByText('Distances')).toBeNull();
     });
 });
 

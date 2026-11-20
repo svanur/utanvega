@@ -317,6 +317,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
         return null;
     }, [event, locations]);
     const confettiFiredForEvent = useRef<string | null>(null);
+    const racesHeadingRef = useRef<HTMLHeadingElement>(null);
 
     // Uses the flattened event.editionEffectiveCancelled (not primaryEdition) since primaryEdition
     // is computed later and itself depends on isPostRace below — going through primaryEdition here
@@ -893,6 +894,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                                 label={t('races.raceCount', { count: visibleRaces.length })}
                                 size="small"
                                 color="primary"
+                                onClick={() => racesHeadingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                             />
                         )}
                     </Stack>
@@ -1185,7 +1187,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                 )}
 
                 {(event.type === 'Race' || event.type === 'Series') && (
-                    <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+                    <Typography ref={racesHeadingRef} variant="h5" fontWeight={700} sx={{ mb: 2 }}>
                         {t('races.racesHeading')}
                     </Typography>
                 )}
