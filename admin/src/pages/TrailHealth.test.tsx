@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import TrailHealth from './TrailHealth';
+import TrailHealth, { getHealthChecks, getHealthScore, scoreColor, type TrailHealthInput } from './TrailHealth';
 
 // #1295: the six long-running action buttons on this page (TrailHealth.tsx:290,299,308,318,327,448)
 // each disable themselves against the other five in-flight flags (detecting, detectingLocations,
@@ -140,5 +140,70 @@ describe('TrailHealth — six-button disabled matrix (#1263/#1264/#1294 regressi
       const button = await screen.findByRole<HTMLButtonElement>('button', { name });
       expect(button.disabled).toBe(false);
     }
+  });
+});
+
+// #1842: getHealthChecks/getHealthScore/scoreColor are exported from here for reuse by
+// TrailDetailPage.tsx's inline completeness banner, which assembles a TrailHealthInput from
+// TrailDetail fields rather than the admin trails list's Trail — these exercise that narrower
+// input shape directly, the same pure-function style as EditionHealth.test.tsx's
+// getEditionChecks/getRaceChecks coverage, rather than rendering a component.
+function makeHealthInput(overrides: Partial<TrailHealthInput> = {}): TrailHealthInput {
+  return {
+    description: 'A fine trail through the hills.',
+    startLatitude: 64.1,
+    startLongitude: -21.9,
+    elevationGain: 120,
+    elevationLoss: 110,
+    locations: [{ name: 'Reykjavík' }],
+    length: 5000,
+    status: 'Published',
+    terrainType: 'Hilly',
+    ...overrides,
+  };
+}
+
+describe('getHealthChecks / getHealthScore / scoreColor — TrailHealthInput', () => {
+  it('scores 100 and reports every check passed for a fully-complete trail', () => {
+    const checks = getHealthChecks(makeHealthInput());
+
+    expect(checks.every(c => c.passed)).toBe(true);
+    expect(getHealthScore(makeHealthInput())).toBe(100);
+    expect(scoreColor(100)).toBe('success');
+  });
+
+  it('fails the Description check for an empty description, without affecting other checks', () => {
+    const checks = getHealthChecks(makeHealthInput({ description: '' }));
+
+    expect(checks.find(c => c.label === 'Description')!.passed).toBe(false);
+    expect(checks.find(c => c.label === 'GPX Data')!.passed).toBe(true);
+  });
+
+  it('fails GPX Data and treats Terrain as N/A (passed) when there is no start coordinate', () => {
+    const checks = getHealthChecks(makeHealthInput({ startLatitude: null, startLongitude: null }));
+
+    expect(checks.find(c => c.label === 'GPX Data')!.passed).toBe(false);
+    const terrain = checks.find(c => c.label === 'Terrain')!;
+    expect(terrain.passed).toBe(true);
+    expect(terrain.tooltip).toContain('N/A');
+  });
+
+  it('fails Terrain when GPX data exists but terrainType is unset', () => {
+    const checks = getHealthChecks(makeHealthInput({ terrainType: null }));
+
+    expect(checks.find(c => c.label === 'Terrain')!.passed).toBe(false);
+  });
+
+  it('fails Location when the trail has no locations linked', () => {
+    const checks = getHealthChecks(makeHealthInput({ locations: [] }));
+
+    expect(checks.find(c => c.label === 'Location')!.passed).toBe(false);
+  });
+
+  it('fails Published when status is not Published, dragging the score below 100', () => {
+    const score = getHealthScore(makeHealthInput({ status: 'Draft' }));
+
+    expect(score).toBeLessThan(100);
+    expect(scoreColor(score)).not.toBe('success');
   });
 });
