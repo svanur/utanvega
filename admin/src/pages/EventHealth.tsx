@@ -31,7 +31,8 @@ interface HealthCheck {
 
 // Checks that are not meaningful for a given event type are marked na=true
 // and excluded from the health score.
-function getHealthChecks(event: EventSummaryDto): HealthCheck[] {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for reuse in EventDetailPage.tsx and tests
+export function getHealthChecks(event: EventSummaryDto): HealthCheck[] {
   const isAd = event.type === 'Advertisement';
   const isSeries = event.type === 'Series';
 
@@ -108,13 +109,15 @@ function getHealthChecks(event: EventSummaryDto): HealthCheck[] {
   ];
 }
 
-function scoreFromChecks(checks: HealthCheck[]): number {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for reuse in EventDetailPage.tsx and tests
+export function scoreFromChecks(checks: HealthCheck[]): number {
   const applicable = checks.filter(c => !c.na);
   if (applicable.length === 0) return 100;
   return Math.round((applicable.filter(c => c.passed).length / applicable.length) * 100);
 }
 
-function scoreColor(score: number): 'success' | 'warning' | 'error' {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for reuse in EventDetailPage.tsx and tests
+export function scoreColor(score: number): 'success' | 'warning' | 'error' {
   if (score >= 100) return 'success';
   if (score >= 50) return 'warning';
   return 'error';

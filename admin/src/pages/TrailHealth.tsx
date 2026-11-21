@@ -20,7 +20,7 @@ import CalculateIcon from '@mui/icons-material/Calculate';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../hooks/api';
-import { useTrails, trailsQueryKey, type Trail } from '../hooks/useTrails';
+import { useTrails, trailsQueryKey } from '../hooks/useTrails';
 
 
 interface HealthCheck {
@@ -37,7 +37,24 @@ interface DuplicatePair {
   matchPercentage: number;
 }
 
-function getHealthChecks(trail: Trail): HealthCheck[] {
+// Narrower than Trail — just the fields the checks below actually read. Trail (used by this
+// dashboard) satisfies it structurally; TrailDetailPage.tsx assembles one from TrailDetail plus
+// the start coordinate it already has on hand from the loaded GPX geometry, without needing a
+// matching backend field on the admin trail-detail endpoint.
+export interface TrailHealthInput {
+  description?: string;
+  startLatitude?: number | null;
+  startLongitude?: number | null;
+  elevationGain: number;
+  elevationLoss: number;
+  locations: { name: string }[];
+  length: number;
+  status: string;
+  terrainType?: string | null;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components -- exported for reuse in TrailDetailPage.tsx and tests
+export function getHealthChecks(trail: TrailHealthInput): HealthCheck[] {
   return [
     {
       label: 'Description',
@@ -81,12 +98,14 @@ function getHealthChecks(trail: Trail): HealthCheck[] {
   ];
 }
 
-function getHealthScore(trail: Trail): number {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for reuse in TrailDetailPage.tsx and tests
+export function getHealthScore(trail: TrailHealthInput): number {
   const checks = getHealthChecks(trail);
   return Math.round((checks.filter(c => c.passed).length / checks.length) * 100);
 }
 
-function scoreColor(score: number): 'success' | 'warning' | 'error' {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for reuse in TrailDetailPage.tsx and tests
+export function scoreColor(score: number): 'success' | 'warning' | 'error' {
   if (score >= 100) return 'success';
   if (score >= 50) return 'warning';
   return 'error';
