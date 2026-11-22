@@ -56,6 +56,9 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import ShareIcon from '@mui/icons-material/Share';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
@@ -196,6 +199,17 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [checkInError, setCheckInError] = useState<string | null>(null);
     const [checkInExpanded, setCheckInExpanded] = useState(false);
     const [videoExpanded, setVideoExpanded] = useState(true);
+    // Mirrors i18n.ts's `utanvega-lang` localStorage pattern: collapsed by
+    // default, persisted once the visitor expands it so the legend doesn't
+    // reset to icon-only on every return visit.
+    const [actionsLegendOpen, setActionsLegendOpen] = useState(() => localStorage.getItem('utanvega-trail-actions-legend') === '1');
+    const toggleActionsLegend = () => {
+        setActionsLegendOpen((current) => {
+            const next = !current;
+            localStorage.setItem('utanvega-trail-actions-legend', next ? '1' : '0');
+            return next;
+        });
+    };
     const [checkInSearch, setCheckInSearch] = useState('');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [toastSeverity, setToastSeverity] = useState<'info' | 'error'>('info');
@@ -522,6 +536,21 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         [{ label: t('nav.trails'), to: '/trails' }, { label: trail.name }],
     );
 
+    // Legend entries mirror the action row below one-for-one, gated by the
+    // same feature flags — a flag-disabled action is filtered out here too,
+    // so the legend never describes an icon that isn't actually on screen.
+    type ActionsLegendItem = { key: string; icon: React.ReactNode; header: string; description: string };
+    const actionsLegendCandidates: (ActionsLegendItem | false)[] = [
+        isEnabled('share_trail') && { key: 'share', icon: <ShareIcon fontSize="small" color="action" />, header: t('share.shareOptions'), description: t('trail.actionsLegend.share') },
+        isEnabled('qr_code') && { key: 'qr', icon: <QrCode2Icon fontSize="small" color="action" />, header: t('qr.showQR'), description: t('trail.actionsLegend.qr') },
+        isEnabled('download_trail') && { key: 'gpx', icon: <FileDownloadIcon fontSize="small" color="action" />, header: t('trail.downloadGpx'), description: t('trail.actionsLegend.gpx') },
+        isEnabled('trail_comparison') && { key: 'compare', icon: <CompareArrowsIcon fontSize="small" color="action" />, header: t('compare.compareButton'), description: t('trail.actionsLegend.compare') },
+        isEnabled('tool_trail_predictor') && { key: 'predictor', icon: <QueryStatsIcon fontSize="small" color="action" />, header: t('tools.trailPredictor.title'), description: t('trail.actionsLegend.predictor') },
+        isEnabled('offline_button') && { key: 'offline', icon: <CloudDownloadIcon fontSize="small" color="action" />, header: t('offline.saveForOffline'), description: t('trail.actionsLegend.offline') },
+        (isEnabled('directions_to_trailhead') && !!geometry && geometry.coordinates.length > 0) && { key: 'directions', icon: <DirectionsCarIcon fontSize="small" color="action" />, header: t('trail.getDirections'), description: t('trail.actionsLegend.directions') },
+    ];
+    const actionsLegendItems = actionsLegendCandidates.filter((item): item is ActionsLegendItem => !!item);
+
     return (
         <Layout mode={mode} onToggleMode={onToggleMode} breadcrumb={breadcrumb}>
             {trail.linkedRaces && (
@@ -559,9 +588,9 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         spacing={1} 
                         alignItems="center" 
                         justifyContent="flex-end"
-                        flexWrap="wrap" 
-                        useFlexGap 
-                        sx={{ mb: 2 }}
+                        flexWrap="wrap"
+                        useFlexGap
+                        sx={{ mb: 1 }}
                     >
                         {trail.difficulty && (
                             <DifficultyInfo difficulty={trail.difficulty} activityType={trail.activityType} />
@@ -623,61 +652,101 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 variant={tag.color ? 'filled' : 'outlined'}
                             />
                         ))}
-                        {isEnabled('share_trail') && <ShareButtons title={trail.name} slug={trail.slug} />}
-                        {isEnabled('qr_code') && <QRCodeShare slug={trail.slug} trailName={trail.name} />}
-                        {isEnabled('download_trail') && (
-                        <Tooltip title={t('trail.downloadGpx')} arrow>
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                startIcon={<FileDownloadIcon fontSize="small" />}
-                                onClick={handleGpxDownload}
-                                sx={{ minWidth: 44, minHeight: 44 }}
-                            >
-                                {t('trail.gpxLabel')}
-                            </Button>
-                        </Tooltip>
-                        )}
-                        {isEnabled('trail_comparison') && (
-                        <Tooltip title={t('compare.compareButton')} arrow>
-                            <IconButton
-                                size="small"
-                                onClick={() => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); }}
-                                sx={{ minWidth: 44, minHeight: 44 }}
-                            >
-                                <CompareArrowsIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        )}
-                        {isEnabled('tool_trail_predictor') && (
-                        <Tooltip title={t('tools.trailPredictor.title')} arrow>
-                            <IconButton
-                                size="small"
-                                onClick={() => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); }}
-                                sx={{ minWidth: 44, minHeight: 44 }}
-                            >
-                                <QueryStatsIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        )}
-                        {isEnabled('offline_button') && <OfflineButton slug={trail.slug} trailName={trail.name} />}
-                        {isEnabled('directions_to_trailhead') && geometry && geometry.coordinates.length > 0 && (
-                            <Tooltip title={t('trail.getDirections')} arrow>
-                                <IconButton
-                                    size="small"
-                                    component="a"
-                                    href={`https://www.google.com/maps/dir/?api=1&destination=${geometry.coordinates[0][1]},${geometry.coordinates[0][0]}`}
-                                    target="_blank"
-                                    rel="noopener"
-                                    onClick={() => trackTrailDirectionsClick(trail.slug)}
-                                    sx={{ minWidth: 44, minHeight: 44 }}
-                                >
-                                    <DirectionsCarIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        )}
                     </Stack>
 
+                    {/* Action controls (share, QR, GPX, compare, predictor, offline,
+                        directions) live in their own row, separate from the metadata
+                        pills above — mixing "describes the trail" with "things you can
+                        do" in one row made the icon-only actions easy to miss (#1851). */}
+                    <Box sx={{ mb: 2 }}>
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            justifyContent="flex-end"
+                            flexWrap="wrap"
+                            useFlexGap
+                        >
+                            {isEnabled('share_trail') && <ShareButtons title={trail.name} slug={trail.slug} />}
+                            {isEnabled('qr_code') && <QRCodeShare slug={trail.slug} trailName={trail.name} />}
+                            {isEnabled('download_trail') && (
+                            <Tooltip title={t('trail.downloadGpx')} arrow>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<FileDownloadIcon fontSize="small" />}
+                                    onClick={handleGpxDownload}
+                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                >
+                                    {t('trail.gpxLabel')}
+                                </Button>
+                            </Tooltip>
+                            )}
+                            {isEnabled('trail_comparison') && (
+                            <Tooltip title={t('compare.compareButton')} arrow>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); }}
+                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                >
+                                    <CompareArrowsIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                            )}
+                            {isEnabled('tool_trail_predictor') && (
+                            <Tooltip title={t('tools.trailPredictor.title')} arrow>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); }}
+                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                >
+                                    <QueryStatsIcon fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                            )}
+                            {isEnabled('offline_button') && <OfflineButton slug={trail.slug} trailName={trail.name} />}
+                            {isEnabled('directions_to_trailhead') && geometry && geometry.coordinates.length > 0 && (
+                                <Tooltip title={t('trail.getDirections')} arrow>
+                                    <IconButton
+                                        size="small"
+                                        component="a"
+                                        href={`https://www.google.com/maps/dir/?api=1&destination=${geometry.coordinates[0][1]},${geometry.coordinates[0][0]}`}
+                                        target="_blank"
+                                        rel="noopener"
+                                        onClick={() => trackTrailDirectionsClick(trail.slug)}
+                                        sx={{ minWidth: 44, minHeight: 44 }}
+                                    >
+                                        <DirectionsCarIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            )}
+                            <Tooltip title={actionsLegendOpen ? t('trail.actionsLegend.toggleHide') : t('trail.actionsLegend.toggleShow')} arrow>
+                                <IconButton
+                                    size="small"
+                                    onClick={toggleActionsLegend}
+                                    aria-expanded={actionsLegendOpen}
+                                    aria-label={actionsLegendOpen ? t('trail.actionsLegend.toggleHide') : t('trail.actionsLegend.toggleShow')}
+                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                >
+                                    {actionsLegendOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                                </IconButton>
+                            </Tooltip>
+                        </Stack>
+
+                        <Collapse in={actionsLegendOpen}>
+                            <Stack spacing={1} sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: 'action.hover' }}>
+                                {actionsLegendItems.map((item) => (
+                                    <Stack key={item.key} direction="row" spacing={1} alignItems="flex-start">
+                                        <Box sx={{ display: 'flex', mt: 0.25 }}>{item.icon}</Box>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={600}>{item.header}</Typography>
+                                            <Typography variant="body2" color="text.secondary">{item.description}</Typography>
+                                        </Box>
+                                    </Stack>
+                                ))}
+                            </Stack>
+                        </Collapse>
+                    </Box>
 
                     {trail.description && (
                         <Typography variant="body1" color="text.secondary" sx={{ mb: 2, lineHeight: 1.7, whiteSpace: 'pre-line' }}>

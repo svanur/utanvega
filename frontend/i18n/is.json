@@ -231,6 +231,17 @@
         "checkInToastJoined_other": "{{count}} hlauparar mættu rétt í þessu.",
         "checkInToastLeft_one": "{{count}} hlaupari skráði sig út.",
         "checkInToastLeft_other": "{{count}} hlauparar skráðu sig út.",
+        "actionsLegend": {
+            "toggleShow": "Hvað gera þessi tákn?",
+            "toggleHide": "Fela útskýringar á táknum",
+            "share": "Deildu þessari leið með vinum á samfélagsmiðlum eða með tengli.",
+            "qr": "Birtu QR-kóða svo einhver nálægt geti opnað þessa leið í símanum sínum.",
+            "gpx": "Hlaða niður GPX-skrá þessarar leiðar fyrir GPS-úrið þitt eða app.",
+            "compare": "Bera þessa leið saman við aðra leið.",
+            "predictor": "Áætla lokatíma þinn fyrir þessa leið.",
+            "offline": "Vista kort þessarar leiðar til notkunar án nettengingar.",
+            "directions": "Fá akstursleiðbeiningar að upphafspunkti."
+        },
         "terrainType": {
             "Mountainous": "Fjalllendi",
             "Hilly": "Hæðótt",
