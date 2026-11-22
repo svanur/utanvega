@@ -60,6 +60,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import ShareIcon from '@mui/icons-material/Share';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 import Layout from '../components/Layout';
 import { useTrailBySlug, useTrails, useTrailSuggestions, useTrailWeather, useTrailLeaderboard, recordTrailView, API_URL } from '../hooks/useTrails';
 import { estimateDuration } from '../utils/estimateDuration';
@@ -68,6 +69,7 @@ import LandscapeIcon from '@mui/icons-material/Landscape';
 import PaceInfo from '../components/PaceInfo';
 import LostRunner from '../components/LostRunner';
 import { useFavorites } from '../hooks/useFavorites';
+import { useOfflineTrails } from '../hooks/useOfflineTrails';
 import { useRecentlyViewed } from '../hooks/useRecentlyViewed';
 import type { GeoJsonGeometry } from '../components/TrailMap';
 const TrailMap = lazy(() => import('../components/TrailMap'));
@@ -182,6 +184,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     } = useTrailCheckIns(slug, checkInEnabled);
     const { trails: allTrails } = useTrails();
     const { isFavorite, toggleFavorite } = useFavorites();
+    const { isOffline } = useOfflineTrails();
     const [geometry, setGeometry] = useState<GeoJsonGeometry | null>(null);
     const poolSection = useMemo(() => {
         if (!trail || !poolsEnabled) return null;
@@ -573,7 +576,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         isEnabled('download_trail') && { key: 'gpx', icon: <FileDownloadIcon fontSize="small" color="action" />, header: t('trail.downloadGpx'), description: t('trail.actionsLegend.gpx'), activate: handleGpxDownload },
         isEnabled('trail_comparison') && { key: 'compare', icon: <CompareArrowsIcon fontSize="small" color="action" />, header: t('compare.compareButton'), description: t('trail.actionsLegend.compare'), activate: () => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); } },
         isEnabled('tool_trail_predictor') && { key: 'predictor', icon: <QueryStatsIcon fontSize="small" color="action" />, header: t('tools.trailPredictor.title'), description: t('trail.actionsLegend.predictor'), activate: () => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); } },
-        isEnabled('offline_button') && { key: 'offline', icon: <CloudDownloadIcon fontSize="small" color="action" />, header: t('offline.saveForOffline'), description: t('trail.actionsLegend.offline'), activate: forwardClickTo(offlineActionRef) },
+        isEnabled('offline_button') && { key: 'offline', icon: isOffline(trail.slug) ? <OfflinePinIcon fontSize="small" color="success" /> : <CloudDownloadIcon fontSize="small" color="action" />, header: t('offline.saveForOffline'), description: t('trail.actionsLegend.offline'), activate: forwardClickTo(offlineActionRef) },
         (isEnabled('directions_to_trailhead') && !!geometry && geometry.coordinates.length > 0) && { key: 'directions', icon: <DirectionsCarIcon fontSize="small" color="action" />, header: t('trail.getDirections'), description: t('trail.actionsLegend.directions'), activate: () => { trackTrailDirectionsClick(trail.slug); window.open(`https://www.google.com/maps/dir/?api=1&destination=${geometry.coordinates[0][1]},${geometry.coordinates[0][0]}`, '_blank', 'noopener'); } },
     ];
     const actionsLegendItems = actionsLegendCandidates.filter((item): item is ActionsLegendItem => !!item);
