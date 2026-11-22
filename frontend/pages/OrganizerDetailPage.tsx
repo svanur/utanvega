@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -185,7 +185,7 @@ export default function OrganizerDetailPage({ mode, onToggleMode }: OrganizerDet
                             const date = event.nextEditionDate;
                             return (
                                 <Card key={event.id} variant="outlined" sx={{ borderRadius: 2 }}>
-                                    <CardActionArea component="a" href={`/events/${event.slug}`}>
+                                    <CardActionArea component={RouterLink} to={`/events/${event.slug}`}>
                                         <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
                                                 <Typography variant="body1" fontWeight={600}>

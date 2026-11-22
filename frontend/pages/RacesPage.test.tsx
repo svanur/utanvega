@@ -119,6 +119,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         alertSeverity: null,
         locationId: null,
         locationName: 'Reykjavik',
+        locationSlug: null,
         scheduleRule: null,
         socialLinks: null,
         nextEditionDate: '2026-11-15',

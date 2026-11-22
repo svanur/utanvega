@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Alert,
@@ -45,6 +45,8 @@ import ChangeLogList from '../components/ChangeLogList';
 import TrailStatusLegendDialog from '../components/trails/TrailStatusLegendDialog';
 import TrailActionDialog, { type TrailAction } from '../components/trails/TrailActionDialog';
 import { InlineEditSelect, InlineEditText } from '../components/InlineEditCell';
+import HealthStatusBanner from '../components/HealthStatusBanner';
+import { getHealthChecks, getHealthScore, scoreColor as healthScoreColor, type TrailHealthInput } from './TrailHealth';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080';
@@ -365,6 +367,27 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
     }
   };
 
+  // #1847: startLatitude/startLongitude now come straight off TrailDetail (backend reads them
+  // synchronously from GpxData, see GET /api/v1/admin/trails/{idOrSlug}) instead of from the
+  // `geometry` state TrailMap resolves asynchronously via onDataLoaded — that state was null
+  // on first paint even for trails with real GPX data, so the "GPX Data" health check briefly
+  // rendered a false failure before self-correcting. `geometry` itself stays for the map and
+  // ElevationChart below; only the health-check input source changed. Location names still
+  // come from `allLocations` the same way #1842 left them.
+  const trailHealthInput: TrailHealthInput = useMemo(() => ({
+    description: trail?.description,
+    startLatitude: trail?.startLatitude ?? null,
+    startLongitude: trail?.startLongitude ?? null,
+    elevationGain: trail?.elevationGain ?? 0,
+    elevationLoss: trail?.elevationLoss ?? 0,
+    locations: (trail?.locations ?? []).map(l => ({ name: allLocations.find(al => al.id === l.locationId)?.name ?? '…' })),
+    length: trail?.length ?? 0,
+    status: trail?.status ?? '',
+    terrainType: trail?.terrainType,
+  }), [trail, allLocations]);
+  const trailHealthChecks = useMemo(() => getHealthChecks(trailHealthInput), [trailHealthInput]);
+  const trailHealthScore = useMemo(() => getHealthScore(trailHealthInput), [trailHealthInput]);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
@@ -410,6 +433,9 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
         <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
         <Typography variant="body2" fontWeight={500}>{trail.name}</Typography>
       </Stack>
+
+      {/* Completeness banner — same checks/score as TrailHealth.tsx's dashboard, see #1842 */}
+      <HealthStatusBanner checks={trailHealthChecks} score={trailHealthScore} scoreColor={healthScoreColor} />
 
       {/* Trail header card */}
       <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2.5, mb: 3 }}>

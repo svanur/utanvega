@@ -714,6 +714,57 @@ public class EditionsHistoryHandlerTests : IDisposable
         Assert.Null(row.OrganizerSlug);
     }
 
+    // ─── Location (#1832) ───
+
+    [Fact]
+    public async Task History_Row_LinkedLocation_PopulatesLocationSlug()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var location = new Location { Id = Guid.NewGuid(), Name = "Þórsmörk", Slug = "thorsmork" };
+        var ev = CreateTestEvent("Located Race");
+        ev.LocationId = location.Id;
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Locations.Add(location);
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Equal("Þórsmörk", row.LocationName);
+        Assert.Equal("thorsmork", row.LocationSlug);
+    }
+
+    [Fact]
+    public async Task History_Row_NoLocation_LocationFieldsAreNull()
+    {
+        var pastYear = DateOnly.FromDateTime(DateTime.UtcNow).Year - 1;
+        var ev = CreateTestEvent("Unlocated Race");
+        var edition = CreateEdition(ev.Id, new DateOnly(pastYear, 6, 1));
+
+        using (var ctx = _factory.CreateContext())
+        {
+            ctx.Events.Add(ev);
+            ctx.EventEditions.Add(edition);
+            await ctx.SaveChangesAsync();
+        }
+
+        using var queryCtx = _factory.CreateContext();
+        var handler = new GetEditionsHistoryQueryHandler(queryCtx, _memoryCache);
+        var result = await handler.Handle(new GetEditionsHistoryQuery(pastYear), CancellationToken.None);
+
+        var row = Assert.Single(result);
+        Assert.Null(row.LocationName);
+        Assert.Null(row.LocationSlug);
+    }
+
     // ─── Years list ───
 
     [Fact]

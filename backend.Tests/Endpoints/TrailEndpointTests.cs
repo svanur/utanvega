@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using NetTopologySuite.Geometries;
+using Utanvega.Backend.Core.Entities;
 using Utanvega.Backend.Tests.WebHost;
 
 namespace Utanvega.Backend.Tests.Endpoints;
@@ -198,5 +201,82 @@ public class TrailEndpointTests : IDisposable
         Assert.NotNull(body);
         Assert.Equal("Validation failed", body!.Title);
         Assert.True(body.Errors.ContainsKey("Files[0].GpxXml"));
+    }
+
+    private static readonly GeometryFactory GeometryFactory = new(new PrecisionModel(), 4326);
+
+    private static LineString SimpleLine() => GeometryFactory.CreateLineString(new[]
+    {
+        new CoordinateZ(-21.90, 64.13, 10),
+        new CoordinateZ(-21.89, 64.14, 45),
+    });
+
+    /// <summary>
+    /// Endpoint-level test for <c>GET /api/v1/admin/trails/{idOrSlug}</c> (Program.cs:857-...) —
+    /// see #1847. Before this fix, the response carried no start-coordinate field at all, so
+    /// TrailDetailPage.tsx's "GPX Data" health check fell back to TrailMap's async geometry
+    /// fetch and briefly rendered a false failure for trails that do have GPX data, until that
+    /// fetch resolved. This locks in that StartLatitude/StartLongitude come straight off the
+    /// trail's already-loaded GpxData, matching GetTrailsQuery's StartPoint.Y/X convention
+    /// (latitude first, longitude second) without that query's second-query workaround — this
+    /// endpoint never projects via .Select(), so GpxData (and the cast to LineString) is
+    /// available in memory the moment the entity is materialized.
+    /// </summary>
+    [Fact]
+    public async Task GetAdminTrail_TrailWithGpxData_ReturnsStartLatitudeAndLongitude()
+    {
+        var trail = new Trail
+        {
+            Id = Guid.NewGuid(),
+            Name = "Mountain Loop",
+            Slug = "mountain-loop",
+            Length = 5000,
+            ActivityTypeId = ActivityType.Hiking,
+            Type = TrailType.Loop,
+            Difficulty = Difficulty.Easy,
+            Visibility = Visibility.Public,
+            GpxData = SimpleLine(),
+        };
+
+        using var db = _factory.CreateDbContext();
+        db.Trails.Add(trail);
+        await db.SaveChangesAsync();
+
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+        var response = await client.GetAsync($"/api/v1/admin/trails/{trail.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(64.13, body.GetProperty("startLatitude").GetDouble());
+        Assert.Equal(-21.90, body.GetProperty("startLongitude").GetDouble());
+    }
+
+    [Fact]
+    public async Task GetAdminTrail_TrailWithoutGpxData_ReturnsNullStartCoordinates()
+    {
+        var trail = new Trail
+        {
+            Id = Guid.NewGuid(),
+            Name = "No GPX Trail",
+            Slug = "no-gpx-trail",
+            Length = 5000,
+            ActivityTypeId = ActivityType.Hiking,
+            Type = TrailType.Loop,
+            Difficulty = Difficulty.Easy,
+            Visibility = Visibility.Public,
+            GpxData = null,
+        };
+
+        using var db = _factory.CreateDbContext();
+        db.Trails.Add(trail);
+        await db.SaveChangesAsync();
+
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+        var response = await client.GetAsync($"/api/v1/admin/trails/{trail.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("startLatitude").ValueKind);
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("startLongitude").ValueKind);
     }
 }

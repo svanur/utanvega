@@ -50,7 +50,8 @@ public record EventDetailPublicDto(
     List<string>? ActivityTypes = null,
     string? EditionStatus = null,
     bool EditionEffectiveCancelled = false,
-    string? OrganizerSlug = null
+    string? OrganizerSlug = null,
+    string? LocationSlug = null
 );
 
 // Narrowed public-facing projection of EventEditionDto — same shape except Races is
@@ -219,7 +220,8 @@ public class GetPublicEventQueryHandler : IRequestHandler<GetPublicEventQuery, E
             ActivityTypes: computed.ActivityTypes,
             EditionStatus: computed.EditionStatus,
             EditionEffectiveCancelled: computed.EditionEffectiveCancelled,
-            OrganizerSlug: ev.Organizer != null ? ev.Organizer.Slug : null
+            OrganizerSlug: ev.Organizer != null ? ev.Organizer.Slug : null,
+            LocationSlug: ev.Location != null ? ev.Location.Slug : null
         );
     }
 }

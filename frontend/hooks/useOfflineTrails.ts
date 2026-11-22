@@ -119,18 +119,53 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const TILE_SERVER = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const ZOOM_LEVELS = [10, 11, 12, 13, 14, 15];
 
+// #1856: offlineSlugs used to be per-instance useState, loaded from IndexedDB
+// only on mount. Two components mounted at once (e.g. OfflineButton and the
+// actions-legend row on TrailDetailsPage) each kept their own copy, so saving
+// offline in one never updated the other without a full page reload. These
+// module-level globals plus a listener set turn offlineSlugs into a tiny
+// shared store: every save/remove updates `sharedOfflineSlugs` once and
+// notifies every mounted hook instance, which re-renders with the new set.
+let sharedOfflineSlugs = new Set<string>();
+let sharedSlugsLoaded = false;
+let loadSharedSlugsPromise: Promise<void> | null = null;
+const listeners = new Set<(slugs: Set<string>) => void>();
+
+function notifyListeners(): void {
+    listeners.forEach(listener => listener(sharedOfflineSlugs));
+}
+
+function loadSharedSlugs(): Promise<void> {
+    if (!loadSharedSlugsPromise) {
+        loadSharedSlugsPromise = openDB().then(db => getAll(db, TRAIL_STORE)).then(items => {
+            sharedOfflineSlugs = new Set(items.map(i => i.slug));
+            sharedSlugsLoaded = true;
+            notifyListeners();
+        }).catch(() => {
+            sharedSlugsLoaded = true;
+        });
+    }
+    return loadSharedSlugsPromise;
+}
+
 export function useOfflineTrails() {
-    const [offlineSlugs, setOfflineSlugs] = useState<Set<string>>(new Set());
-    const [loading, setLoading] = useState(true);
+    const [offlineSlugs, setOfflineSlugs] = useState<Set<string>>(sharedOfflineSlugs);
+    const [loading, setLoading] = useState(!sharedSlugsLoaded);
     const [saving, setSaving] = useState<string | null>(null);
     const [progress, setProgress] = useState(0);
 
-    // Load saved trail slugs on mount
+    // Subscribe to the shared store so a save/remove triggered by any other
+    // mounted instance (e.g. the real OfflineButton) updates this one too.
     useEffect(() => {
-        openDB().then(db => getAll(db, TRAIL_STORE)).then(items => {
-            setOfflineSlugs(new Set(items.map(i => i.slug)));
+        listeners.add(setOfflineSlugs);
+        if (!sharedSlugsLoaded) {
+            loadSharedSlugs().then(() => setLoading(false));
+        } else {
             setLoading(false);
-        }).catch(() => setLoading(false));
+        }
+        return () => {
+            listeners.delete(setOfflineSlugs);
+        };
     }, []);
 
     const isOffline = useCallback((slug: string) => offlineSlugs.has(slug), [offlineSlugs]);
@@ -184,7 +219,8 @@ export function useOfflineTrails() {
             };
             await putItem(db, TRAIL_STORE, item);
 
-            setOfflineSlugs(prev => new Set([...prev, slug]));
+            sharedOfflineSlugs = new Set([...sharedOfflineSlugs, slug]);
+            notifyListeners();
             setProgress(100);
         } finally {
             setSaving(null);
@@ -198,11 +234,10 @@ export function useOfflineTrails() {
 
         // Remove from IndexedDB
         await deleteItem(db, TRAIL_STORE, slug);
-        setOfflineSlugs(prev => {
-            const next = new Set(prev);
-            next.delete(slug);
-            return next;
-        });
+        const next = new Set(sharedOfflineSlugs);
+        next.delete(slug);
+        sharedOfflineSlugs = next;
+        notifyListeners();
 
         // Clean up tiles (only if no other trail uses them)
         if (item) {

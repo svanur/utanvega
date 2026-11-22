@@ -78,6 +78,9 @@ import { useBackToList } from '../hooks/useBackToList';
 import { useIdRowFocus } from '../hooks/useIdRowFocus';
 import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
+import HealthStatusBanner, { HealthScoreBadge } from '../components/HealthStatusBanner';
+import { getHealthChecks as getEventHealthChecks, scoreFromChecks as eventScoreFromChecks, scoreColor as healthScoreColor } from './EventHealth';
+import { getEditionChecks, getRaceChecks, scoreFromChecks } from './EditionHealth';
 import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
 import BilingualLangToggle from '../components/BilingualLangToggle';
@@ -777,6 +780,12 @@ function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx
     ...siblingDates.filter(d => d !== edition.date).map(d => ({ date: d, label: `Sibling: ${fmtDate(d)}` })),
   ];
 
+  // #1842: same checks/score EditionHealth.tsx's dashboard computes for this race — detail (the
+  // parent EventDetailDto) tells getRaceChecks whether this is a Series race, same as the
+  // dashboard's event.type === 'Series'.
+  const raceHealthChecks = useMemo(() => getRaceChecks(race, edition, detail?.type === 'Series'), [race, edition, detail?.type]);
+  const raceHealthScore = useMemo(() => scoreFromChecks(raceHealthChecks), [raceHealthChecks]);
+
   // race.activityType === null means "inherit from event" — fall back to the event's own activity type.
   const effectiveActivityType = race.activityType ?? detail?.activityType;
   const isItraEligible = effectiveActivityType === 'TrailRunning';
@@ -812,6 +821,7 @@ function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx
               <Chip label="EN" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem', '& .MuiChip-label': { px: 0.75 } }} />
             </Tooltip>
           )}
+          <HealthScoreBadge score={raceHealthScore} scoreColor={healthScoreColor} tooltip={`Race health: ${raceHealthScore}%`} />
         </Stack>
       </TableCell>
       <TableCell>
@@ -1587,6 +1597,16 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
     });
   };
 
+  // #1842: same checks/score EventHealth.tsx's dashboard computes for this event — EventDetailDto
+  // extends EventSummaryDto, so detail satisfies getHealthChecks' parameter type unchanged. N/A
+  // checks (e.g. "Editions" for a Series event) are excluded from both the banner's failing-check
+  // list and the score, same as the dashboard's own Checks column/scoreFromChecks.
+  // #1845: getHealthChecks(detail) is the expensive call — compute it once and derive both
+  // the filtered list and the score from that single result instead of calling it twice.
+  const eventHealthAllChecks = useMemo(() => detail ? getEventHealthChecks(detail) : [], [detail]);
+  const eventHealthChecks = useMemo(() => eventHealthAllChecks.filter(c => !c.na), [eventHealthAllChecks]);
+  const eventHealthScore = useMemo(() => detail ? eventScoreFromChecks(eventHealthAllChecks) : 100, [detail, eventHealthAllChecks]);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -1630,6 +1650,9 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         <ChevronRightIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
         <Typography variant="body2" fontWeight={500}>{detail.name}</Typography>
       </Stack>
+
+      {/* Completeness banner — same checks/score as EventHealth.tsx's dashboard, see #1842 */}
+      <HealthStatusBanner checks={eventHealthChecks} score={eventHealthScore} scoreColor={healthScoreColor} />
 
       {/* Event header card */}
       <Box sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2.5, mb: 3 }}>
@@ -1766,6 +1789,10 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
         const isPast = edition.date ? edition.date < new Date().toISOString().slice(0, 10) : false;
         const isEditionFocused = focusedId === `edition:${edition.id}`;
 
+        // #1842: same checks/score EditionHealth.tsx's dashboard computes for this edition.
+        const editionHealthChecks = getEditionChecks(edition);
+        const editionHealthScore = scoreFromChecks(editionHealthChecks);
+
         // Complete/Cancel/Delete's armed/confirm text, shared between the Tooltip title (sighted)
         // and the hidden aria-live status region below (assistive tech) — see VISUALLY_HIDDEN_SX.
         const activeRaceCount = edition.races.filter(r => r.status === 'Active').length;
@@ -1879,6 +1906,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
                   variant="outlined"
                   color={raceCount === 0 && !isPast ? 'warning' : 'default'}
                 />
+                <HealthScoreBadge score={editionHealthScore} scoreColor={healthScoreColor} tooltip={`Edition health: ${editionHealthScore}%`} />
                 {onNavigateToRaceManager && (edition.date || edition.endDate) && (
                   <Tooltip title={`Open in Race Manager (${edition.date ?? edition.endDate})`}>
                     <IconButton size="small" onClick={() => onNavigateToRaceManager(edition.date ?? edition.endDate ?? '')}>

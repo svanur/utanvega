@@ -24,8 +24,23 @@ import type { Trail } from '../hooks/useTrails';
 // 8-core dev machine — under half of RacesPage's 4.48s. Running the full suite constrained to 2
 // worker threads (simulating a CPU-starved CI runner, same method #1672 used) left this file's
 // slowest individual it() at 525ms, nowhere near vitest's default 5000ms per-it() testTimeout
-// (vitest.config.ts sets no override). No vi.setConfig() override added here; re-measure if this
-// file's icon-import graph grows materially.
+// (vitest.config.ts sets no override) — so #1681 concluded no vi.setConfig() override was needed.
+//
+// #1857: that conclusion didn't hold under heavier contention. The #1507 describe block's first
+// test (mount this heavy-import component, open the Advanced Filters panel, open the Location
+// Autocomplete via mouseDown, findByText the option, click it, read the Chip, click its delete
+// icon, assert) does strictly more work per it() than anything #1681 measured, and a *full*
+// `npx vitest run` runs every file's worker concurrently (not 2 constrained threads) — under real
+// CPU contention from the rest of the suite, reproduced with `npx vitest run` while 6 CPU-saturating
+// background processes competed for the machine's 8 cores: the whole it() (not
+// @testing-library/dom's separate, unrelated 1000ms findBy* waitFor budget) tripped vitest's
+// default 5000ms per-it() testTimeout, erroring "Test timed out in 5000ms" rather than a
+// findByText "Unable to find element" — confirming the test itself, not the Autocomplete or
+// findByText, was starved of wall-clock time, not of DOM content. Same fix and same scope-limiting
+// reasoning as #1672/RacesPage.test.tsx:29: raise only this file's own isolated testTimeout (
+// vitest.config.ts doesn't set `isolate: false`, so this never loosens the 5000ms budget anywhere
+// else in the suite).
+vi.setConfig({ testTimeout: 20000 });
 
 // vitest.config.ts doesn't set `globals: true`, so @testing-library/react's automatic
 // afterEach(cleanup) registration never fires — without this, a later test's screen queries can

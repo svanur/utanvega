@@ -12,7 +12,7 @@
 // non-cancelled event fixture — not a general-purpose page harness (out of scope per #1442).
 import React from 'react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, cleanup, screen } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -23,14 +23,20 @@ import { createAppTheme } from '../theme';
 import type { EventDetail, EventEditionDto, RaceDto } from '../hooks/useEvents';
 import type { EventClimate, TrailWeather } from '../hooks/useTrails';
 
-// #1681: CompetitionDetailPage.tsx imports 20 separate @mui/icons-material/* modules —
-// comparable in shape to RacesPage.tsx's 25+, which needed #1672's testTimeout override. Measured
-// the same way as #1672: this file's own module-graph import (not the test body), isolated, cost
-// ~3.1-3.2s cold on an 8-core dev machine — still well under RacesPage's 4.48s. Running the full
-// suite constrained to 2 worker threads (simulating a CPU-starved CI runner, same method #1672
-// used) left this file's slowest individual it() at 247ms, nowhere near vitest's default 5000ms
-// per-it() testTimeout (vitest.config.ts sets no override). No vi.setConfig() override added
-// here; re-measure if this file's icon-import graph grows materially.
+// #1859: #1681's 2-worker-thread measurement (247ms slowest it()) understated real full-suite
+// contention — same gap #1857/PR #1858 found for TrailList.test.tsx. Running `npx vitest run`
+// across the full suite under heavy external CPU load (16+ CPU-saturating background processes
+// on an 8-core dev machine, simulating a CPU-starved CI runner) tripped this file's own
+// "renders TrailMapView with userLocation={null}..." it() at 6213ms, with vitest reporting exactly:
+//   Error: Test timed out in 5000ms.
+//   If this is a long-running test, pass a timeout value as the last argument or configure it
+//   globally with "testTimeout".
+// That is vitest's own per-it() testTimeout (default 5000ms, vitest.config.ts sets no override) —
+// not an RTL findBy*/waitFor timeout, which would instead throw TestingLibraryElementError. Same
+// root cause as #1672/#1857, so the same fix applies. vi.setConfig() only touches this file's own
+// isolated test context (vitest.config.ts doesn't set `isolate: false`), so this doesn't loosen
+// the 5000ms budget anywhere else in the suite.
+vi.setConfig({ testTimeout: 20000 });
 
 // Mirrors RacesPage.test.tsx:20-24 — vitest.config.ts doesn't set `globals: true`, so RTL's
 // automatic afterEach(cleanup) never registers.
@@ -47,9 +53,12 @@ void i18n.use(initReactI18next).init({
 
 // Layout pulls in useMediaQuery (jsdom has no window.matchMedia) plus a dozen more
 // data-fetching hooks unrelated to the two sections under test — mocked to a bare passthrough,
-// same as RacesPage.test.tsx:44-46.
+// same as RacesPage.test.tsx:44-46. STAGING_BANNER_HEIGHT is re-exported with Layout's own
+// value (not a guessed stand-in) since #1830 round 2 imports it directly for the races
+// heading's scroll-margin-top offset — a bare default-only mock would leave it undefined.
 vi.mock('../components/Layout', () => ({
     default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    STAGING_BANNER_HEIGHT: 28,
 }));
 
 const { mockEvent } = vi.hoisted(() => ({
@@ -161,6 +170,7 @@ function makeEvent(overrides: Partial<EventDetail> = {}): EventDetail {
         alertSeverity: null,
         locationId: null,
         locationName: 'Thingvellir',
+        locationSlug: null,
         scheduleRule: null,
         socialLinks: null,
         nextEditionDate: '2026-11-15',
@@ -410,6 +420,57 @@ describe('CompetitionDetailPage climate section (#1460)', () => {
         renderCompetitionDetailPage(makeEvent({ locationName: null, gpxPointLat: 64.25, gpxPointLng: -21.13 }));
 
         expect(climateCardMock).not.toHaveBeenCalled();
+    });
+});
+
+// #1829: the location Chip must link to /locations/<slug> only when the backend actually sent one
+// (OrganizerSlug's long-standing precedent); without it, the chip must stay exactly as it rendered
+// before this change — plain text, not a link.
+describe('CompetitionDetailPage location chip (#1829)', () => {
+    beforeEach(() => {
+        mockEnabledFlags.current = new Set(['climate_normals', 'locations_page']);
+    });
+
+    it('renders the location chip as a link to /locations/<slug> when locationSlug is present', () => {
+        renderCompetitionDetailPage(makeEvent({ locationName: 'Thingvellir', locationSlug: 'thingvellir' }));
+
+        const link = screen.getByRole('link', { name: 'Thingvellir' });
+        expect(link.getAttribute('href')).toBe('/locations/thingvellir');
+    });
+
+    it('renders the location chip as plain, non-clickable text when locationSlug is null', () => {
+        renderCompetitionDetailPage(makeEvent({ locationName: 'Thingvellir', locationSlug: null }));
+
+        expect(screen.getByText('Thingvellir')).not.toBeNull();
+        expect(screen.queryByRole('link', { name: 'Thingvellir' })).toBeNull();
+    });
+});
+
+// #1830: the header-level race-count pill (CompetitionDetailPage.tsx:891-897) was purely
+// informational, with no way to jump to the "Distances" heading (:1187-1191) it summarizes.
+describe('CompetitionDetailPage race-count pill scroll (#1830)', () => {
+    it('smooth-scrolls the Distances heading into view when the race-count pill is clicked', () => {
+        const scrollIntoViewMock = vi.fn();
+        Element.prototype.scrollIntoView = scrollIntoViewMock;
+        renderCompetitionDetailPage(makeEvent({ type: 'Race' }));
+
+        fireEvent.click(screen.getByText('0 races'));
+
+        expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+        expect(screen.getByText('Distances').tagName).toBe('H5');
+        // #1830 round 2: the sticky-header/breadcrumb offset itself (scroll-margin-top on this
+        // heading, computed from Layout.tsx's own Toolbar/breadcrumb-bar dimensions) is CSS
+        // applied via emotion at media-query breakpoints — jsdom's CSSOM doesn't evaluate
+        // emotion-injected stylesheets or media queries, so getComputedStyle() here can't
+        // observe it reliably; verified instead by reading the sx value directly in source
+        // and manually in a real browser at a 375px viewport (see PR description).
+    });
+
+    it('renders neither the pill nor the Distances heading for a non-Race/Series event (same gate on both)', () => {
+        renderCompetitionDetailPage(makeEvent({ type: 'Single' }));
+
+        expect(screen.queryByText('0 races')).toBeNull();
+        expect(screen.queryByText('Distances')).toBeNull();
     });
 });
 

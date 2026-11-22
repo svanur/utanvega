@@ -346,6 +346,13 @@ export default function RaceCalendarPage({ mode, onToggleMode }: RaceCalendarPag
         navigateToMonth(today.getFullYear(), today.getMonth());
         setTodayFlash(true);
         setTimeout(() => {
+            // #1835 audit: unlike CompetitionDetailPage's #1830 scrollIntoView({block:'start'}),
+            // which pins the target flush to viewport y=0 (needing a scrollMarginTop offset to clear
+            // Layout's sticky AppBar+breadcrumb bar), block:'center' lands the target's vertical
+            // midpoint at the viewport's midpoint. The today-cell is only 48px/64px tall (xs/sm
+            // minHeight above) against a viewport several hundred px tall, so its centered top edge
+            // sits well clear of the sticky bars (~98-126px incl. staging banner) in every case this
+            // page can realistically render in — no scroll-margin-top offset needed here.
             todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTodayFlash(false);
         }, 150);

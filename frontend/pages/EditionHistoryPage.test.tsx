@@ -140,6 +140,7 @@ function makeEvent(edition: EventEditionDto, overrides: Partial<EventDetail> = {
         alertSeverity: null,
         locationId: null,
         locationName: 'Thingvellir',
+        locationSlug: null,
         scheduleRule: null,
         socialLinks: null,
         nextEditionDate: edition.date,

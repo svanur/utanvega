@@ -62,6 +62,7 @@ export interface EventSummary {
     alertSeverity: string | null;
     locationId: string | null;
     locationName: string | null;
+    locationSlug: string | null;
     scheduleRule: ScheduleRule | null;
     socialLinks: SocialLink[] | null;
     nextEditionDate: string | null;
@@ -291,6 +292,7 @@ export interface EditionHistoryRow {
     rowDate: string;
     rowEndDate: string | null;
     locationName: string | null;
+    locationSlug: string | null;
     organizerName: string | null;
     organizerNameEn: string | null;
     organizerSlug: string | null;

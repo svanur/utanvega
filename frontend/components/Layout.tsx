@@ -90,7 +90,10 @@ function ScrollToTopButton() {
     );
 }
 
-const STAGING_BANNER_HEIGHT = 28;
+// Exported (not file-private) so pages whose content scrolls under the sticky
+// header/breadcrumb stack (e.g. CompetitionDetailPage's #1830 scroll-margin-top fix) can
+// compute the same total offset without duplicating the 28px as an untraceable magic number.
+export const STAGING_BANNER_HEIGHT = 28;
 
 export default function Layout({ children, mode, onToggleMode, maxWidth = 'md', bottomContent, breadcrumb }: LayoutProps) {
     const navigate = useNavigate();

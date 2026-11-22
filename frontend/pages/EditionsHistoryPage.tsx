@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link as RouterLink } from 'react-router-dom';
 import {
     Container, Typography, Box, Stack, TextField, InputAdornment, IconButton,
     Select, MenuItem, FormControlLabel, Checkbox, Table, TableBody, TableCell,
@@ -311,7 +311,21 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                         {row.locationName && (
                                                             <Stack direction="row" alignItems="center" gap={0.5} sx={{ mt: 0.25 }}>
                                                                 <LocationOnIcon sx={{ fontSize: 13, color: 'text.secondary' }} />
-                                                                <Typography variant="body2" color="text.secondary" noWrap>{row.locationName}</Typography>
+                                                                {row.locationSlug ? (
+                                                                    <Typography
+                                                                        variant="body2"
+                                                                        color="text.secondary"
+                                                                        noWrap
+                                                                        component={RouterLink}
+                                                                        to={`/locations/${row.locationSlug}`}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                                    >
+                                                                        {row.locationName}
+                                                                    </Typography>
+                                                                ) : (
+                                                                    <Typography variant="body2" color="text.secondary" noWrap>{row.locationName}</Typography>
+                                                                )}
                                                             </Stack>
                                                         )}
                                                         {row.organizerName && (
@@ -322,8 +336,8 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                                         variant="body2"
                                                                         color="text.secondary"
                                                                         noWrap
-                                                                        component="a"
-                                                                        href={`/organizers/${row.organizerSlug}`}
+                                                                        component={RouterLink}
+                                                                        to={`/organizers/${row.organizerSlug}`}
                                                                         onClick={e => e.stopPropagation()}
                                                                         sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                                                                     >
@@ -497,8 +511,8 @@ export default function EditionsHistoryPage({ mode, onToggleMode }: EditionsHist
                                                         <Typography variant="caption" color="text.secondary" display="block" noWrap tabIndex={row.organizerSlug ? undefined : 0}>
                                                             {row.organizerSlug ? (
                                                                 <Box
-                                                                    component="a"
-                                                                    href={`/organizers/${row.organizerSlug}`}
+                                                                    component={RouterLink}
+                                                                    to={`/organizers/${row.organizerSlug}`}
                                                                     onClick={e => e.stopPropagation()}
                                                                     sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
                                                                 >
