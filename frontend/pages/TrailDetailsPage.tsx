@@ -214,6 +214,14 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [toastSeverity, setToastSeverity] = useState<'info' | 'error'>('info');
     const [nearbyPromptVisible, setNearbyPromptVisible] = useState(false);
+    // These three wrap action controls that own their own click handler
+    // internally (ShareButtons' menu, QRCodeShare's dialog, OfflineButton's
+    // save toggle) with no prop to trigger it externally. The legend row's
+    // onClick forwards a native click to the real button via these refs, so
+    // it fires the exact same handler rather than re-implementing it.
+    const shareActionRef = useRef<HTMLSpanElement>(null);
+    const qrActionRef = useRef<HTMLSpanElement>(null);
+    const offlineActionRef = useRef<HTMLSpanElement>(null);
     const previousCheckInCountRef = useRef<number | null>(null);
     const suppressRealtimeToastUntilRef = useRef<number>(0);
     const nearbyPromptGeoCacheRef = useRef<{
@@ -536,18 +544,26 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         [{ label: t('nav.trails'), to: '/trails' }, { label: trail.name }],
     );
 
+    // Clicking a legend row forwards a native click to the real action
+    // button via its ref, rather than re-implementing the button's handler.
+    const forwardClickTo = (ref: React.RefObject<HTMLSpanElement>) => () => {
+        ref.current?.querySelector('button')?.click();
+    };
+
     // Legend entries mirror the action row below one-for-one, gated by the
     // same feature flags — a flag-disabled action is filtered out here too,
     // so the legend never describes an icon that isn't actually on screen.
-    type ActionsLegendItem = { key: string; icon: React.ReactNode; header: string; description: string };
+    // `activate` reuses each action's exact existing handler/href so the
+    // legend row is just another way to reach it, not a second behavior.
+    type ActionsLegendItem = { key: string; icon: React.ReactNode; header: string; description: string; activate: () => void };
     const actionsLegendCandidates: (ActionsLegendItem | false)[] = [
-        isEnabled('share_trail') && { key: 'share', icon: <ShareIcon fontSize="small" color="action" />, header: t('share.shareOptions'), description: t('trail.actionsLegend.share') },
-        isEnabled('qr_code') && { key: 'qr', icon: <QrCode2Icon fontSize="small" color="action" />, header: t('qr.showQR'), description: t('trail.actionsLegend.qr') },
-        isEnabled('download_trail') && { key: 'gpx', icon: <FileDownloadIcon fontSize="small" color="action" />, header: t('trail.downloadGpx'), description: t('trail.actionsLegend.gpx') },
-        isEnabled('trail_comparison') && { key: 'compare', icon: <CompareArrowsIcon fontSize="small" color="action" />, header: t('compare.compareButton'), description: t('trail.actionsLegend.compare') },
-        isEnabled('tool_trail_predictor') && { key: 'predictor', icon: <QueryStatsIcon fontSize="small" color="action" />, header: t('tools.trailPredictor.title'), description: t('trail.actionsLegend.predictor') },
-        isEnabled('offline_button') && { key: 'offline', icon: <CloudDownloadIcon fontSize="small" color="action" />, header: t('offline.saveForOffline'), description: t('trail.actionsLegend.offline') },
-        (isEnabled('directions_to_trailhead') && !!geometry && geometry.coordinates.length > 0) && { key: 'directions', icon: <DirectionsCarIcon fontSize="small" color="action" />, header: t('trail.getDirections'), description: t('trail.actionsLegend.directions') },
+        isEnabled('share_trail') && { key: 'share', icon: <ShareIcon fontSize="small" color="action" />, header: t('share.shareOptions'), description: t('trail.actionsLegend.share'), activate: forwardClickTo(shareActionRef) },
+        isEnabled('qr_code') && { key: 'qr', icon: <QrCode2Icon fontSize="small" color="action" />, header: t('qr.showQR'), description: t('trail.actionsLegend.qr'), activate: forwardClickTo(qrActionRef) },
+        isEnabled('download_trail') && { key: 'gpx', icon: <FileDownloadIcon fontSize="small" color="action" />, header: t('trail.downloadGpx'), description: t('trail.actionsLegend.gpx'), activate: handleGpxDownload },
+        isEnabled('trail_comparison') && { key: 'compare', icon: <CompareArrowsIcon fontSize="small" color="action" />, header: t('compare.compareButton'), description: t('trail.actionsLegend.compare'), activate: () => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); } },
+        isEnabled('tool_trail_predictor') && { key: 'predictor', icon: <QueryStatsIcon fontSize="small" color="action" />, header: t('tools.trailPredictor.title'), description: t('trail.actionsLegend.predictor'), activate: () => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); } },
+        isEnabled('offline_button') && { key: 'offline', icon: <CloudDownloadIcon fontSize="small" color="action" />, header: t('offline.saveForOffline'), description: t('trail.actionsLegend.offline'), activate: forwardClickTo(offlineActionRef) },
+        (isEnabled('directions_to_trailhead') && !!geometry && geometry.coordinates.length > 0) && { key: 'directions', icon: <DirectionsCarIcon fontSize="small" color="action" />, header: t('trail.getDirections'), description: t('trail.actionsLegend.directions'), activate: () => { trackTrailDirectionsClick(trail.slug); window.open(`https://www.google.com/maps/dir/?api=1&destination=${geometry.coordinates[0][1]},${geometry.coordinates[0][0]}`, '_blank', 'noopener'); } },
     ];
     const actionsLegendItems = actionsLegendCandidates.filter((item): item is ActionsLegendItem => !!item);
 
@@ -583,11 +599,11 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         )}
                     </Box>
                     
-                    <Stack 
-                        direction="row" 
-                        spacing={1} 
-                        alignItems="center" 
-                        justifyContent="flex-end"
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        justifyContent="flex-start"
                         flexWrap="wrap"
                         useFlexGap
                         sx={{ mb: 1 }}
@@ -663,12 +679,12 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             direction="row"
                             spacing={1}
                             alignItems="center"
-                            justifyContent="flex-end"
+                            justifyContent="flex-start"
                             flexWrap="wrap"
                             useFlexGap
                         >
-                            {isEnabled('share_trail') && <ShareButtons title={trail.name} slug={trail.slug} />}
-                            {isEnabled('qr_code') && <QRCodeShare slug={trail.slug} trailName={trail.name} />}
+                            {isEnabled('share_trail') && <span ref={shareActionRef}><ShareButtons title={trail.name} slug={trail.slug} /></span>}
+                            {isEnabled('qr_code') && <span ref={qrActionRef}><QRCodeShare slug={trail.slug} trailName={trail.name} /></span>}
                             {isEnabled('download_trail') && (
                             <Tooltip title={t('trail.downloadGpx')} arrow>
                                 <Button
@@ -704,7 +720,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 </IconButton>
                             </Tooltip>
                             )}
-                            {isEnabled('offline_button') && <OfflineButton slug={trail.slug} trailName={trail.name} />}
+                            {isEnabled('offline_button') && <span ref={offlineActionRef}><OfflineButton slug={trail.slug} trailName={trail.name} /></span>}
                             {isEnabled('directions_to_trailhead') && geometry && geometry.coordinates.length > 0 && (
                                 <Tooltip title={t('trail.getDirections')} arrow>
                                     <IconButton
@@ -734,15 +750,30 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                         </Stack>
 
                         <Collapse in={actionsLegendOpen}>
-                            <Stack spacing={1} sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: 'action.hover' }}>
+                            <Stack spacing={2.5} sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: 'action.hover' }}>
                                 {actionsLegendItems.map((item) => (
-                                    <Stack key={item.key} direction="row" spacing={1} alignItems="flex-start">
-                                        <Box sx={{ display: 'flex', mt: 0.25 }}>{item.icon}</Box>
-                                        <Box>
-                                            <Typography variant="body2" fontWeight={600}>{item.header}</Typography>
-                                            <Typography variant="body2" color="text.secondary">{item.description}</Typography>
-                                        </Box>
-                                    </Stack>
+                                    <ButtonBase
+                                        key={item.key}
+                                        onClick={item.activate}
+                                        sx={{
+                                            display: 'flex',
+                                            width: '100%',
+                                            justifyContent: 'flex-start',
+                                            alignItems: 'flex-start',
+                                            textAlign: 'left',
+                                            borderRadius: 1,
+                                            minHeight: 44,
+                                            p: 0.5,
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1} alignItems="flex-start">
+                                            <Box sx={{ display: 'flex', mt: 0.25 }}>{item.icon}</Box>
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={600}>{item.header}</Typography>
+                                                <Typography variant="body2" color="text.secondary">{item.description}</Typography>
+                                            </Box>
+                                        </Stack>
+                                    </ButtonBase>
                                 ))}
                             </Stack>
                         </Collapse>
