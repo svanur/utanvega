@@ -80,7 +80,7 @@ import RaceFormCard from '../components/events/RaceFormCard';
 import EventFormCard from '../components/events/EventFormCard';
 import HealthStatusBanner, { HealthScoreBadge } from '../components/HealthStatusBanner';
 import { getHealthChecks as getEventHealthChecks, scoreFromChecks as eventScoreFromChecks, scoreColor as healthScoreColor } from './EventHealth';
-import { getEditionChecks, getRaceChecks } from './EditionHealth';
+import { getEditionChecks, getRaceChecks, scoreFromChecks } from './EditionHealth';
 import PhotoGalleryManager, { type PhotoGalleryManagerHandle } from '../components/events/PhotoGalleryManager';
 import BilingualTextField from '../components/BilingualTextField';
 import BilingualLangToggle from '../components/BilingualLangToggle';
@@ -148,14 +148,6 @@ const VISUALLY_HIDDEN_SX = {
   whiteSpace: 'nowrap',
   border: 0,
 } as const;
-
-// #1842: same pass/total percentage EditionHealth.tsx's own (unexported) scoreFromChecks uses
-// for getEditionChecks/getRaceChecks — not re-defining the checks or their scoring rule, just
-// applying the standard formula to a check list already computed by that file's exports.
-function scoreFromCheckList(checks: { passed: boolean }[]): number {
-  if (checks.length === 0) return 100;
-  return Math.round((checks.filter(c => c.passed).length / checks.length) * 100);
-}
 
 function sortRaces(a: RaceDto, b: RaceDto): number {
   if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -792,7 +784,7 @@ function SortableRaceRow({ race, edition, isActive, isFocused, focusRef, staleTx
   // parent EventDetailDto) tells getRaceChecks whether this is a Series race, same as the
   // dashboard's event.type === 'Series'.
   const raceHealthChecks = useMemo(() => getRaceChecks(race, edition, detail?.type === 'Series'), [race, edition, detail?.type]);
-  const raceHealthScore = useMemo(() => scoreFromCheckList(raceHealthChecks), [raceHealthChecks]);
+  const raceHealthScore = useMemo(() => scoreFromChecks(raceHealthChecks), [raceHealthChecks]);
 
   // race.activityType === null means "inherit from event" — fall back to the event's own activity type.
   const effectiveActivityType = race.activityType ?? detail?.activityType;
@@ -1799,7 +1791,7 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
 
         // #1842: same checks/score EditionHealth.tsx's dashboard computes for this edition.
         const editionHealthChecks = getEditionChecks(edition);
-        const editionHealthScore = scoreFromCheckList(editionHealthChecks);
+        const editionHealthScore = scoreFromChecks(editionHealthChecks);
 
         // Complete/Cancel/Delete's armed/confirm text, shared between the Tooltip title (sighted)
         // and the hidden aria-live status region below (assistive tech) — see VISUALLY_HIDDEN_SX.
