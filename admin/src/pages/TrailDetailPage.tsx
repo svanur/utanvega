@@ -46,7 +46,7 @@ import TrailStatusLegendDialog from '../components/trails/TrailStatusLegendDialo
 import TrailActionDialog, { type TrailAction } from '../components/trails/TrailActionDialog';
 import { InlineEditSelect, InlineEditText } from '../components/InlineEditCell';
 import HealthStatusBanner from '../components/HealthStatusBanner';
-import { getHealthChecks, scoreColor as healthScoreColor, type TrailHealthInput } from './TrailHealth';
+import { getHealthChecks, getHealthScore, scoreColor as healthScoreColor, type TrailHealthInput } from './TrailHealth';
 
 const PUBLIC_SITE_URL = ((import.meta.env.VITE_PUBLIC_SITE_URL ?? '') as string).replace(/\/$/, '');
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8080';
@@ -384,9 +384,7 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
     terrainType: trail?.terrainType,
   }), [trail, geometry, allLocations]);
   const trailHealthChecks = useMemo(() => getHealthChecks(trailHealthInput), [trailHealthInput]);
-  const trailHealthScore = trailHealthChecks.length > 0
-    ? Math.round((trailHealthChecks.filter(c => c.passed).length / trailHealthChecks.length) * 100)
-    : 100;
+  const trailHealthScore = useMemo(() => getHealthScore(trailHealthInput), [trailHealthInput]);
 
   if (loading) {
     return (
