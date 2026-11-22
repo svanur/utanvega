@@ -10,6 +10,7 @@ using Utanvega.Backend.Core;
 using Utanvega.Backend.Core.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 
 using Utanvega.Backend.Application.Trails.Commands.CreateTrailFromGpx;
 using Utanvega.Backend.Application.Trails.Commands.CheckTrailSimilarity;
@@ -868,6 +869,13 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize(Policy = "AdminOnly")] 
 
     if (trail == null) return Results.NotFound();
 
+    // #1847: start coordinate for TrailHealth's "GPX Data" check, read synchronously here
+    // instead of admin waiting on TrailMap's async geometry fetch. Unlike GetTrailsQuery
+    // (which projects via .Select() and so can't translate a Geometry-to-LineString cast to
+    // SQL), this query has no projection — `trail` is a fully materialized entity, GpxData is
+    // already loaded with it, and the cast below runs in memory. No second query needed.
+    var gpxLineString = trail.GpxData as LineString;
+
     return Results.Ok(new
     {
         trail.Id,
@@ -886,6 +894,8 @@ app.MapGet("/api/v1/admin/trails/{idOrSlug}", [Authorize(Policy = "AdminOnly")] 
         trail.ElevationLoss,
         trail.YoutubeUrl,
         trail.NeedsReview,
+        StartLatitude = gpxLineString?.StartPoint.Y,
+        StartLongitude = gpxLineString?.StartPoint.X,
         TerrainType = trail.TerrainType?.ToString(),
         TranslationHashes = trail.TranslationHashes == null ? null : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(trail.TranslationHashes),
         MaxAltitude = ElevationProfileValidator.GetMaxAltitude(trail.ElevationProfile),
