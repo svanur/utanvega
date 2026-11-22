@@ -1,5 +1,6 @@
 import { Box, CircularProgress, IconButton, Snackbar, Tooltip } from '@mui/material';
 import { trackTrailOfflineSave } from '../utils/analytics';
+import { actionHighlightSx, actionHighlightForcedSx } from '../utils/actionHighlightSx';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 import { useTranslation } from 'react-i18next';
@@ -9,9 +10,14 @@ import { useState } from 'react';
 interface OfflineButtonProps {
     slug: string;
     trailName: string;
+    /** Forces the same highlight `actionHighlightSx` applies on hover —
+     * used by TrailDetailsPage to cross-highlight this button when its
+     * legend row is hovered/focused, since that's a different DOM subtree
+     * plain CSS can't reach. */
+    forceHighlight?: boolean;
 }
 
-export default function OfflineButton({ slug, trailName }: OfflineButtonProps) {
+export default function OfflineButton({ slug, trailName, forceHighlight }: OfflineButtonProps) {
     const { t } = useTranslation();
     const { isOffline, saving, progress, saveTrailOffline, removeTrailOffline } = useOfflineTrails();
     const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -51,7 +57,7 @@ export default function OfflineButton({ slug, trailName }: OfflineButtonProps) {
     return (
         <>
             <Tooltip title={isSaved ? t('offline.removeOffline') : t('offline.saveForOffline')} arrow>
-                <IconButton size="small" onClick={handleClick}>
+                <IconButton size="small" onClick={handleClick} sx={{ ...actionHighlightSx, ...(forceHighlight ? actionHighlightForcedSx : {}), minWidth: 44, minHeight: 44 }}>
                     {isSaved
                         ? <OfflinePinIcon fontSize="small" color="success" />
                         : <CloudDownloadIcon fontSize="small" />

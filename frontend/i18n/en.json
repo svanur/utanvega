@@ -231,6 +231,17 @@
         "checkInToastJoined_other": "{{count}} runners just checked in.",
         "checkInToastLeft_one": "{{count}} runner checked out.",
         "checkInToastLeft_other": "{{count}} runners checked out.",
+        "actionsLegend": {
+            "toggleShow": "What do these icons do?",
+            "toggleHide": "Hide icon descriptions",
+            "share": "Share this trail with friends via social media or a link.",
+            "qr": "Show a QR code so someone nearby can open this trail on their phone.",
+            "gpx": "Download this trail's GPX file for your GPS watch or app.",
+            "compare": "Compare this trail side by side with another one.",
+            "predictor": "Estimate your finish time for this trail.",
+            "offline": "Save this trail's map for use without a connection.",
+            "directions": "Get driving directions to the trailhead."
+        },
         "terrainType": {
             "Mountainous": "Mountainous",
             "Hilly": "Hilly",
