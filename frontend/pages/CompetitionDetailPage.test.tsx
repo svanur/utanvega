@@ -23,14 +23,20 @@ import { createAppTheme } from '../theme';
 import type { EventDetail, EventEditionDto, RaceDto } from '../hooks/useEvents';
 import type { EventClimate, TrailWeather } from '../hooks/useTrails';
 
-// #1681: CompetitionDetailPage.tsx imports 20 separate @mui/icons-material/* modules —
-// comparable in shape to RacesPage.tsx's 25+, which needed #1672's testTimeout override. Measured
-// the same way as #1672: this file's own module-graph import (not the test body), isolated, cost
-// ~3.1-3.2s cold on an 8-core dev machine — still well under RacesPage's 4.48s. Running the full
-// suite constrained to 2 worker threads (simulating a CPU-starved CI runner, same method #1672
-// used) left this file's slowest individual it() at 247ms, nowhere near vitest's default 5000ms
-// per-it() testTimeout (vitest.config.ts sets no override). No vi.setConfig() override added
-// here; re-measure if this file's icon-import graph grows materially.
+// #1859: #1681's 2-worker-thread measurement (247ms slowest it()) understated real full-suite
+// contention — same gap #1857/PR #1858 found for TrailList.test.tsx. Running `npx vitest run`
+// across the full suite under heavy external CPU load (16+ CPU-saturating background processes
+// on an 8-core dev machine, simulating a CPU-starved CI runner) tripped this file's own
+// "renders TrailMapView with userLocation={null}..." it() at 6213ms, with vitest reporting exactly:
+//   Error: Test timed out in 5000ms.
+//   If this is a long-running test, pass a timeout value as the last argument or configure it
+//   globally with "testTimeout".
+// That is vitest's own per-it() testTimeout (default 5000ms, vitest.config.ts sets no override) —
+// not an RTL findBy*/waitFor timeout, which would instead throw TestingLibraryElementError. Same
+// root cause as #1672/#1857, so the same fix applies. vi.setConfig() only touches this file's own
+// isolated test context (vitest.config.ts doesn't set `isolate: false`), so this doesn't loosen
+// the 5000ms budget anywhere else in the suite.
+vi.setConfig({ testTimeout: 20000 });
 
 // Mirrors RacesPage.test.tsx:20-24 — vitest.config.ts doesn't set `globals: true`, so RTL's
 // automatic afterEach(cleanup) never registers.
