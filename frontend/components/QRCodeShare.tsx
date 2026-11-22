@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { trackTrailQRClick } from '../utils/analytics';
-import { actionHighlightSx } from '../utils/actionHighlightSx';
+import { actionHighlightSx, actionHighlightForcedSx } from '../utils/actionHighlightSx';
 import { 
     Box, 
     Typography, 
@@ -27,9 +27,14 @@ interface QRCodeShareProps {
     trailName: string;
     open?: boolean;
     onClose?: () => void;
+    /** Forces the same highlight `actionHighlightSx` applies on hover —
+     * used by TrailDetailsPage to cross-highlight this button when its
+     * legend row is hovered/focused, since that's a different DOM subtree
+     * plain CSS can't reach. */
+    forceHighlight?: boolean;
 }
 
-export default function QRCodeShare({ slug, trailName, open: openProp, onClose }: QRCodeShareProps) {
+export default function QRCodeShare({ slug, trailName, open: openProp, onClose, forceHighlight }: QRCodeShareProps) {
     const { t, i18n } = useTranslation();
     const [internalOpen, setInternalOpen] = useState(false);
     const [tab, setTab] = useState(0);
@@ -47,7 +52,7 @@ export default function QRCodeShare({ slug, trailName, open: openProp, onClose }
         <>
             {openProp === undefined && (
                 <Tooltip title={t('qr.showQR')}>
-                    <IconButton onClick={() => { trackTrailQRClick(slug); setInternalOpen(true); }} color="primary" size="small" sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}>
+                    <IconButton onClick={() => { trackTrailQRClick(slug); setInternalOpen(true); }} color="primary" size="small" sx={{ ...actionHighlightSx, ...(forceHighlight ? actionHighlightForcedSx : {}), minWidth: 44, minHeight: 44 }}>
                         <QrCode2Icon fontSize="small" />
                     </IconButton>
                 </Tooltip>

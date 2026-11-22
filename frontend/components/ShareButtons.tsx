@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { trackTrailShareClick } from '../utils/analytics';
-import { actionHighlightSx } from '../utils/actionHighlightSx';
+import { actionHighlightSx, actionHighlightForcedSx } from '../utils/actionHighlightSx';
 import { 
     IconButton, 
     Tooltip, 
@@ -25,9 +25,14 @@ interface ShareButtonsProps {
     shareText?: string;
     buttonLabel?: string;
     slug?: string;
+    /** Forces the same highlight `actionHighlightSx` applies on hover —
+     * used by TrailDetailsPage to cross-highlight this button when its
+     * legend row is hovered/focused, since that's a different DOM subtree
+     * plain CSS can't reach. */
+    forceHighlight?: boolean;
 }
 
-export default function ShareButtons({ title, url, shareText, buttonLabel, slug }: ShareButtonsProps) {
+export default function ShareButtons({ title, url, shareText, buttonLabel, slug, forceHighlight }: ShareButtonsProps) {
     const { t } = useTranslation();
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -115,7 +120,7 @@ export default function ShareButtons({ title, url, shareText, buttonLabel, slug 
                 </Button>
             ) : (
                 <Tooltip title={t('share.shareOptions')}>
-                    <IconButton onClick={handleOpenMenu} color="primary" size="small" sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}>
+                    <IconButton onClick={handleOpenMenu} color="primary" size="small" sx={{ ...actionHighlightSx, ...(forceHighlight ? actionHighlightForcedSx : {}), minWidth: 44, minHeight: 44 }}>
                         <ShareIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>

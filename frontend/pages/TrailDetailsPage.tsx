@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'rea
 import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick, trackTrailDirectionsClick } from '../utils/analytics';
 import { downloadTrailGpx } from '../utils/trailGpxDownload';
 import { toggleCheckIn } from '../utils/trailCheckInToggle';
-import { actionHighlightSx } from '../utils/actionHighlightSx';
+import { actionHighlightSx, actionHighlightForcedSx } from '../utils/actionHighlightSx';
 import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -142,6 +142,11 @@ type TrailDetailsPageProps = {
     onToggleMode: () => void;
 };
 
+// The seven action controls this page renders (share, QR, GPX, compare,
+// predictor, offline, directions) — shared by the legend-item keys and the
+// cross-highlight state so the two stay in sync.
+type ActionId = 'share' | 'qr' | 'gpx' | 'compare' | 'predictor' | 'offline' | 'directions';
+
 const CHECK_IN_SEARCH_THRESHOLD = 10;
 const CHECK_IN_NEARBY_RADIUS_KM = 0.8;
 const CHECK_IN_JUST_ARRIVED_MINUTES = 10;
@@ -211,6 +216,10 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
             return next;
         });
     };
+    // Cross-highlights a legend row and its matching icon button above —
+    // hovering/focusing either one highlights both, since plain CSS can't
+    // reach across two unrelated subtrees.
+    const [hoveredAction, setHoveredAction] = useState<ActionId | null>(null);
     const [checkInSearch, setCheckInSearch] = useState('');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [toastSeverity, setToastSeverity] = useState<'info' | 'error'>('info');
@@ -557,7 +566,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
     // so the legend never describes an icon that isn't actually on screen.
     // `activate` reuses each action's exact existing handler/href so the
     // legend row is just another way to reach it, not a second behavior.
-    type ActionsLegendItem = { key: string; icon: React.ReactNode; header: string; description: string; activate: () => void };
+    type ActionsLegendItem = { key: ActionId; icon: React.ReactNode; header: string; description: string; activate: () => void };
     const actionsLegendCandidates: (ActionsLegendItem | false)[] = [
         isEnabled('share_trail') && { key: 'share', icon: <ShareIcon fontSize="small" color="action" />, header: t('share.shareOptions'), description: t('trail.actionsLegend.share'), activate: forwardClickTo(shareActionRef) },
         isEnabled('qr_code') && { key: 'qr', icon: <QrCode2Icon fontSize="small" color="action" />, header: t('qr.showQR'), description: t('trail.actionsLegend.qr'), activate: forwardClickTo(qrActionRef) },
@@ -685,8 +694,8 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                             flexWrap="wrap"
                             useFlexGap
                         >
-                            {isEnabled('share_trail') && <span ref={shareActionRef}><ShareButtons title={trail.name} slug={trail.slug} /></span>}
-                            {isEnabled('qr_code') && <span ref={qrActionRef}><QRCodeShare slug={trail.slug} trailName={trail.name} /></span>}
+                            {isEnabled('share_trail') && <span ref={shareActionRef}><ShareButtons title={trail.name} slug={trail.slug} forceHighlight={hoveredAction === 'share'} /></span>}
+                            {isEnabled('qr_code') && <span ref={qrActionRef}><QRCodeShare slug={trail.slug} trailName={trail.name} forceHighlight={hoveredAction === 'qr'} /></span>}
                             {isEnabled('download_trail') && (
                             <Tooltip title={t('trail.downloadGpx')} arrow>
                                 <Button
@@ -694,7 +703,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     variant="outlined"
                                     startIcon={<FileDownloadIcon fontSize="small" />}
                                     onClick={handleGpxDownload}
-                                    sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
+                                    sx={{ ...actionHighlightSx, ...(hoveredAction === 'gpx' ? actionHighlightForcedSx : {}), minWidth: 44, minHeight: 44 }}
                                 >
                                     {t('trail.gpxLabel')}
                                 </Button>
@@ -705,7 +714,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 <IconButton
                                     size="small"
                                     onClick={() => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); }}
-                                    sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
+                                    sx={{ ...actionHighlightSx, ...(hoveredAction === 'compare' ? actionHighlightForcedSx : {}), minWidth: 44, minHeight: 44 }}
                                 >
                                     <CompareArrowsIcon fontSize="small" />
                                 </IconButton>
@@ -716,13 +725,13 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 <IconButton
                                     size="small"
                                     onClick={() => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); }}
-                                    sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
+                                    sx={{ ...actionHighlightSx, ...(hoveredAction === 'predictor' ? actionHighlightForcedSx : {}), minWidth: 44, minHeight: 44 }}
                                 >
                                     <QueryStatsIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
                             )}
-                            {isEnabled('offline_button') && <span ref={offlineActionRef}><OfflineButton slug={trail.slug} trailName={trail.name} /></span>}
+                            {isEnabled('offline_button') && <span ref={offlineActionRef}><OfflineButton slug={trail.slug} trailName={trail.name} forceHighlight={hoveredAction === 'offline'} /></span>}
                             {isEnabled('directions_to_trailhead') && geometry && geometry.coordinates.length > 0 && (
                                 <Tooltip title={t('trail.getDirections')} arrow>
                                     <IconButton
@@ -732,7 +741,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                         target="_blank"
                                         rel="noopener"
                                         onClick={() => trackTrailDirectionsClick(trail.slug)}
-                                        sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
+                                        sx={{ ...actionHighlightSx, ...(hoveredAction === 'directions' ? actionHighlightForcedSx : {}), minWidth: 44, minHeight: 44 }}
                                     >
                                         <DirectionsCarIcon fontSize="small" />
                                     </IconButton>
@@ -757,8 +766,15 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     <ButtonBase
                                         key={item.key}
                                         onClick={item.activate}
+                                        onMouseEnter={() => setHoveredAction(item.key)}
+                                        onMouseLeave={() => setHoveredAction(null)}
+                                        onFocus={() => setHoveredAction(item.key)}
+                                        onBlur={() => setHoveredAction(null)}
+                                        onTouchStart={() => setHoveredAction(item.key)}
+                                        onTouchEnd={() => setHoveredAction(null)}
                                         sx={{
                                             ...actionHighlightSx,
+                                            ...(hoveredAction === item.key ? actionHighlightForcedSx : {}),
                                             display: 'flex',
                                             width: '100%',
                                             justifyContent: 'flex-start',
