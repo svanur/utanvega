@@ -207,7 +207,8 @@ export function getRaceChecks(race: RaceDto, edition: EventEditionDto, isSeries:
   return checks;
 }
 
-function scoreFromChecks(checks: HealthCheck[]): number {
+// eslint-disable-next-line react-refresh/only-export-components -- exported for reuse in EventDetailPage.tsx and tests
+export function scoreFromChecks(checks: HealthCheck[]): number {
   if (checks.length === 0) return 100;
   return Math.round((checks.filter(c => c.passed).length / checks.length) * 100);
 }
