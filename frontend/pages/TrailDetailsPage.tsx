@@ -550,6 +550,17 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         ref.current?.querySelector('button')?.click();
     };
 
+    // Shared faint highlight for the action icons and their legend rows —
+    // hover for mouse, active for the tap-and-hold moment on touch devices
+    // (which have no :hover), focus-visible for keyboard nav. A transparent
+    // border at rest keeps the swap to a visible one from shifting layout.
+    const actionHighlightSx = {
+        border: '1px solid transparent',
+        '&:hover': { bgcolor: 'action.hover', borderColor: 'divider' },
+        '&:active': { bgcolor: 'action.hover', borderColor: 'divider' },
+        '&:focus-visible': { bgcolor: 'action.hover', borderColor: 'divider' },
+    } as const;
+
     // Legend entries mirror the action row below one-for-one, gated by the
     // same feature flags — a flag-disabled action is filtered out here too,
     // so the legend never describes an icon that isn't actually on screen.
@@ -692,7 +703,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     variant="outlined"
                                     startIcon={<FileDownloadIcon fontSize="small" />}
                                     onClick={handleGpxDownload}
-                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                    sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
                                 >
                                     {t('trail.gpxLabel')}
                                 </Button>
@@ -703,7 +714,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 <IconButton
                                     size="small"
                                     onClick={() => { trackTrailCompareClick(trail.slug); navigate(`/compare?a=${trail.slug}`); }}
-                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                    sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
                                 >
                                     <CompareArrowsIcon fontSize="small" />
                                 </IconButton>
@@ -714,7 +725,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                 <IconButton
                                     size="small"
                                     onClick={() => { trackTrailPredictorClick(trail.slug); navigate(`/tools/trail-predictor?trail=${encodeURIComponent(trail.slug)}`); }}
-                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                    sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
                                 >
                                     <QueryStatsIcon fontSize="small" />
                                 </IconButton>
@@ -730,7 +741,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                         target="_blank"
                                         rel="noopener"
                                         onClick={() => trackTrailDirectionsClick(trail.slug)}
-                                        sx={{ minWidth: 44, minHeight: 44 }}
+                                        sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
                                     >
                                         <DirectionsCarIcon fontSize="small" />
                                     </IconButton>
@@ -742,7 +753,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                     onClick={toggleActionsLegend}
                                     aria-expanded={actionsLegendOpen}
                                     aria-label={actionsLegendOpen ? t('trail.actionsLegend.toggleHide') : t('trail.actionsLegend.toggleShow')}
-                                    sx={{ minWidth: 44, minHeight: 44 }}
+                                    sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}
                                 >
                                     {actionsLegendOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
                                 </IconButton>
@@ -756,6 +767,7 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
                                         key={item.key}
                                         onClick={item.activate}
                                         sx={{
+                                            ...actionHighlightSx,
                                             display: 'flex',
                                             width: '100%',
                                             justifyContent: 'flex-start',
