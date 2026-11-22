@@ -1609,8 +1609,11 @@ export default function EventDetailPage({ onNotify, onNavigateToRaceManager }: E
   // extends EventSummaryDto, so detail satisfies getHealthChecks' parameter type unchanged. N/A
   // checks (e.g. "Editions" for a Series event) are excluded from both the banner's failing-check
   // list and the score, same as the dashboard's own Checks column/scoreFromChecks.
-  const eventHealthChecks = useMemo(() => detail ? getEventHealthChecks(detail).filter(c => !c.na) : [], [detail]);
-  const eventHealthScore = useMemo(() => detail ? eventScoreFromChecks(getEventHealthChecks(detail)) : 100, [detail]);
+  // #1845: getHealthChecks(detail) is the expensive call — compute it once and derive both
+  // the filtered list and the score from that single result instead of calling it twice.
+  const eventHealthAllChecks = useMemo(() => detail ? getEventHealthChecks(detail) : [], [detail]);
+  const eventHealthChecks = useMemo(() => eventHealthAllChecks.filter(c => !c.na), [eventHealthAllChecks]);
+  const eventHealthScore = useMemo(() => detail ? eventScoreFromChecks(eventHealthAllChecks) : 100, [detail, eventHealthAllChecks]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
