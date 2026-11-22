@@ -367,22 +367,24 @@ export default function TrailDetailPage({ onNotify }: { onNotify: (message: Reac
     }
   };
 
-  // #1842: TrailDetail (this page's data) carries neither a start coordinate nor resolved
-  // location names the way the admin trails list (Trail, used by TrailHealth.tsx's dashboard)
-  // does — adapted here from fields already on the page instead of adding a backend field.
-  // `geometry` is the GPX track this page already loads via TrailMap's onDataLoaded, and its
-  // first coordinate is [lon, lat, ele] (see TrailMap.tsx) — reused rather than refetched.
+  // #1847: startLatitude/startLongitude now come straight off TrailDetail (backend reads them
+  // synchronously from GpxData, see GET /api/v1/admin/trails/{idOrSlug}) instead of from the
+  // `geometry` state TrailMap resolves asynchronously via onDataLoaded — that state was null
+  // on first paint even for trails with real GPX data, so the "GPX Data" health check briefly
+  // rendered a false failure before self-correcting. `geometry` itself stays for the map and
+  // ElevationChart below; only the health-check input source changed. Location names still
+  // come from `allLocations` the same way #1842 left them.
   const trailHealthInput: TrailHealthInput = useMemo(() => ({
     description: trail?.description,
-    startLatitude: geometry && geometry.coordinates.length > 0 ? geometry.coordinates[0][1] : null,
-    startLongitude: geometry && geometry.coordinates.length > 0 ? geometry.coordinates[0][0] : null,
+    startLatitude: trail?.startLatitude ?? null,
+    startLongitude: trail?.startLongitude ?? null,
     elevationGain: trail?.elevationGain ?? 0,
     elevationLoss: trail?.elevationLoss ?? 0,
     locations: (trail?.locations ?? []).map(l => ({ name: allLocations.find(al => al.id === l.locationId)?.name ?? '…' })),
     length: trail?.length ?? 0,
     status: trail?.status ?? '',
     terrainType: trail?.terrainType,
-  }), [trail, geometry, allLocations]);
+  }), [trail, allLocations]);
   const trailHealthChecks = useMemo(() => getHealthChecks(trailHealthInput), [trailHealthInput]);
   const trailHealthScore = useMemo(() => getHealthScore(trailHealthInput), [trailHealthInput]);
 

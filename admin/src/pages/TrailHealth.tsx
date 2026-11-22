@@ -38,9 +38,9 @@ interface DuplicatePair {
 }
 
 // Narrower than Trail — just the fields the checks below actually read. Trail (used by this
-// dashboard) satisfies it structurally; TrailDetailPage.tsx assembles one from TrailDetail plus
-// the start coordinate it already has on hand from the loaded GPX geometry, without needing a
-// matching backend field on the admin trail-detail endpoint.
+// dashboard) satisfies it structurally; TrailDetailPage.tsx assembles one from TrailDetail,
+// which carries its own startLatitude/startLongitude (see #1847 — read synchronously from
+// GpxData by GET /api/v1/admin/trails/{idOrSlug}, same as this dashboard's Trail type).
 export interface TrailHealthInput {
   description?: string;
   startLatitude?: number | null;

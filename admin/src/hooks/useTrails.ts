@@ -35,6 +35,8 @@ export type TrailDetail = {
     maxAltitude?: number | null;
     translationHashes?: Record<string, string> | null;
     needsReview: boolean;
+    startLatitude?: number | null;
+    startLongitude?: number | null;
     locations: TrailLocationInfo[];
     tags: TrailTagInfo[];
 };
