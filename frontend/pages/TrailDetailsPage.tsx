@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'rea
 import { trackTrailGpxDownload, trackTrailCompareClick, trackTrailPredictorClick, trackTrailDirectionsClick } from '../utils/analytics';
 import { downloadTrailGpx } from '../utils/trailGpxDownload';
 import { toggleCheckIn } from '../utils/trailCheckInToggle';
+import { actionHighlightSx } from '../utils/actionHighlightSx';
 import { useParams, useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
@@ -550,16 +551,6 @@ export default function TrailDetailsPage({ mode, onToggleMode }: TrailDetailsPag
         ref.current?.querySelector('button')?.click();
     };
 
-    // Shared faint highlight for the action icons and their legend rows —
-    // hover for mouse, active for the tap-and-hold moment on touch devices
-    // (which have no :hover), focus-visible for keyboard nav. A transparent
-    // border at rest keeps the swap to a visible one from shifting layout.
-    const actionHighlightSx = {
-        border: '1px solid transparent',
-        '&:hover': { bgcolor: 'action.hover', borderColor: 'divider' },
-        '&:active': { bgcolor: 'action.hover', borderColor: 'divider' },
-        '&:focus-visible': { bgcolor: 'action.hover', borderColor: 'divider' },
-    } as const;
 
     // Legend entries mirror the action row below one-for-one, gated by the
     // same feature flags — a flag-disabled action is filtered out here too,

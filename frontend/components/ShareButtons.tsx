@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { trackTrailShareClick } from '../utils/analytics';
+import { actionHighlightSx } from '../utils/actionHighlightSx';
 import { 
     IconButton, 
     Tooltip, 
@@ -114,7 +115,7 @@ export default function ShareButtons({ title, url, shareText, buttonLabel, slug 
                 </Button>
             ) : (
                 <Tooltip title={t('share.shareOptions')}>
-                    <IconButton onClick={handleOpenMenu} color="primary" size="small" sx={{ minWidth: 44, minHeight: 44 }}>
+                    <IconButton onClick={handleOpenMenu} color="primary" size="small" sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}>
                         <ShareIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>

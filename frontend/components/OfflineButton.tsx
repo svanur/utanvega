@@ -1,5 +1,6 @@
 import { Box, CircularProgress, IconButton, Snackbar, Tooltip } from '@mui/material';
 import { trackTrailOfflineSave } from '../utils/analytics';
+import { actionHighlightSx } from '../utils/actionHighlightSx';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import OfflinePinIcon from '@mui/icons-material/OfflinePin';
 import { useTranslation } from 'react-i18next';
@@ -51,7 +52,7 @@ export default function OfflineButton({ slug, trailName }: OfflineButtonProps) {
     return (
         <>
             <Tooltip title={isSaved ? t('offline.removeOffline') : t('offline.saveForOffline')} arrow>
-                <IconButton size="small" onClick={handleClick}>
+                <IconButton size="small" onClick={handleClick} sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}>
                     {isSaved
                         ? <OfflinePinIcon fontSize="small" color="success" />
                         : <CloudDownloadIcon fontSize="small" />

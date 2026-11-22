@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { trackTrailQRClick } from '../utils/analytics';
+import { actionHighlightSx } from '../utils/actionHighlightSx';
 import { 
     Box, 
     Typography, 
@@ -46,7 +47,7 @@ export default function QRCodeShare({ slug, trailName, open: openProp, onClose }
         <>
             {openProp === undefined && (
                 <Tooltip title={t('qr.showQR')}>
-                    <IconButton onClick={() => { trackTrailQRClick(slug); setInternalOpen(true); }} color="primary" size="small" sx={{ minWidth: 44, minHeight: 44 }}>
+                    <IconButton onClick={() => { trackTrailQRClick(slug); setInternalOpen(true); }} color="primary" size="small" sx={{ ...actionHighlightSx, minWidth: 44, minHeight: 44 }}>
                         <QrCode2Icon fontSize="small" />
                     </IconButton>
                 </Tooltip>
