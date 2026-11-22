@@ -830,6 +830,10 @@
             }
         },
         "changelog": {
+            "v1_18_1": {
+                "title": "Aðgerðatákn fá sinn eigin útskýringalista, 'inline' heilsuyfirlit í stjórnborði, og fleiri smellanlegir tenglar",
+                "description": "Á viðburðasíðum er nú hægt að smella á staðsetningu og fara á staðsetningarsíðuna sjálfa. Einnig er hægð að smella á 'X leiðir' og skruna niður að leiðunum sjálfum á sömu síðu. Á leiðarsíðu eru nú aðgerða-tákn í sér röð og hægt að fá ítarlegar útskýringar hvað hvert tákn gerir. Á stjórnborði er nú komin 'inline health' upplýsingalína fyrir hvern viðburð."
+            },
             "v1_18_0": {
                 "title": "Staðasetningar, staðsetningar, staðsetningar - Eftirlæti, veðurfar og fleira",
                 "description": "Nú er hægt að bæta staðsetningum í eftirlæti. Í stjórnborði er nú hægt að búa til nákvæmt svæði í stað einfalds hrings. Nú birtum við veðurfar á staðsetningarsíðum, auk ýmissa lagfæringa á snertisvæðum og útlitshnökrum."
