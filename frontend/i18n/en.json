@@ -830,6 +830,10 @@
             }
         },
         "changelog": {
+            "v1_18_2": {
+                "title": "Clearer registration status, no more dead-end Register buttons",
+                "description": "Event detail pages now show the registration-status chip for single-edition events too — it was being skipped there entirely before. When registration hasn't opened yet, the chip shows the actual opening date instead of a generic message, and the Register button stays hidden until that date arrives, matching the behavior already used on the races list and event table."
+            },
             "v1_18_1": {
                 "title": "A trail actions legend, inline admin health checks, and more clickable location links",
                 "description": "Trail detail pages now separate the action icons (share, QR, GPX download, compare, predictor, offline save, directions) from the descriptive pills into their own row, with an optional legend explaining each one — and the offline icon now correctly reflects whether the trail is actually saved. In admin, trail and event detail pages show an inline health-completeness banner plus per-edition and per-race health badges, so you no longer need to cross-reference the separate Health Dashboard, and a trail's GPX health check no longer briefly misreports before the map finishes loading. On the public site, event location chips, editions-history location links, and an event's race-count pill are now clickable, jumping straight to the matching location page or the Distances section, and internal links now navigate without a full page reload."
