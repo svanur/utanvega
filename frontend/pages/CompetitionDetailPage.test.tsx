@@ -805,6 +805,126 @@ describe('CompetitionDetailPage register button vs sold-out races (#1587)', () =
 
         expect(screen.getByText('Register')).not.toBeNull();
     });
+
+    // #1862: both gate sites swapped isAllSoldOut for the broader isAllUnavailableForRegistration
+    // (ticketStatus.ts:98-103), which also treats 'NotStarted' (registration window not yet open)
+    // as unavailable. isAllSoldOut alone let a NotStarted-only edition pass the gate and show a
+    // live, clickable Register button for a race nobody can register for yet.
+    it('hides the primaryEdition-gated register button when every visible race is NotStarted (single-edition path)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'NotStarted' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('hides the EditionMeta register button for a NotStarted edition, but keeps it for a sibling edition that is Available (multi-edition path)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'NotStarted' })],
+        });
+        const openEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, openEdition] }));
+
+        // Exactly one Register button — the NotStarted edition's is suppressed, the other edition's
+        // is not.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+    });
+
+    it('hides the primaryEdition-gated register button for a mix of NotStarted and SoldOut/Closed races (no Available/AlmostSoldOut)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', ticketStatus: 'NotStarted' }),
+                makeRace({ id: 'race-2', ticketStatus: 'SoldOut' }),
+                makeRace({ id: 'race-3', ticketStatus: 'Closed' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('still shows the primaryEdition-gated register button when at least one race is Available alongside NotStarted/SoldOut/Closed others', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', ticketStatus: 'NotStarted' }),
+                makeRace({ id: 'race-2', ticketStatus: 'SoldOut' }),
+                makeRace({ id: 'race-3', ticketStatus: 'Available' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('still shows the primaryEdition-gated register button when at least one race is AlmostSoldOut alongside NotStarted others', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', ticketStatus: 'NotStarted' }),
+                makeRace({ id: 'race-2', ticketStatus: 'AlmostSoldOut' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('still shows the register button for an edition with no races at all (NotStarted regression guard)', () => {
+        // isAllUnavailableForRegistration([]) returns false (ticketStatus.ts:99), same as
+        // isAllSoldOut([]) before this change — mirrors the no-races regression guard above.
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('still renders the registration status Chip for a NotStarted edition even though the register button is hidden', () => {
+        // Button visibility only — the Chip (EditionMeta line 260-264) is a separate, unaffected
+        // render, same as the sold-out case above.
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'NotStarted' })],
+        });
+        const otherEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, otherEdition] }));
+
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+        expect(screen.getAllByText('Registration is open')).toHaveLength(3);
+    });
 });
 
 // #1670: WeatherCard mounts in ClimateCard's exact slot (same Box sx={{ mt: 3 }}) once the

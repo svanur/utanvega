@@ -100,7 +100,7 @@ import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
 import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday, isRaceWithinShareWindow, daysBetween } from '../utils/eventUtils';
-import { getTicketStatusColor, isAllSoldOut, isRegistrationRequired } from '../utils/ticketStatus';
+import { getTicketStatusColor, isAllUnavailableForRegistration, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -252,7 +252,7 @@ function EditionMeta({
                     {/* #1592: exclude Cancelled races before the sold-out check — a Cancelled race's own
                         ticketStatus isn't guaranteed SoldOut/Closed, so leaving it in would fail the
                         "every race" check open on a mixed cancelled+sold-out edition. */}
-                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllSoldOut(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
+                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllUnavailableForRegistration(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                         <Button
                             variant="contained"
                             color="primary"
@@ -1012,7 +1012,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         {/* Row 1: action buttons */}
                         <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
                             {/* #1592: see the matching comment above — exclude Cancelled races before checking sold-out. */}
-                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && !isAllSoldOut(primaryEdition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
+                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && !isAllUnavailableForRegistration(primaryEdition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                                 <Button
                                     variant="contained"
                                     color="primary"
