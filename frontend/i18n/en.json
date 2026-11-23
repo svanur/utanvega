@@ -1733,6 +1733,7 @@
             "NotRequired": "Free entry",
             "Invitational": "Invitation only"
         },
+        "registrationOpensOn": "Registration opens {{date}}",
         "ticketStatus": {
             "Free": "Registration not required",
             "NotStarted": "Registration not started",

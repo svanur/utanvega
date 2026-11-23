@@ -332,6 +332,7 @@ function makeEdition(overrides: Partial<EventEditionDto> = {}): EventEditionDto 
         notes: null,
         notesEn: null,
         registrationStatus: null,
+        registrationOpens: null,
         trailId: null,
         trailName: null,
         trailSlug: null,
@@ -924,6 +925,88 @@ describe('CompetitionDetailPage register button vs sold-out races (#1587)', () =
 
         expect(screen.getAllByText('Register')).toHaveLength(1);
         expect(screen.getAllByText('Registration is open')).toHaveLength(3);
+    });
+});
+
+// #1863: GetPublicEventQuery already returns registrationOpens on every edition — this swaps the
+// generic "Registration not started" Chip label for a date-bearing one when the backend has given
+// a concrete opening date, via EditionMeta's one shared Chip block (CompetitionDetailPage.tsx:266-275).
+describe('CompetitionDetailPage registration-opens-date Chip (#1863)', () => {
+    // Pre-existing, unrelated to this change: EditionMeta's whole registration Stack (the Register
+    // button, the Results button, and this Chip) sits behind `{!hideMeta && (...)}`
+    // (CompetitionDetailPage.tsx:250), and the primaryEdition call site (CompetitionDetailPage.tsx:1154)
+    // always passes hideMeta — so for a single-edition (non-showEditionSections) event, this Chip
+    // (with either the old or the new label) never renders at all. Documented here rather than
+    // silently skipped, since the issue's "primaryEdition (single-edition) rendering" scenario
+    // cannot show this Chip regardless of label content; the date-bearing label is only reachable
+    // via the showEditionSections (multi-edition) loop below, which passes showHeader, not hideMeta.
+    it('never renders the registrationStatus Chip for primaryEdition (hideMeta path), regardless of status or registrationOpens', () => {
+        const edition = makeEdition({
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-01T00:00:00Z',
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText(/Registration/)).toBeNull();
+    });
+
+    it('shows "Registration opens <date>" for a NotStarted edition with a registrationOpens date in the multi-edition loop (showEditionSections path)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-01T00:00:00Z',
+        });
+        const openEdition = makeEdition({
+            id: 'edition-2',
+            registrationStatus: 'Open',
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, openEdition] }));
+
+        expect(screen.getByText('Registration opens 1. December 2026')).not.toBeNull();
+        expect(screen.getByText('Registration is open')).not.toBeNull();
+    });
+
+    it('falls back to the generic "Registration not started" label when registrationOpens is null (multi-edition loop)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'NotStarted',
+            registrationOpens: null,
+        });
+        const otherEdition = makeEdition({ id: 'edition-2', registrationStatus: 'Open' });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, otherEdition] }));
+
+        expect(screen.getByText('Registration not started')).not.toBeNull();
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('leaves other registration statuses unchanged even when registrationOpens is set (multi-edition loop)', () => {
+        const openEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'Open',
+            registrationOpens: '2026-12-01T00:00:00Z',
+        });
+        const otherEdition = makeEdition({ id: 'edition-2', registrationStatus: 'Closed' });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [openEdition, otherEdition] }));
+
+        expect(screen.getByText('Registration is open')).not.toBeNull();
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('displays only the date portion of a registrationOpens value that includes a time-of-day component (multi-edition loop)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-01T14:30:00Z',
+        });
+        const otherEdition = makeEdition({ id: 'edition-2', registrationStatus: 'Open' });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, otherEdition] }));
+
+        expect(screen.getByText('Registration opens 1. December 2026')).not.toBeNull();
     });
 });
 
