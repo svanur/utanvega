@@ -932,25 +932,6 @@ describe('CompetitionDetailPage register button vs sold-out races (#1587)', () =
 // generic "Registration not started" Chip label for a date-bearing one when the backend has given
 // a concrete opening date, via EditionMeta's one shared Chip block (CompetitionDetailPage.tsx:266-275).
 describe('CompetitionDetailPage registration-opens-date Chip (#1863)', () => {
-    // Pre-existing, unrelated to this change: EditionMeta's whole registration Stack (the Register
-    // button, the Results button, and this Chip) sits behind `{!hideMeta && (...)}`
-    // (CompetitionDetailPage.tsx:250), and the primaryEdition call site (CompetitionDetailPage.tsx:1154)
-    // always passes hideMeta — so for a single-edition (non-showEditionSections) event, this Chip
-    // (with either the old or the new label) never renders at all. Documented here rather than
-    // silently skipped, since the issue's "primaryEdition (single-edition) rendering" scenario
-    // cannot show this Chip regardless of label content; the date-bearing label is only reachable
-    // via the showEditionSections (multi-edition) loop below, which passes showHeader, not hideMeta.
-    it('never renders the registrationStatus Chip for primaryEdition (hideMeta path), regardless of status or registrationOpens', () => {
-        const edition = makeEdition({
-            registrationStatus: 'NotStarted',
-            registrationOpens: '2026-12-01T00:00:00Z',
-        });
-
-        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
-
-        expect(screen.queryByText(/Registration/)).toBeNull();
-    });
-
     it('shows "Registration opens <date>" for a NotStarted edition with a registrationOpens date in the multi-edition loop (showEditionSections path)', () => {
         const notStartedEdition = makeEdition({
             id: 'edition-1',
@@ -1007,6 +988,63 @@ describe('CompetitionDetailPage registration-opens-date Chip (#1863)', () => {
         renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, otherEdition] }));
 
         expect(screen.getByText('Registration opens 1. December 2026')).not.toBeNull();
+    });
+});
+
+// #1866: the primaryEdition (single-edition, hideMeta) call site was gating the whole registration
+// Stack — including the Chip — behind `{!hideMeta && (...)}`, so this Chip never rendered for a
+// single-edition event regardless of registrationStatus/registrationOpens. The Register/Results
+// buttons and GalleryLinks stay hidden here (hideMeta) because CompetitionDetailPage already renders
+// them, for primaryEdition, in its own action row above (around line 1019-1053) — only the Chip has
+// no such duplicate and so is no longer gated by hideMeta.
+describe('CompetitionDetailPage registration-status Chip for single-edition events (#1866)', () => {
+    it('renders the date-bearing Chip for a NotStarted single edition with registrationOpens set', () => {
+        const edition = makeEdition({
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-01T00:00:00Z',
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Registration opens 1. December 2026')).not.toBeNull();
+    });
+
+    it('renders the generic "Registration not started" Chip for a NotStarted single edition with no registrationOpens', () => {
+        const edition = makeEdition({
+            registrationStatus: 'NotStarted',
+            registrationOpens: null,
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Registration not started')).not.toBeNull();
+    });
+
+    it.each([
+        ['Open', 'Registration is open'],
+        ['Closed', 'Registration closed'],
+        ['NotRequired', 'Free entry'],
+        ['Invitational', 'Invitation only'],
+    ])('renders the Chip for a single edition with registrationStatus %s', (registrationStatus, label) => {
+        const edition = makeEdition({ registrationStatus: registrationStatus as EventEditionDto['registrationStatus'] });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText(label)).not.toBeNull();
+    });
+
+    it('still hides the Register and Results buttons from EditionMeta for a single edition (they are rendered in the action row above instead)', () => {
+        const edition = makeEdition({
+            registrationStatus: 'Open',
+            registrationUrl: 'https://example.com/register',
+            resultsUrl: 'https://example.com/results',
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        // Exactly one Register button (the action-row one) and one Results button, not two.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+        expect(screen.getAllByText('Results')).toHaveLength(1);
     });
 });
 
