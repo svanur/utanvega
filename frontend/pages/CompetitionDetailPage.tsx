@@ -265,7 +265,11 @@ function EditionMeta({
                     )}
                     {edition.registrationStatus && (
                         <Chip
-                            label={t(`races.registrationStatus.${edition.registrationStatus}`, { defaultValue: edition.registrationStatus })}
+                            label={
+                                edition.registrationStatus === 'NotStarted' && edition.registrationOpens
+                                    ? t('races.registrationOpensOn', { date: formatNextDate(edition.registrationOpens.slice(0, 10), t) })
+                                    : t(`races.registrationStatus.${edition.registrationStatus}`, { defaultValue: edition.registrationStatus })
+                            }
                             size="small"
                             color={getRegistrationStatusColor(edition.registrationStatus)}
                         />

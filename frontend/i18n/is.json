@@ -1733,6 +1733,7 @@
             "NotRequired": "Ekki þarf að skrá sig",
             "Invitational": "Boðsgestir eingöngu"
         },
+        "registrationOpensOn": "Skráning opnar {{date}}",
         "ticketStatus": {
             "Free": "Engin skráning — Bara mæta",
             "NotStarted": "Skráning ekki hafin",

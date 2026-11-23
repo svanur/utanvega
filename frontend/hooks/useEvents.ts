@@ -141,6 +141,7 @@ export interface EventEditionDto {
     notes: string | null;
     notesEn: string | null;
     registrationStatus: string | null;
+    registrationOpens: string | null;
     trailId: string | null;
     trailName: string | null;
     trailSlug: string | null;
