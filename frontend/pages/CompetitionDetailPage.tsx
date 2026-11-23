@@ -247,12 +247,18 @@ function EditionMeta({
                     <LinkifiedText text={loc(edition.notes, edition.notesEn)} />
                 </Typography>
             )}
-            {!hideMeta && (
+            {/* #1866: hideMeta still gates the Register/Results buttons and GalleryLinks here — for the
+                single-edition (primaryEdition, hideMeta) call site those three are already rendered in
+                CompetitionDetailPage's own action row (around line 1019-1053), so rendering them again
+                here would duplicate them. The registration-status Chip has no such duplicate elsewhere,
+                so it renders regardless of hideMeta — otherwise a single-edition event never shows its
+                registration status at all. */}
+            {(!hideMeta || edition.registrationStatus) && (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
                     {/* #1592: exclude Cancelled races before the sold-out check — a Cancelled race's own
                         ticketStatus isn't guaranteed SoldOut/Closed, so leaving it in would fail the
                         "every race" check open on a mixed cancelled+sold-out edition. */}
-                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllUnavailableForRegistration(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
+                    {!hideMeta && edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllUnavailableForRegistration(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                         <Button
                             variant="contained"
                             color="primary"
@@ -274,7 +280,7 @@ function EditionMeta({
                             color={getRegistrationStatusColor(edition.registrationStatus)}
                         />
                     )}
-                    {edition.resultsUrl && (
+                    {!hideMeta && edition.resultsUrl && (
                         <Button
                             variant="outlined"
                             size="small"
@@ -285,7 +291,7 @@ function EditionMeta({
                             {t('races.results', { defaultValue: 'Results' })}
                         </Button>
                     )}
-                    <GalleryLinks galleries={edition.galleries} />
+                    {!hideMeta && <GalleryLinks galleries={edition.galleries} />}
                 </Stack>
             )}
         </Box>
