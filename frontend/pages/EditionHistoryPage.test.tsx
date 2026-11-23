@@ -104,6 +104,7 @@ function makeEdition(overrides: Partial<EventEditionDto> = {}): EventEditionDto 
         notes: null,
         notesEn: null,
         registrationStatus: null,
+        registrationOpens: null,
         trailId: null,
         trailName: null,
         trailSlug: null,

@@ -46,5 +46,10 @@ backend/.env.production
 # Claude local settings (machine-specific)
 .claude/settings.local.json
 
+# Stray agent-scratchpad artifacts mistakenly written to repo root
+# (mangled temp-dir paths used as filenames, e.g. a Windows drive-letter
+# colon rendered as a non-ASCII glyph with path separators stripped out)
+/*scratchpad*.json
+
 vite.config.js
 vite.config.d.ts

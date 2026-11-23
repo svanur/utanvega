@@ -332,6 +332,7 @@ function makeEdition(overrides: Partial<EventEditionDto> = {}): EventEditionDto 
         notes: null,
         notesEn: null,
         registrationStatus: null,
+        registrationOpens: null,
         trailId: null,
         trailName: null,
         trailSlug: null,
@@ -804,6 +805,246 @@ describe('CompetitionDetailPage register button vs sold-out races (#1587)', () =
         renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
 
         expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    // #1862: both gate sites swapped isAllSoldOut for the broader isAllUnavailableForRegistration
+    // (ticketStatus.ts:98-103), which also treats 'NotStarted' (registration window not yet open)
+    // as unavailable. isAllSoldOut alone let a NotStarted-only edition pass the gate and show a
+    // live, clickable Register button for a race nobody can register for yet.
+    it('hides the primaryEdition-gated register button when every visible race is NotStarted (single-edition path)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'NotStarted' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('hides the EditionMeta register button for a NotStarted edition, but keeps it for a sibling edition that is Available (multi-edition path)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'NotStarted' })],
+        });
+        const openEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, openEdition] }));
+
+        // Exactly one Register button — the NotStarted edition's is suppressed, the other edition's
+        // is not.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+    });
+
+    it('hides the primaryEdition-gated register button for a mix of NotStarted and SoldOut/Closed races (no Available/AlmostSoldOut)', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', ticketStatus: 'NotStarted' }),
+                makeRace({ id: 'race-2', ticketStatus: 'SoldOut' }),
+                makeRace({ id: 'race-3', ticketStatus: 'Closed' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('still shows the primaryEdition-gated register button when at least one race is Available alongside NotStarted/SoldOut/Closed others', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', ticketStatus: 'NotStarted' }),
+                makeRace({ id: 'race-2', ticketStatus: 'SoldOut' }),
+                makeRace({ id: 'race-3', ticketStatus: 'Available' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('still shows the primaryEdition-gated register button when at least one race is AlmostSoldOut alongside NotStarted others', () => {
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [
+                makeRace({ id: 'race-1', ticketStatus: 'NotStarted' }),
+                makeRace({ id: 'race-2', ticketStatus: 'AlmostSoldOut' }),
+            ],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('still shows the register button for an edition with no races at all (NotStarted regression guard)', () => {
+        // isAllUnavailableForRegistration([]) returns false (ticketStatus.ts:99), same as
+        // isAllSoldOut([]) before this change — mirrors the no-races regression guard above.
+        const edition = makeEdition({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'Open',
+            races: [],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('still renders the registration status Chip for a NotStarted edition even though the register button is hidden', () => {
+        // Button visibility only — the Chip (EditionMeta line 260-264) is a separate, unaffected
+        // render, same as the sold-out case above.
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationUrl: 'https://example.com/register-1',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-1', ticketStatus: 'NotStarted' })],
+        });
+        const otherEdition = makeEdition({
+            id: 'edition-2',
+            registrationUrl: 'https://example.com/register-2',
+            registrationStatus: 'Open',
+            races: [makeRace({ id: 'race-2', ticketStatus: 'Available' })],
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, otherEdition] }));
+
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+        expect(screen.getAllByText('Registration is open')).toHaveLength(3);
+    });
+});
+
+// #1863: GetPublicEventQuery already returns registrationOpens on every edition — this swaps the
+// generic "Registration not started" Chip label for a date-bearing one when the backend has given
+// a concrete opening date, via EditionMeta's one shared Chip block (CompetitionDetailPage.tsx:266-275).
+describe('CompetitionDetailPage registration-opens-date Chip (#1863)', () => {
+    it('shows "Registration opens <date>" for a NotStarted edition with a registrationOpens date in the multi-edition loop (showEditionSections path)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-01T00:00:00Z',
+        });
+        const openEdition = makeEdition({
+            id: 'edition-2',
+            registrationStatus: 'Open',
+        });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, openEdition] }));
+
+        expect(screen.getByText('Registration opens 1. December 2026')).not.toBeNull();
+        expect(screen.getByText('Registration is open')).not.toBeNull();
+    });
+
+    it('falls back to the generic "Registration not started" label when registrationOpens is null (multi-edition loop)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'NotStarted',
+            registrationOpens: null,
+        });
+        const otherEdition = makeEdition({ id: 'edition-2', registrationStatus: 'Open' });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, otherEdition] }));
+
+        expect(screen.getByText('Registration not started')).not.toBeNull();
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('leaves other registration statuses unchanged even when registrationOpens is set (multi-edition loop)', () => {
+        const openEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'Open',
+            registrationOpens: '2026-12-01T00:00:00Z',
+        });
+        const otherEdition = makeEdition({ id: 'edition-2', registrationStatus: 'Closed' });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [openEdition, otherEdition] }));
+
+        expect(screen.getByText('Registration is open')).not.toBeNull();
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('displays only the date portion of a registrationOpens value that includes a time-of-day component (multi-edition loop)', () => {
+        const notStartedEdition = makeEdition({
+            id: 'edition-1',
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-01T14:30:00Z',
+        });
+        const otherEdition = makeEdition({ id: 'edition-2', registrationStatus: 'Open' });
+
+        renderCompetitionDetailPage(makeEvent({ type: 'Series', editions: [notStartedEdition, otherEdition] }));
+
+        expect(screen.getByText('Registration opens 1. December 2026')).not.toBeNull();
+    });
+});
+
+// #1866: the primaryEdition (single-edition, hideMeta) call site was gating the whole registration
+// Stack — including the Chip — behind `{!hideMeta && (...)}`, so this Chip never rendered for a
+// single-edition event regardless of registrationStatus/registrationOpens. The Register/Results
+// buttons and GalleryLinks stay hidden here (hideMeta) because CompetitionDetailPage already renders
+// them, for primaryEdition, in its own action row above (around line 1019-1053) — only the Chip has
+// no such duplicate and so is no longer gated by hideMeta.
+describe('CompetitionDetailPage registration-status Chip for single-edition events (#1866)', () => {
+    it('renders the date-bearing Chip for a NotStarted single edition with registrationOpens set', () => {
+        const edition = makeEdition({
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-01T00:00:00Z',
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Registration opens 1. December 2026')).not.toBeNull();
+    });
+
+    it('renders the generic "Registration not started" Chip for a NotStarted single edition with no registrationOpens', () => {
+        const edition = makeEdition({
+            registrationStatus: 'NotStarted',
+            registrationOpens: null,
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText('Registration not started')).not.toBeNull();
+    });
+
+    it.each([
+        ['Open', 'Registration is open'],
+        ['Closed', 'Registration closed'],
+        ['NotRequired', 'Free entry'],
+        ['Invitational', 'Invitation only'],
+    ])('renders the Chip for a single edition with registrationStatus %s', (registrationStatus, label) => {
+        const edition = makeEdition({ registrationStatus: registrationStatus as EventEditionDto['registrationStatus'] });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        expect(screen.getByText(label)).not.toBeNull();
+    });
+
+    it('still hides the Register and Results buttons from EditionMeta for a single edition (they are rendered in the action row above instead)', () => {
+        const edition = makeEdition({
+            registrationStatus: 'Open',
+            registrationUrl: 'https://example.com/register',
+            resultsUrl: 'https://example.com/results',
+        });
+
+        renderCompetitionDetailPage(makeEvent({ editions: [edition] }));
+
+        // Exactly one Register button (the action-row one) and one Results button, not two.
+        expect(screen.getAllByText('Register')).toHaveLength(1);
+        expect(screen.getAllByText('Results')).toHaveLength(1);
     });
 });
 

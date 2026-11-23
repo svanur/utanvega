@@ -100,7 +100,7 @@ import { ACTIVITY_EMOJI } from '../constants/activityEmoji';
 import { googleCalendarUrl, outlookCalendarUrl, downloadIcs } from '../utils/calendarLinks';
 import EventDateBadge from '../components/EventDateBadge';
 import { deriveEventTrailSlugs, formatDateRange, formatNextDate, getCountdownColor, getCountdownLabel, formatRaceDateTime, getEventTypeColor, isEffectivelyCancelled, isEffectivelyUnconfirmed, shortestUniqueEditionKey, getMultiDayEditionProgress, toDateOnlyString, getEditionTimingStatus, computeRaceDayFlags, resolveSeriesClimateDate, resolveHeroDaysUntil, resolveEditionDayProgress, isRaceHappeningToday, isRaceWithinShareWindow, daysBetween } from '../utils/eventUtils';
-import { getTicketStatusColor, isAllSoldOut, isRegistrationRequired } from '../utils/ticketStatus';
+import { getTicketStatusColor, isAllUnavailableForRegistration, isRegistrationRequired } from '../utils/ticketStatus';
 import { trackEventQRClick } from '../utils/analytics';
 
 type RaceDayChecklistKey = 'bib' | 'shoes' | 'gels' | 'goodMood';
@@ -247,12 +247,18 @@ function EditionMeta({
                     <LinkifiedText text={loc(edition.notes, edition.notesEn)} />
                 </Typography>
             )}
-            {!hideMeta && (
+            {/* #1866: hideMeta still gates the Register/Results buttons and GalleryLinks here — for the
+                single-edition (primaryEdition, hideMeta) call site those three are already rendered in
+                CompetitionDetailPage's own action row (around line 1019-1053), so rendering them again
+                here would duplicate them. The registration-status Chip has no such duplicate elsewhere,
+                so it renders regardless of hideMeta — otherwise a single-edition event never shows its
+                registration status at all. */}
+            {(!hideMeta || edition.registrationStatus) && (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 1.5 }} alignItems={{ sm: 'center' }}>
                     {/* #1592: exclude Cancelled races before the sold-out check — a Cancelled race's own
                         ticketStatus isn't guaranteed SoldOut/Closed, so leaving it in would fail the
                         "every race" check open on a mixed cancelled+sold-out edition. */}
-                    {edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllSoldOut(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
+                    {!hideMeta && edition.registrationUrl && isRegistrationRequired(edition.registrationStatus) && !isAllUnavailableForRegistration(edition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                         <Button
                             variant="contained"
                             color="primary"
@@ -265,12 +271,16 @@ function EditionMeta({
                     )}
                     {edition.registrationStatus && (
                         <Chip
-                            label={t(`races.registrationStatus.${edition.registrationStatus}`, { defaultValue: edition.registrationStatus })}
+                            label={
+                                edition.registrationStatus === 'NotStarted' && edition.registrationOpens
+                                    ? t('races.registrationOpensOn', { date: formatNextDate(edition.registrationOpens.slice(0, 10), t) })
+                                    : t(`races.registrationStatus.${edition.registrationStatus}`, { defaultValue: edition.registrationStatus })
+                            }
                             size="small"
                             color={getRegistrationStatusColor(edition.registrationStatus)}
                         />
                     )}
-                    {edition.resultsUrl && (
+                    {!hideMeta && edition.resultsUrl && (
                         <Button
                             variant="outlined"
                             size="small"
@@ -281,7 +291,7 @@ function EditionMeta({
                             {t('races.results', { defaultValue: 'Results' })}
                         </Button>
                     )}
-                    <GalleryLinks galleries={edition.galleries} />
+                    {!hideMeta && <GalleryLinks galleries={edition.galleries} />}
                 </Stack>
             )}
         </Box>
@@ -1012,7 +1022,7 @@ export default function CompetitionDetailPage({ mode, onToggleMode }: Competitio
                         {/* Row 1: action buttons */}
                         <Stack direction="row" flexWrap="wrap" gap={1} alignItems="center">
                             {/* #1592: see the matching comment above — exclude Cancelled races before checking sold-out. */}
-                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && !isAllSoldOut(primaryEdition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
+                            {!showEditionSections && primaryEdition?.registrationUrl && isRegistrationRequired(primaryEdition.registrationStatus) && !isAllUnavailableForRegistration(primaryEdition.visibleRaces.filter(race => race.status !== 'Cancelled')) && (
                                 <Button
                                     variant="contained"
                                     color="primary"

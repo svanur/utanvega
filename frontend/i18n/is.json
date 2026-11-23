@@ -830,6 +830,10 @@
             }
         },
         "changelog": {
+            "v1_18_2": {
+                "title": "Skýrari skráningarstaða og réttari skráningarhnappur",
+                "description": "Skráningarhnappur á nú að birtast aðeins þegar 'skráningargluginn' er opinn. Ef það er komin dagsetning fyrir 'Skráning opnar' þá birtum við þá dagsetningu."
+            },
             "v1_18_1": {
                 "title": "Aðgerðatákn fá sinn eigin útskýringalista, 'inline' heilsuyfirlit í stjórnborði, og fleiri smellanlegir tenglar",
                 "description": "Á viðburðasíðum er nú hægt að smella á staðsetningu og fara á staðsetningarsíðuna sjálfa. Einnig er hægð að smella á 'X leiðir' og skruna niður að leiðunum sjálfum á sömu síðu. Á leiðarsíðu eru nú aðgerða-tákn í sér röð og hægt að fá ítarlegar útskýringar hvað hvert tákn gerir. Á stjórnborði er nú komin 'inline health' upplýsingalína fyrir hvern viðburð."
@@ -1733,6 +1737,7 @@
             "NotRequired": "Ekki þarf að skrá sig",
             "Invitational": "Boðsgestir eingöngu"
         },
+        "registrationOpensOn": "Skráning opnar {{date}}",
         "ticketStatus": {
             "Free": "Engin skráning — Bara mæta",
             "NotStarted": "Skráning ekki hafin",
