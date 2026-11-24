@@ -29,6 +29,7 @@ public class UtanvegaDbContext : DbContext
     public DbSet<Photographer> Photographers => Set<Photographer>();
     public DbSet<PhotoGallery> PhotoGalleries => Set<PhotoGallery>();
     public DbSet<Feedback> Feedback => Set<Feedback>();
+    public DbSet<AdventEntry> AdventEntries => Set<AdventEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -391,6 +392,17 @@ public class UtanvegaDbContext : DbContext
             entity.Property(e => e.AdminComment).HasMaxLength(2000);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        modelBuilder.Entity<AdventEntry>(entity =>
+        {
+            entity.ToTable("AdventEntries");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(320);
+            entity.Property(e => e.Day).IsRequired();
+            entity.Property(e => e.Source).IsRequired().HasConversion<string>().HasMaxLength(20);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.HasIndex(e => new { e.Email, e.Day, e.Source }).IsUnique();
         });
 
         modelBuilder.Entity<TrailCheckIn>(entity =>

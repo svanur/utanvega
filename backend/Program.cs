@@ -85,6 +85,9 @@ using Utanvega.Backend.Application.TrailCheckIns.Queries.GetTrailCheckIns;
 using Utanvega.Backend.Application.Tips.Commands;
 using Utanvega.Backend.Application.Feedback.Commands;
 using Utanvega.Backend.Application.Feedback.Queries;
+using Utanvega.Backend.Application.Advent;
+using Utanvega.Backend.Application.Advent.Commands;
+using Utanvega.Backend.Application.Advent.Queries;
 using Utanvega.Backend.Infrastructure.Email;
 using MediatR;
 using FluentValidation;
@@ -430,6 +433,29 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
             }));
     options.AddPolicy("newsletter-subscribe", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            ClientIpResolver.GetPartitionKey(httpContext),
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+            }));
+    // A wrong answer is retryable immediately and as often as needed (#1875), so this needs to be
+    // generous enough that a visitor working through a 4-choice question doesn't get rate-limited
+    // mid-game, while still bounding brute-forcing the correct index.
+    options.AddPolicy("advent-answer", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            ClientIpResolver.GetPartitionKey(httpContext),
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(10),
+                SegmentsPerWindow = 5,
+                QueueLimit = 0,
+            }));
+    options.AddPolicy("advent-share", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
             ClientIpResolver.GetPartitionKey(httpContext),
             _ => new SlidingWindowRateLimiterOptions
@@ -2693,6 +2719,61 @@ app.MapPatch("/api/v1/admin/feedback/{id:guid}", [Authorize(Policy = "AdminOnly"
 })
 .WithName("PatchFeedback");
 
+// --- Jóladagatal / Advent calendar (#1875) ---
+
+app.MapGet("/api/v1/advent/{day:int}", async (int day, IMediator mediator) =>
+{
+    var question = await mediator.Send(new GetAdventQuestionQuery(day));
+    return question is null
+        ? Results.BadRequest("Day is outside 1-24 or not yet unlocked.")
+        : Results.Ok(question);
+})
+.WithName("GetAdventQuestion");
+
+app.MapPost("/api/v1/advent/answer", async (SubmitAdventAnswerRequest req, IMediator mediator) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Email))
+        return Results.BadRequest("Email is required.");
+    try { _ = new System.Net.Mail.MailAddress(req.Email); }
+    catch { return Results.BadRequest("Email format is invalid."); }
+
+    var outcome = await mediator.Send(new SubmitAdventAnswerCommand(req.Day, req.SelectedIndex, req.Email));
+    return outcome switch
+    {
+        SubmitAdventAnswerOutcome.DayLocked => Results.BadRequest("Day is outside 1-24 or not yet unlocked."),
+        SubmitAdventAnswerOutcome.Incorrect => Results.Ok(new { isCorrect = false }),
+        SubmitAdventAnswerOutcome.Correct => Results.Ok(new { isCorrect = true }),
+        _ => throw new InvalidOperationException($"Unhandled {nameof(SubmitAdventAnswerOutcome)}: {outcome}"),
+    };
+})
+.WithName("SubmitAdventAnswer")
+.RequireRateLimiting("advent-answer");
+
+app.MapPost("/api/v1/advent/share", async (SubmitAdventShareRequest req, IMediator mediator) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Email))
+        return Results.BadRequest("Email is required.");
+    try { _ = new System.Net.Mail.MailAddress(req.Email); }
+    catch { return Results.BadRequest("Email format is invalid."); }
+
+    var outcome = await mediator.Send(new GrantAdventShareBonusCommand(req.Day, req.Email));
+    return outcome switch
+    {
+        GrantAdventShareBonusOutcome.NoPriorAnswer => Results.BadRequest("No correct answer on record for this day."),
+        GrantAdventShareBonusOutcome.Granted => Results.Ok(new { granted = true }),
+        _ => throw new InvalidOperationException($"Unhandled {nameof(GrantAdventShareBonusOutcome)}: {outcome}"),
+    };
+})
+.WithName("SubmitAdventShare")
+.RequireRateLimiting("advent-share");
+
+app.MapGet("/api/v1/admin/advent/entries/export", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
+{
+    var emails = await mediator.Send(new ExportAdventEntriesQuery());
+    return Results.Text(string.Join('\n', emails), "text/plain");
+})
+.WithName("ExportAdventEntries");
+
 if (isMigrateMode)
 {
     var directUrlUsed = builder.Configuration["DIRECT_DATABASE_URL"] is not null;
@@ -2720,6 +2801,8 @@ public record SubmitFeedbackRequest(
     string PageUrl, string Message, string? Category, string? Name, string? Email,
     string? StepsToReproduce, string? BrowserInfo, string? ScreenshotUrl);
 public record NewsletterSubscribeRequest(string Email);
+public record SubmitAdventAnswerRequest(int Day, int SelectedIndex, string Email);
+public record SubmitAdventShareRequest(int Day, string Email);
 public record PatchFeedbackRequest(
     string? Status, string? Priority, int? GitHubIssue, bool? ClearGitHubIssue, string? AdminComment);
 public record TranslateRequest(List<string> Texts);
