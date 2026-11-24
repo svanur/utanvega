@@ -269,6 +269,11 @@ function EditionMeta({
                             {t('races.register')}
                         </Button>
                     )}
+                    {/* #1867: verified by static width calc (see PR body, no code change needed) that the
+                        worst-case Icelandic "Skráning opnar <day>. september <year>" label (~207-223px
+                        incl. Chip label padding at 13px/small) never exceeds the available xs-width here
+                        (~303-311px, after Container + Paper padding), so default Chip truncation CSS
+                        never engages at 375px — this Chip stays unstyled on purpose. */}
                     {edition.registrationStatus && (
                         <Chip
                             label={
