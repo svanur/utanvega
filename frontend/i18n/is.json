@@ -2082,5 +2082,45 @@
         "openGalleryAriaLabel": "Opna myndasafn fyrir {{event}} (opnast í nýjum flipa)",
         "viewEdition": "Skoða útgáfu",
         "viewEditionAriaLabel": "Skoða útgáfu {{event}} á þessari síðu"
+    },
+    "advent": {
+        "pageTitle": "Jóladagatal Hlaupadagskra.is 2026",
+        "tabCalendar": "Dagatal",
+        "tabRules": "Reglur og vinningar",
+        "doorAriaOpen": "Dagur {{day}}",
+        "doorAriaWon": "Dagur {{day}} — þú vannst þennan!",
+        "doorAriaLocked": "Dagur {{day}} — ekki opinn enn",
+        "doorTitle": "Dagur {{day}}",
+        "close": "Loka",
+        "usingEmail": "Netfangið {{email}} er notað sem þátttökumiði.",
+        "notYou": "Ekki þú?",
+        "emailLabel": "Netfangið þitt",
+        "emailHelper": "Við þurfum netfangið þitt bara einu sinni til að skrá vinningsmiðann þinn — það er notað sjálfkrafa alla aðra daga.",
+        "emailInvalid": "Sláðu inn gilt netfang.",
+        "loading": "Sæki spurningu dagsins…",
+        "loadError": "Náði ekki að sækja spurningu dagsins. Prófaðu aftur síðar.",
+        "retry": "Reyna aftur",
+        "correctTitle": "Hárrétt!",
+        "correctBody": "Þú vannst einn vinningsmiða í pottinn.",
+        "shareButton": "Deila fyrir aukamiða",
+        "shareText": "Ég vann vinningsmiða í jóladagatali Hlaupadagskra.is 2026! Vilt þú ekki prófa líka?",
+        "rules": {
+            "title": "Reglur og vinningar",
+            "intro": "Opnaðu nýjar dyr á hverjum degi frá 1. – 24. desember 2026 og svaraðu stuttri spurningu um hlaup, búnað eða vefsíðuna sjálfa. Hverjar dyr tengjast einhverju atriði til að skoða nánar.",
+            "prizesTitle": "Vinningar",
+            "prizes": [
+                "HOKA Speedgoat Spike – negldir utanvegahlaupaskór frá Sportís.",
+                "Merino ullarhlaupasokkar frá Stance",
+                "Utanvegahlaupaskafkort frá Hlaupadagskra.is",
+                "Götuhlaupaskafkort frá Hlaupadagskra.is.",
+                "Tveir miðar í götu- eða utanvegahlaup árið 2027"
+            ],
+            "mechanic": "Þátttaka er ókeypis og opin öllum. Hver þátttakandi getur svarað einu sinni á dag og hvert rétt svar gildir sem einn möguleiki í útdrætti. Dregið verður úr þátttakendum að leik loknum 25.des og haft samband við vinningshafa með tölvupósti.",
+            "shareBonus": "Þegar þú hefur unnið vinningsmiða dagsins getur þú deilt dagatalinu og fengið einn aukamiða fyrir þann sama dag.",
+            "signup": "Með þátttöku skráir þú þig jafnframt á póstlista Hlaupadagskra.is og Sportís, þar sem þú færð fréttir af hlaupum, viðburðum, nýjungum og tilboðum. Þú getur afskráð þig hvenær sem er.",
+            "draw": "Allir miðar fara í vinningspott sem dregið er úr 25. desember 2026. Haft verður samband við vinningshafa með tölvupósti.",
+            "privacyPrefix": "Sjá",
+            "privacyLink": "persónuverndarstefnu okkar"
+        }
     }
 }

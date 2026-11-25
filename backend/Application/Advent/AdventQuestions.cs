@@ -71,7 +71,7 @@ public static class AdventQuestions
             ChoicesEn: ["5", "8", "12", "33"],
             CorrectIndex: 2,
             LinkUrl: "https://sportis.is/search?q=speedgoat+spike",
-            LinkLabelIs: "Vörutengill",
+            LinkLabelIs: "Skoða Speedgoat Spike",
             LinkLabelEn: "Product link"),
         new(
             Day: 4,
@@ -253,7 +253,7 @@ public static class AdventQuestions
             ChoicesEn: ["FreshTek™", "UltraMesh-X", "NoStink™", "OdorMoistTEC"],
             CorrectIndex: 0,
             LinkUrl: "https://sportis.is/products/stance-a448a24lig?variant=49896066023706",
-            LinkLabelIs: "Vörutengill",
+            LinkLabelIs: "Skoða Stance Merino sokka",
             LinkLabelEn: "Product link"),
         new(
             Day: 15,
@@ -293,7 +293,7 @@ public static class AdventQuestions
             ChoicesEn: ["Ísland á iði", "Út að hlaupa", "Hlaupadagskrá", "Segment kóngar"],
             CorrectIndex: 2,
             LinkUrl: "https://www.strava.com/clubs/hlaupadagskra",
-            LinkLabelIs: "Skoða klúbbinn",
+            LinkLabelIs: "Skoða Strava klúbbinn",
             LinkLabelEn: "See the club"),
         new(
             Day: 19,
