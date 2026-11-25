@@ -195,6 +195,52 @@ public class AdventHandlerTests : IDisposable
         Assert.Single(db.AdventEntries);
     }
 
+    /// <summary>
+    /// #1880: a repeat win for a ticket already held must not re-fire MailerLite's confirmation
+    /// email on every re-submission — only the call that actually wrote the row subscribes.
+    /// </summary>
+    [Fact]
+    public async Task SubmitAnswer_CorrectAgainForAlreadyWonDay_DoesNotCallMailerLiteAgain()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{}");
+        var correctIndex = AdventQuestions.ForDay(10)!.CorrectIndex;
+
+        var firstHandler = CreateAnswerHandler(OnDay10, handlerMock);
+        await firstHandler.Handle(new SubmitAdventAnswerCommand(10, correctIndex, "runner@example.com"), CancellationToken.None);
+
+        var secondHandler = CreateAnswerHandler(OnDay10, handlerMock);
+        await secondHandler.Handle(new SubmitAdventAnswerCommand(10, correctIndex, "runner@example.com"), CancellationToken.None);
+
+        // One MailerLite call total — the first (row-writing) submission only, not the repeat.
+        VerifySubscribeCallCount(handlerMock, 1);
+    }
+
+    /// <summary>
+    /// The endpoint's <c>new MailAddress(req.Email)</c> validation accepts an RFC 5322 display-name
+    /// wrapper (#1880) — the handler must still key both forms to the same mailbox, or the same
+    /// entrant ends up with two rows and two tickets.
+    /// </summary>
+    [Fact]
+    public async Task SubmitAnswer_EmailWithDisplayNameWrapper_NormalizesToSameKeyAsPlainAddress()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{}");
+        var correctIndex = AdventQuestions.ForDay(10)!.CorrectIndex;
+
+        var firstHandler = CreateAnswerHandler(OnDay10, handlerMock);
+        await firstHandler.Handle(new SubmitAdventAnswerCommand(10, correctIndex, "runner@example.com"), CancellationToken.None);
+
+        var secondHandler = CreateAnswerHandler(OnDay10, handlerMock);
+        var outcome = await secondHandler.Handle(
+            new SubmitAdventAnswerCommand(10, correctIndex, "Runner Example <Runner@Example.com>"), CancellationToken.None);
+
+        Assert.Equal(SubmitAdventAnswerOutcome.Correct, outcome);
+        using var db = _factory.CreateContext();
+        var rows = db.AdventEntries.ToList();
+        Assert.Single(rows); // same mailbox — not a second entrant
+        Assert.Equal("runner@example.com", rows[0].Email);
+        VerifySubscribeCallCount(handlerMock, 1); // second call is the idempotent-repeat path
+    }
+
     // ── GrantAdventShareBonusCommand: no-answer rejection + idempotency ────────
 
     [Fact]
@@ -260,6 +306,35 @@ public class AdventHandlerTests : IDisposable
         using var verify = _factory.CreateContext();
         var shareRows = verify.AdventEntries.Where(e => e.Source == AdventEntrySource.Share).ToList();
         Assert.Single(shareRows);
+    }
+
+    /// <summary>
+    /// Same display-name-wrapper collision as the answer handler (#1880): the share bonus is
+    /// gated on a prior Answer row for the *same* email key, so the two forms of the same mailbox
+    /// must resolve to one key here too, or a legitimate share can wrongly miss its prior answer.
+    /// </summary>
+    [Fact]
+    public async Task Share_EmailWithDisplayNameWrapper_MatchesPriorAnswerByPlainAddress()
+    {
+        using (var seed = _factory.CreateContext())
+        {
+            seed.AdventEntries.Add(new AdventEntry
+            {
+                Id = Guid.NewGuid(), Email = "runner@example.com", Day = 10,
+                Source = AdventEntrySource.Answer, CreatedAt = DateTime.UtcNow,
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        using var db = _factory.CreateContext();
+        var handler = new GrantAdventShareBonusCommandHandler(db);
+        var outcome = await handler.Handle(
+            new GrantAdventShareBonusCommand(10, "Runner Example <Runner@Example.com>"), CancellationToken.None);
+
+        Assert.Equal(GrantAdventShareBonusOutcome.Granted, outcome);
+        var shareRows = db.AdventEntries.Where(e => e.Source == AdventEntrySource.Share).ToList();
+        Assert.Single(shareRows);
+        Assert.Equal("runner@example.com", shareRows[0].Email);
     }
 
     // ── ExportAdventEntriesQuery: deduplication ────────────────────────────────

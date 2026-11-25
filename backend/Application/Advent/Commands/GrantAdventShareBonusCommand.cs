@@ -28,7 +28,7 @@ public sealed class GrantAdventShareBonusCommandHandler(UtanvegaDbContext db)
 {
     public async Task<GrantAdventShareBonusOutcome> Handle(GrantAdventShareBonusCommand request, CancellationToken cancellationToken)
     {
-        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var normalizedEmail = AdventEmailNormalizer.Normalize(request.Email);
 
         var hasAnswer = await db.AdventEntries.AsNoTracking().AnyAsync(
             e => e.Email == normalizedEmail && e.Day == request.Day && e.Source == AdventEntrySource.Answer,
