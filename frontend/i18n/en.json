@@ -2099,6 +2099,7 @@
         "emailInvalid": "Enter a valid email address.",
         "loading": "Loading today's question…",
         "loadError": "Couldn't load today's question. Try again later.",
+        "retry": "Try again",
         "correctTitle": "Correct!",
         "correctBody": "You've won a ticket in today's draw.",
         "shareButton": "Share for a bonus ticket",

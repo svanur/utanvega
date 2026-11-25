@@ -2099,6 +2099,7 @@
         "emailInvalid": "Sláðu inn gilt netfang.",
         "loading": "Sæki spurningu dagsins…",
         "loadError": "Náði ekki að sækja spurningu dagsins. Prófaðu aftur síðar.",
+        "retry": "Reyna aftur",
         "correctTitle": "Hárrétt!",
         "correctBody": "Þú vannst vinningsmiða í pottinn í dag.",
         "shareButton": "Deila fyrir aukamiða",

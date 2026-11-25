@@ -181,4 +181,25 @@ describe('AdventCalendarPage door grid + quiz (#1876)', () => {
 
         openSpy.mockRestore();
     });
+
+    // #1882 review follow-up: a failed GET was cached as `questions[day] = null` forever, so
+    // reopening the door after a network error never retried (handleDoorClick only re-fetches
+    // `if (!(day in questions))`). The retry button bypasses that cache check directly.
+    it('shows a retry button on load failure, and retrying re-fetches the question', async () => {
+        const fetchSpy = vi.fn()
+            .mockRejectedValueOnce(new Error('network down')) // GET /advent/1 (first open)
+            .mockResolvedValueOnce({ ok: true, json: async () => mockQuestion(1) }); // GET /advent/1 (retry)
+        vi.stubGlobal('fetch', fetchSpy);
+
+        renderPage();
+        fireEvent.click(screen.getByRole('button', { name: doorAriaName('doorAriaOpen', 1) }));
+
+        const retryButton = await screen.findByRole('button', { name: en.advent.retry });
+        expect(screen.getByText(en.advent.loadError)).not.toBeNull();
+
+        fireEvent.click(retryButton);
+
+        await screen.findByText('Question 1');
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
 });

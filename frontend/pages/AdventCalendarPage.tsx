@@ -134,26 +134,24 @@ export default function AdventCalendarPage({ mode, onToggleMode }: AdventCalenda
         }
     };
 
-    const handleShare = async (day: number) => {
+    const handleShare = (day: number) => {
         if (!email) return;
-        try {
-            await fetch(`${API_URL}/api/v1/advent/share`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ day, email }),
-            });
-        } catch {
-            // Best-effort — a failed bonus-ticket call shouldn't block opening the share sheet below.
-        }
+
+        // Fire the bonus-ticket call independently (not awaited) — on a slow connection,
+        // awaiting it first before opening the share sheet/window.open below can exhaust the
+        // click event's transient user-activation window, causing the browser to silently
+        // refuse both. A failed POST here shouldn't block sharing either way.
+        void fetch(`${API_URL}/api/v1/advent/share`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ day, email }),
+        }).catch(() => { /* best-effort */ });
 
         const shareUrl = `${window.location.origin}/jolaleikur/2026`;
         const shareText = t('advent.shareText');
         if (typeof navigator.share !== 'undefined') {
-            try {
-                await navigator.share({ title: t('advent.pageTitle'), text: shareText, url: shareUrl });
-            } catch {
-                /* User cancelled — ignore, mirrors ShareButtons.tsx's handleNativeShare. */
-            }
+            navigator.share({ title: t('advent.pageTitle'), text: shareText, url: shareUrl })
+                .catch(() => { /* User cancelled — ignore, mirrors ShareButtons.tsx's handleNativeShare. */ });
         } else {
             window.open(
                 `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`,
@@ -300,7 +298,16 @@ export default function AdventCalendarPage({ mode, onToggleMode }: AdventCalenda
                                 )}
 
                                 {!isLoading && dto === null && (
-                                    <Typography color="error">{t('advent.loadError')}</Typography>
+                                    <Stack spacing={1.5} alignItems="center" sx={{ py: 1 }}>
+                                        <Typography color="error">{t('advent.loadError')}</Typography>
+                                        <Button
+                                            onClick={() => void fetchQuestion(day)}
+                                            variant="outlined"
+                                            sx={{ textTransform: 'none' }}
+                                        >
+                                            {t('advent.retry')}
+                                        </Button>
+                                    </Stack>
                                 )}
 
                                 {!isLoading && dto && won && (
@@ -324,7 +331,7 @@ export default function AdventCalendarPage({ mode, onToggleMode }: AdventCalenda
                                             {isIcelandic ? dto.linkLabelIs : dto.linkLabelEn}
                                         </Button>
                                         <Button
-                                            onClick={() => void handleShare(day)}
+                                            onClick={() => handleShare(day)}
                                             variant="contained"
                                             color="secondary"
                                             startIcon={<ShareIcon />}

@@ -106,7 +106,7 @@ export default function App() {
     };
 
     const { activeEgg, clearEgg } = useEasterEggs();
-    const { isEnabled } = useFeatureFlags();
+    const { isEnabled, loaded } = useFeatureFlags();
     const loginEnabled = useLoginEnabled();
     useKeepWarm();
     useFavicon();
@@ -194,7 +194,10 @@ export default function App() {
                         element={<ToolsPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     )}
-                    {isEnabled('advent_calendar_2026', false) && (
+                    {/* Render while flags are still loading too — the `false` default below
+                        would otherwise bounce shared /jolaleikur/2026 links to "/" during the
+                        brief loading window, defeating the share mechanic. */}
+                    {(!loaded || isEnabled('advent_calendar_2026', false)) && (
                     <Route
                         path="/jolaleikur/2026"
                         element={<AdventCalendarPage mode={mode} onToggleMode={handleToggleMode} />}
