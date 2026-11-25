@@ -53,6 +53,7 @@ const ItraGuidePage = lazy(() => import('./pages/ItraGuidePage'));
 const ItraHandbookPage = lazy(() => import('./pages/ItraHandbookPage'));
 const FaqPage = lazy(() => import('./pages/FaqPage'));
 const SendCommentsPage = lazy(() => import('./pages/SendCommentsPage'));
+const AdventCalendarPage = lazy(() => import('./pages/AdventCalendarPage'));
 
 function PageLoader() {
     return (
@@ -188,9 +189,15 @@ export default function App() {
                     />
                     )}
                     {isEnabled('tools_page') && (
-                    <Route 
-                        path="/tools/:toolKey?" 
-                        element={<ToolsPage mode={mode} onToggleMode={handleToggleMode} />} 
+                    <Route
+                        path="/tools/:toolKey?"
+                        element={<ToolsPage mode={mode} onToggleMode={handleToggleMode} />}
+                    />
+                    )}
+                    {isEnabled('advent_calendar_2026', false) && (
+                    <Route
+                        path="/jolaleikur/2026"
+                        element={<AdventCalendarPage mode={mode} onToggleMode={handleToggleMode} />}
                     />
                     )}
                     {isEnabled('races_page') && (

@@ -2082,5 +2082,43 @@
         "openGalleryAriaLabel": "Open the {{event}} photo gallery (opens in a new tab)",
         "viewEdition": "View edition",
         "viewEditionAriaLabel": "View the {{event}} edition on this site"
+    },
+    "advent": {
+        "pageTitle": "Hlaupadagskra.is 2026 Advent Calendar",
+        "tabCalendar": "Calendar",
+        "tabRules": "Rules & prizes",
+        "doorAriaOpen": "Day {{day}}",
+        "doorAriaWon": "Day {{day}} — you won this one!",
+        "doorAriaLocked": "Day {{day}} — not open yet",
+        "doorTitle": "Day {{day}}",
+        "close": "Close",
+        "usingEmail": "Using {{email}} for your entries.",
+        "notYou": "Not you?",
+        "emailLabel": "Your email",
+        "emailHelper": "We need your email once to register your ticket — it's reused automatically on every later day.",
+        "emailInvalid": "Enter a valid email address.",
+        "loading": "Loading today's question…",
+        "loadError": "Couldn't load today's question. Try again later.",
+        "correctTitle": "Correct!",
+        "correctBody": "You've won a ticket in today's draw.",
+        "shareButton": "Share for a bonus ticket",
+        "shareText": "I just won a ticket in the Hlaupadagskra.is 2026 Advent Calendar! Try it yourself.",
+        "rules": {
+            "title": "Rules & prizes",
+            "intro": "Open a new door every day from December 1–24, 2026 and answer a short question about running, gear, or the site itself. Every door links to something real to explore further.",
+            "prizesTitle": "Prizes",
+            "prizes": [
+                "HOKA running shoes",
+                "Stance socks",
+                "2 scratch cards",
+                "2 race entries"
+            ],
+            "mechanic": "Each correct answer earns exactly one ticket per day — wrong answers can be retried immediately, as often as you like, with no penalty. A correct answer automatically enters you in the draw and subscribes your email to the Hlaupadagskra.is newsletter list.",
+            "shareBonus": "Once you've won a day's ticket, sharing the calendar earns you one bonus ticket for that same day.",
+            "signup": "Signing up for the newsletter happens automatically when you win your first ticket — there's no separate opt-in checkbox.",
+            "draw": "All tickets go into a prize draw on December 25, 2026. Winners are contacted directly by email.",
+            "privacyPrefix": "See our",
+            "privacyLink": "privacy policy"
+        }
     }
 }

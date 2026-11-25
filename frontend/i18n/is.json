@@ -2082,5 +2082,43 @@
         "openGalleryAriaLabel": "Opna myndasafn fyrir {{event}} (opnast í nýjum flipa)",
         "viewEdition": "Skoða útgáfu",
         "viewEditionAriaLabel": "Skoða útgáfu {{event}} á þessari síðu"
+    },
+    "advent": {
+        "pageTitle": "Jóladagatal Hlaupadagskra.is 2026",
+        "tabCalendar": "Dagatal",
+        "tabRules": "Reglur og vinningar",
+        "doorAriaOpen": "Dagur {{day}}",
+        "doorAriaWon": "Dagur {{day}} — þú vannst þennan!",
+        "doorAriaLocked": "Dagur {{day}} — ekki opinn enn",
+        "doorTitle": "Dagur {{day}}",
+        "close": "Loka",
+        "usingEmail": "Netfangið {{email}} er notað fyrir þátttökuna þína.",
+        "notYou": "Ekki þú?",
+        "emailLabel": "Netfangið þitt",
+        "emailHelper": "Við þurfum netfangið þitt bara einu sinni til að skrá vinningsmiðann þinn — það er notað sjálfkrafa alla aðra daga.",
+        "emailInvalid": "Sláðu inn gilt netfang.",
+        "loading": "Sæki spurningu dagsins…",
+        "loadError": "Náði ekki að sækja spurningu dagsins. Prófaðu aftur síðar.",
+        "correctTitle": "Hárrétt!",
+        "correctBody": "Þú vannst vinningsmiða í pottinn í dag.",
+        "shareButton": "Deila fyrir aukamiða",
+        "shareText": "Ég vann vinningsmiða í Jóladagatali Hlaupadagskra.is 2026! Prófaðu þú.",
+        "rules": {
+            "title": "Reglur og vinningar",
+            "intro": "Opnaðu nýjar dyr á hverjum degi frá 1.–24. desember 2026 og svaraðu stuttri spurningu um hlaup, búnað eða vefsíðuna sjálfa. Hverjar dyr tengjast í eitthvað raunverulegt til að skoða nánar.",
+            "prizesTitle": "Vinningar",
+            "prizes": [
+                "HOKA hlaupaskór",
+                "Stance sokkar",
+                "2 skafkort",
+                "2 keppnisréttir"
+            ],
+            "mechanic": "Hvert rétt svar gefur nákvæmlega einn vinningsmiða á dag — rangt svar má reyna aftur samstundis, svo oft sem þú vilt, án nokkurs viðurlags. Rétt svar skráir þig sjálfkrafa í pottinn og skráir netfangið þitt á póstlista Hlaupadagskra.is.",
+            "shareBonus": "Þegar þú hefur unnið vinningsmiða dagsins getur þú deilt dagatalinu og fengið einn aukamiða fyrir þann sama dag.",
+            "signup": "Skráning á póstlistann gerist sjálfkrafa þegar þú vinnur fyrsta miðann þinn — það er ekkert sérstakt gátreit til að velja.",
+            "draw": "Allir miðar fara í vinningspott sem dregið er úr 25. desember 2026. Vinningshafar eru hafðir upp á með tölvupósti.",
+            "privacyPrefix": "Sjá",
+            "privacyLink": "persónuverndarstefnu okkar"
+        }
     }
 }
