@@ -44,11 +44,24 @@ public static class AdventCalendar
     /// is on or after December <paramref name="day"/>, <see cref="Year"/> — false for anything
     /// outside 1-24, and false before that door's date (there is no "after Dec 24 it all re-locks"
     /// case to express: every door earned stays earned).
+    ///
+    /// <para>
+    /// <paramref name="unlockAllDoors"/> is the staging-only override (#1885): when true, every
+    /// in-range day (1-24) reports unlocked regardless of the real date, so testers on the
+    /// hlaupadagskra-staging Fly app can see all 24 doors without the real clock reaching
+    /// December. Out-of-range days still return false either way — the override bypasses the
+    /// date check, not the door-range check. Callers are expected to pass <c>false</c> here
+    /// whenever <c>IWebHostEnvironment.IsProduction()</c> is true, so production behavior is
+    /// provably unaffected by this parameter even if the env var were ever set there by mistake.
+    /// </para>
     /// </summary>
-    public static bool IsDayUnlocked(int day, TimeProvider timeProvider)
+    public static bool IsDayUnlocked(int day, TimeProvider timeProvider, bool unlockAllDoors = false)
     {
         if (day < 1 || day > 24)
             return false;
+
+        if (unlockAllDoors)
+            return true;
 
         var icelandNow = TimeZoneInfo.ConvertTimeFromUtc(timeProvider.GetUtcNow().UtcDateTime, IcelandTimeZone.Value);
         var unlockDate = new DateTime(Year, 12, day);

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -74,17 +75,92 @@ public class AdventHandlerTests : IDisposable
         handlerMock.Protected().Verify(
             "SendAsync", Times.Exactly(times), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
 
+    private static readonly AdventTestOverride NoOverride = new(UnlockAllDoors: false);
+    private static readonly AdventTestOverride UnlockAll = new(UnlockAllDoors: true);
+
     private SubmitAdventAnswerCommandHandler CreateAnswerHandler(
-        TimeProvider timeProvider, Mock<HttpMessageHandler> handlerMock) =>
-        new(_factory.CreateContext(), timeProvider, BuildMailerLite(handlerMock),
+        TimeProvider timeProvider, Mock<HttpMessageHandler> handlerMock, AdventTestOverride? testOverride = null) =>
+        new(_factory.CreateContext(), timeProvider, testOverride ?? NoOverride, BuildMailerLite(handlerMock),
             Mock.Of<ILogger<SubmitAdventAnswerCommandHandler>>());
+
+    // ── AdventCalendar.IsDayUnlocked: unlockAllDoors parameter (#1885) ─────────
+
+    /// <summary>
+    /// Baseline: with the default <c>unlockAllDoors: false</c> (i.e. the call shape every existing
+    /// caller used before #1885), behavior is exactly what it was before this parameter existed —
+    /// day 10 is locked in November and unlocked from Dec 10 on.
+    /// </summary>
+    [Fact]
+    public void IsDayUnlocked_DefaultParameter_BehavesAsBeforeOverrideExisted()
+    {
+        Assert.False(AdventCalendar.IsDayUnlocked(10, BeforeDay10));
+        Assert.True(AdventCalendar.IsDayUnlocked(10, OnDay10));
+    }
+
+    [Fact]
+    public void IsDayUnlocked_UnlockAllDoorsTrue_BypassesDateCheckForInRangeDay()
+    {
+        // Day 24 in November — the furthest-out door, checked against the earliest clock in this
+        // file's fixtures, so there is no ambiguity this is the date check being bypassed.
+        Assert.False(AdventCalendar.IsDayUnlocked(24, BeforeDay10));
+        Assert.True(AdventCalendar.IsDayUnlocked(24, BeforeDay10, unlockAllDoors: true));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(25)]
+    public void IsDayUnlocked_UnlockAllDoorsTrue_StillRejectsOutOfRangeDay(int day)
+    {
+        Assert.False(AdventCalendar.IsDayUnlocked(day, BeforeDay10, unlockAllDoors: true));
+    }
+
+    // ── AdventTestOverride.FromConfiguration: the IsProduction() guard (#1885) ─
+
+    private static IConfiguration ConfigWithUnlockAllDoors(bool value) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ADVENT_UNLOCK_ALL_DOORS"] = value.ToString() })
+            .Build();
+
+    /// <summary>
+    /// AC: with the env var unset, the computed override is inert regardless of environment —
+    /// same as production today, before this feature existed.
+    /// </summary>
+    [Fact]
+    public void FromConfiguration_EnvVarUnset_UnlockAllDoorsIsFalse()
+    {
+        var environment = Mock.Of<IWebHostEnvironment>(e => e.EnvironmentName == "Staging");
+        var result = AdventTestOverride.FromConfiguration(ConfigWithUnlockAllDoors(false), environment);
+        Assert.False(result.UnlockAllDoors);
+    }
+
+    /// <summary>AC: the env var set and a non-Production environment (e.g. Staging) honors it.</summary>
+    [Fact]
+    public void FromConfiguration_EnvVarSet_NonProduction_UnlockAllDoorsIsTrue()
+    {
+        var environment = Mock.Of<IWebHostEnvironment>(e => e.EnvironmentName == "Staging");
+        var result = AdventTestOverride.FromConfiguration(ConfigWithUnlockAllDoors(true), environment);
+        Assert.True(result.UnlockAllDoors);
+    }
+
+    /// <summary>
+    /// AC: the env var set but <see cref="IWebHostEnvironment.IsProduction"/> true (simulating the
+    /// var being set on the production Fly app by mistake) is ignored — the override computes
+    /// false exactly as if the var were never set.
+    /// </summary>
+    [Fact]
+    public void FromConfiguration_EnvVarSet_Production_UnlockAllDoorsStaysFalse()
+    {
+        var environment = Mock.Of<IWebHostEnvironment>(e => e.EnvironmentName == "Production");
+        var result = AdventTestOverride.FromConfiguration(ConfigWithUnlockAllDoors(true), environment);
+        Assert.False(result.UnlockAllDoors);
+    }
 
     // ── GetAdventQuestionQuery: day-lock boundary ──────────────────────────────
 
     [Fact]
     public async Task GetAdventQuestion_BeforeUnlockDate_ReturnsNull()
     {
-        var handler = new GetAdventQuestionQueryHandler(BeforeDay10);
+        var handler = new GetAdventQuestionQueryHandler(BeforeDay10, NoOverride);
         var result = await handler.Handle(new GetAdventQuestionQuery(10), CancellationToken.None);
         Assert.Null(result);
     }
@@ -92,7 +168,7 @@ public class AdventHandlerTests : IDisposable
     [Fact]
     public async Task GetAdventQuestion_OnUnlockDate_ReturnsQuestionWithoutCorrectIndex()
     {
-        var handler = new GetAdventQuestionQueryHandler(OnDay10);
+        var handler = new GetAdventQuestionQueryHandler(OnDay10, NoOverride);
         var result = await handler.Handle(new GetAdventQuestionQuery(10), CancellationToken.None);
 
         Assert.NotNull(result);
@@ -106,7 +182,7 @@ public class AdventHandlerTests : IDisposable
     [Fact]
     public async Task GetAdventQuestion_AfterUnlockDate_StillReturnsQuestion()
     {
-        var handler = new GetAdventQuestionQueryHandler(AfterDay10);
+        var handler = new GetAdventQuestionQueryHandler(AfterDay10, NoOverride);
         var result = await handler.Handle(new GetAdventQuestionQuery(10), CancellationToken.None);
         Assert.NotNull(result);
     }
@@ -117,9 +193,89 @@ public class AdventHandlerTests : IDisposable
     [InlineData(-1)]
     public async Task GetAdventQuestion_DayOutsideRange_ReturnsNull(int day)
     {
-        var handler = new GetAdventQuestionQueryHandler(OnDay10);
+        var handler = new GetAdventQuestionQueryHandler(OnDay10, NoOverride);
         var result = await handler.Handle(new GetAdventQuestionQuery(day), CancellationToken.None);
         Assert.Null(result);
+    }
+
+    // ── #1885: staging-only AdventTestOverride, wired through both handlers ───
+
+    /// <summary>
+    /// With the override absent (the production default), a day before its unlock date is still
+    /// locked — proves the override parameter changes nothing when <c>UnlockAllDoors</c> is false,
+    /// i.e. current production behavior is unchanged.
+    /// </summary>
+    [Fact]
+    public async Task GetAdventQuestion_NoOverride_BeforeUnlockDate_StillReturnsNull()
+    {
+        var handler = new GetAdventQuestionQueryHandler(BeforeDay10, NoOverride);
+        var result = await handler.Handle(new GetAdventQuestionQuery(10), CancellationToken.None);
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    /// With the override's <c>UnlockAllDoors</c> true, a day whose real unlock date hasn't arrived
+    /// yet still returns its question — proves the singleton is actually read by the handler and
+    /// passed through to <see cref="AdventCalendar.IsDayUnlocked"/>, not just constructed and ignored.
+    /// </summary>
+    [Fact]
+    public async Task GetAdventQuestion_UnlockAllDoorsOverride_BeforeUnlockDate_StillReturnsQuestion()
+    {
+        var handler = new GetAdventQuestionQueryHandler(BeforeDay10, UnlockAll);
+        var result = await handler.Handle(new GetAdventQuestionQuery(10), CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.Equal(10, result!.Day);
+    }
+
+    /// <summary>Even with the override on, out-of-range days are still rejected.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(25)]
+    public async Task GetAdventQuestion_UnlockAllDoorsOverride_DayOutsideRange_StillReturnsNull(int day)
+    {
+        var handler = new GetAdventQuestionQueryHandler(BeforeDay10, UnlockAll);
+        var result = await handler.Handle(new GetAdventQuestionQuery(day), CancellationToken.None);
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    /// Same proof as above for the answer-submission handler: with <c>UnlockAllDoors</c> true, a
+    /// correct answer for a day not yet unlocked by the real clock still wins a ticket.
+    /// </summary>
+    [Fact]
+    public async Task SubmitAnswer_UnlockAllDoorsOverride_DayNotYetUnlocked_StillAccepted()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{}");
+        var handler = CreateAnswerHandler(BeforeDay10, handlerMock, UnlockAll);
+        var correctIndex = AdventQuestions.ForDay(10)!.CorrectIndex;
+
+        var outcome = await handler.Handle(
+            new SubmitAdventAnswerCommand(10, correctIndex, "runner@example.com"), CancellationToken.None);
+
+        Assert.Equal(SubmitAdventAnswerOutcome.Correct, outcome);
+        using var db = _factory.CreateContext();
+        Assert.Single(db.AdventEntries);
+    }
+
+    /// <summary>
+    /// With the override absent, the answer handler's day-lock behavior for a not-yet-unlocked day
+    /// is unchanged from current production behavior — same assertion as
+    /// <see cref="SubmitAnswer_DayNotYetUnlocked_ReturnsDayLocked_NoRowNoMailerLiteCall"/>, stated
+    /// here explicitly against <see cref="NoOverride"/> rather than relying on the default parameter.
+    /// </summary>
+    [Fact]
+    public async Task SubmitAnswer_NoOverride_DayNotYetUnlocked_StillReturnsDayLocked()
+    {
+        var handlerMock = MockHandlerReturning(HttpStatusCode.Created, "{}");
+        var handler = CreateAnswerHandler(BeforeDay10, handlerMock, NoOverride);
+        var correctIndex = AdventQuestions.ForDay(10)!.CorrectIndex;
+
+        var outcome = await handler.Handle(
+            new SubmitAdventAnswerCommand(10, correctIndex, "runner@example.com"), CancellationToken.None);
+
+        Assert.Equal(SubmitAdventAnswerOutcome.DayLocked, outcome);
+        using var db = _factory.CreateContext();
+        Assert.Empty(db.AdventEntries);
     }
 
     // ── SubmitAdventAnswerCommand: day lock, wrong vs correct, idempotency ─────

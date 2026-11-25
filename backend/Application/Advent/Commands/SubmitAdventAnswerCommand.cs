@@ -38,13 +38,14 @@ public sealed record SubmitAdventAnswerCommand(int Day, int SelectedIndex, strin
 public sealed class SubmitAdventAnswerCommandHandler(
     UtanvegaDbContext db,
     TimeProvider timeProvider,
+    AdventTestOverride testOverride,
     MailerLiteClientProvider mailerLite,
     ILogger<SubmitAdventAnswerCommandHandler> logger
 ) : IRequestHandler<SubmitAdventAnswerCommand, SubmitAdventAnswerOutcome>
 {
     public async Task<SubmitAdventAnswerOutcome> Handle(SubmitAdventAnswerCommand request, CancellationToken cancellationToken)
     {
-        if (!AdventCalendar.IsDayUnlocked(request.Day, timeProvider))
+        if (!AdventCalendar.IsDayUnlocked(request.Day, timeProvider, testOverride.UnlockAllDoors))
             return SubmitAdventAnswerOutcome.DayLocked;
 
         var question = AdventQuestions.ForDay(request.Day);
