@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Grid, Skeleton, Chip, Table, TableBody,
-    TableCell, TableContainer, TableHead, TableRow, Stack, Button, Tooltip as MuiTooltip
+    TableCell, TableContainer, TableHead, TableRow, Stack, Button, Tooltip as MuiTooltip,
+    useTheme
 } from '@mui/material';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
@@ -116,6 +117,7 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const COLORS = ['#2e7d32', '#43a047', '#66bb6a', '#81c784', '#a5d6a7', '#c8e6c9', '#e8f5e9', '#f1f8e9', '#f9fbe7', '#fffde7'];
 
 export default function AnalyticsPage() {
+    const theme = useTheme();
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -223,7 +225,7 @@ export default function AnalyticsPage() {
                         value={summary.viewsToday.toLocaleString()}
                         subtitle={dayChange}
                         icon={<TodayIcon />}
-                        color="#0288d1"
+                        color={theme.palette.info.main}
                     />
                 </Grid>
                 <Grid item xs={5} md={2}>
@@ -232,16 +234,20 @@ export default function AnalyticsPage() {
                         value={summary.viewsThisWeek.toLocaleString()}
                         subtitle={weekChange}
                         icon={<CalendarTodayIcon />}
-                        color="#2e7d32"
+                        color={theme.palette.success.main}
                     />
                 </Grid>
+                {/* #1976d2 was MUI's default primary blue, but this app's theme overrides
+                    primary.main to forest green (App.tsx) — mapping to primary.main here would
+                    silently turn this tile green. info.main is the closest semantic blue the
+                    theme still resolves to its MUI default. See #1899. */}
                 <Grid item xs={5} md={2}>
                     <StatCard
                         title="Total Views"
                         value={summary.totalViews.toLocaleString()}
                         subtitle="All time"
                         icon={<VisibilityIcon />}
-                        color="#1976d2"
+                        color={theme.palette.info.main}
                     />
                 </Grid>
                 <Grid item xs={5} md={2}>
@@ -252,7 +258,7 @@ export default function AnalyticsPage() {
                         // anything older counts as views but no longer as a visitor.
                         subtitle="Last 90 days"
                         icon={<PeopleIcon />}
-                        color="#9c27b0"
+                        color={theme.palette.secondary.main}
                     />
                 </Grid>
                 <Grid item xs={5} md={2}>
@@ -261,7 +267,7 @@ export default function AnalyticsPage() {
                         value={summary.avgViewsPerTrail}
                         subtitle={`Across ${summary.trailsWithViews} trails`}
                         icon={<RouteIcon />}
-                        color="#ed6c02"
+                        color={theme.palette.warning.main}
                     />
                 </Grid>
             </Grid>
