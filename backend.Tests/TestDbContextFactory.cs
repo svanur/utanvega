@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 using Npgsql;
@@ -31,6 +32,20 @@ public class TestDbContextFactory : IDisposable
     }
 
     public UtanvegaDbContext CreateContext() => new TestDbContext(_options);
+
+    /// <summary>
+    /// Same shared connection as <see cref="CreateContext()"/>, but with EF command
+    /// interceptors wired in — for #1897's round-trip-count assertion, where a test needs to
+    /// observe how many commands a handler actually sends rather than just its return value.
+    /// </summary>
+    public UtanvegaDbContext CreateContext(params IInterceptor[] interceptors)
+    {
+        var options = new DbContextOptionsBuilder<UtanvegaDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(interceptors)
+            .Options;
+        return new TestDbContext(options);
+    }
 
     /// <summary>
     /// Creates a standalone context whose SaveChangesAsync always fails with a fabricated Postgres

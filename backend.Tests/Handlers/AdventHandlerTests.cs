@@ -1,6 +1,8 @@
+using System.Data.Common;
 using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -865,5 +867,73 @@ public class AdventHandlerTests : IDisposable
         Assert.Equal(0, result.TotalAnswers);
         Assert.Equal(0, result.TotalShares);
         Assert.Empty(result.DailyStats);
+    }
+
+    /// <summary>
+    /// Counts every DbCommand the handler sends against the AdventEntries table — #1897's whole
+    /// point is collapsing 5 round trips into at most 2 (one grouped-by-day query covering
+    /// DailyStats plus the Total{Tickets,Answers,Shares} rollups, one distinct-Email query for
+    /// TotalParticipants). Matches on CommandText rather than a fixed count-of-all-commands so an
+    /// unrelated EF housekeeping command (if any) can't produce a false pass.
+    /// </summary>
+    private sealed class AdventEntriesCommandCounter : DbCommandInterceptor
+    {
+        public int Count { get; private set; }
+
+        private void Track(DbCommand command)
+        {
+            if (command.CommandText.Contains("AdventEntries", StringComparison.OrdinalIgnoreCase))
+                Count++;
+        }
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
+        {
+            Track(command);
+            return base.ReaderExecuting(command, eventData, result);
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Track(command);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
+
+        public override InterceptionResult<object> ScalarExecuting(
+            DbCommand command, CommandEventData eventData, InterceptionResult<object> result)
+        {
+            Track(command);
+            return base.ScalarExecuting(command, eventData, result);
+        }
+
+        public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<object> result,
+            CancellationToken cancellationToken = default)
+        {
+            Track(command);
+            return base.ScalarExecutingAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task GetStats_IssuesAtMostTwoQueriesAgainstAdventEntries()
+    {
+        using (var db = _factory.CreateContext())
+        {
+            db.AdventEntries.AddRange(
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 2, Source = AdventEntrySource.Share, CreatedAt = new DateTime(2026, 12, 2) });
+            await db.SaveChangesAsync();
+        }
+
+        var counter = new AdventEntriesCommandCounter();
+        using var countedDb = _factory.CreateContext(counter);
+        var handler = new GetAdventStatsQueryHandler(countedDb);
+
+        await handler.Handle(new GetAdventStatsQuery(), CancellationToken.None);
+
+        Assert.True(counter.Count <= 2, $"expected at most 2 queries against AdventEntries, saw {counter.Count}");
     }
 }
