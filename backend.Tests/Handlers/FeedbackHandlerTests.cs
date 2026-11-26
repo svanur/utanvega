@@ -423,4 +423,47 @@ public class FeedbackHandlerTests : IDisposable
         Assert.NotNull(result.Counts.AvgResolutionHours);
         Assert.True(result.Counts.AvgResolutionHours > 0);
     }
+
+    /// <summary>
+    /// #1889: a caller-supplied pageSize above the 100 max must clamp to a 100-row page, not an
+    /// unbounded one — seed more than 100 rows so an unclamped Take would prove the gap.
+    /// </summary>
+    [Fact]
+    public async Task GetFeedback_PageSizeAboveMax_ClampsTo100()
+    {
+        using (var db = _factory.CreateContext())
+        {
+            for (var i = 0; i < 150; i++)
+            {
+                db.Feedback.Add(new Feedback
+                {
+                    Id = Guid.NewGuid(), FeedbackNumber = i + 1,
+                    PageUrl = "https://hlaupadagskra.is/", Message = $"Message {i}",
+                    Status = "new", Priority = "medium", CreatedAt = DateTimeOffset.UtcNow,
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new GetFeedbackQueryHandler(_factory.CreateContext());
+        var result = await handler.Handle(new GetFeedbackQuery(null, 1, 500), CancellationToken.None);
+
+        Assert.Equal(150, result.Total); // Total is unaffected by the clamp
+        Assert.Equal(100, result.Items.Count); // but the page itself is capped at 100
+    }
+
+    /// <summary>#1889: page/pageSize <= 0 must behave as if they were 1, not throw or return empty.</summary>
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(-1, -5)]
+    public async Task GetFeedback_PageOrPageSizeZeroOrNegative_ClampsToOne(int page, int pageSize)
+    {
+        await SeedMultiple();
+        var handler = new GetFeedbackQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetFeedbackQuery(null, page, pageSize), CancellationToken.None);
+
+        // page=1, pageSize=1 → exactly one row, regardless of sort order.
+        Assert.Single(result.Items);
+    }
 }
