@@ -2780,6 +2780,14 @@ app.MapGet("/api/v1/admin/advent/entries/export", [Authorize(Policy = "AdminOnly
 })
 .WithName("ExportAdventEntries");
 
+app.MapGet("/api/v1/admin/advent/entries", [Authorize(Policy = "AdminOnly")] async (
+    IMediator mediator, int page = 1, int pageSize = 25, string? sortBy = null, string? sortDir = null) =>
+{
+    var result = await mediator.Send(new GetAdventEntrySummariesQuery(page, pageSize, sortBy, sortDir));
+    return Results.Ok(result);
+})
+.WithName("GetAdventEntrySummaries");
+
 if (isMigrateMode)
 {
     var directUrlUsed = builder.Configuration["DIRECT_DATABASE_URL"] is not null;

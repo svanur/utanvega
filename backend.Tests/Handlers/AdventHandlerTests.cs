@@ -523,4 +523,155 @@ public class AdventHandlerTests : IDisposable
         var emails = await handler.Handle(new ExportAdventEntriesQuery(), CancellationToken.None);
         Assert.Empty(emails);
     }
+
+    // ── GetAdventEntrySummariesQuery: per-email aggregation (#1887) ────────────
+
+    private async Task SeedSummaryFixture()
+    {
+        using var db = _factory.CreateContext();
+        db.AdventEntries.AddRange(
+            // a@example.com: 3 Answer rows (days 1,2,3) + 2 Share rows (days 1,2) = 5 tickets, LastDay 3.
+            new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 2, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 2) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Share, CreatedAt = new DateTime(2026, 12, 1, 1, 0, 0) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 2, Source = AdventEntrySource.Share, CreatedAt = new DateTime(2026, 12, 2, 1, 0, 0) },
+            // b@example.com: 1 Answer row, day 5 — fewer tickets than a@example.com.
+            new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 5, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 5) },
+            // c@example.com: 2 Answer rows, days 6 and 10 (10 is the higher Day, including a Share-only day in between is not needed here) — 2 tickets.
+            new AdventEntry { Id = Guid.NewGuid(), Email = "c@example.com", Day = 6, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 6) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "c@example.com", Day = 10, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 10) });
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task GetSummaries_GroupsByEmail_CountsBothSourcesTowardTicketCount()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(1, 25), CancellationToken.None);
+
+        var a = result.Items.Single(i => i.Email == "a@example.com");
+        Assert.Equal(5, a.TicketCount); // 3 Answer + 2 Share rows
+    }
+
+    [Fact]
+    public async Task GetSummaries_LastDay_ReflectsHighestDayAcrossBothSources()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(1, 25), CancellationToken.None);
+
+        var a = result.Items.Single(i => i.Email == "a@example.com");
+        Assert.Equal(3, a.LastDay);
+    }
+
+    [Fact]
+    public async Task GetSummaries_NoSortBy_DefaultsTo_TicketCountDescending()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(1, 25), CancellationToken.None);
+
+        // a: 5 tickets, c: 2 tickets, b: 1 ticket.
+        Assert.Equal(["a@example.com", "c@example.com", "b@example.com"], result.Items.Select(i => i.Email));
+    }
+
+    [Fact]
+    public async Task GetSummaries_Total_CountsDistinctEmails_NotRows()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(1, 25), CancellationToken.None);
+
+        Assert.Equal(3, result.Total); // 3 distinct emails, despite 8 AdventEntry rows
+    }
+
+    [Fact]
+    public async Task GetSummaries_Paginates_ToExactPageSlice()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var page1 = await handler.Handle(new GetAdventEntrySummariesQuery(1, 2), CancellationToken.None);
+        var page2 = await handler.Handle(new GetAdventEntrySummariesQuery(2, 2), CancellationToken.None);
+
+        Assert.Equal(3, page1.Total);
+        Assert.Equal(2, page1.Items.Count);
+        Assert.Single(page2.Items);
+        // Default sort (TicketCount desc): a (5), c (2) on page 1; b (1) on page 2.
+        Assert.Equal("b@example.com", page2.Items[0].Email);
+    }
+
+    /// <summary>
+    /// #1888 review finding: TicketCount ties had no secondary sort key, so the DB/EF provider's
+    /// ordering among tied rows wasn't guaranteed stable across separate query executions — a row
+    /// could shift between pages and end up duplicated or skipped. Four emails tied at 1 ticket each,
+    /// paged two-at-a-time: every email must appear exactly once across all pages, in the same
+    /// Email-ascending tiebreak order every time.
+    /// </summary>
+    [Fact]
+    public async Task GetSummaries_TicketCountTie_IsStableAndNonOverlapping_AcrossPages()
+    {
+        using var db = _factory.CreateContext();
+        db.AdventEntries.AddRange(
+            new AdventEntry { Id = Guid.NewGuid(), Email = "d@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "c@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+            new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) });
+        await db.SaveChangesAsync();
+
+        var page1 = await new GetAdventEntrySummariesQueryHandler(_factory.CreateContext())
+            .Handle(new GetAdventEntrySummariesQuery(1, 2), CancellationToken.None);
+        var page2 = await new GetAdventEntrySummariesQueryHandler(_factory.CreateContext())
+            .Handle(new GetAdventEntrySummariesQuery(2, 2), CancellationToken.None);
+
+        // All four are tied on TicketCount (1) — the Email-ascending tiebreak must put them in a
+        // fixed order: a, b on page 1, c, d on page 2. No email duplicated or missing across pages.
+        Assert.Equal(["a@example.com", "b@example.com"], page1.Items.Select(i => i.Email));
+        Assert.Equal(["c@example.com", "d@example.com"], page2.Items.Select(i => i.Email));
+        var allEmails = page1.Items.Concat(page2.Items).Select(i => i.Email).ToList();
+        Assert.Equal(allEmails.Distinct().Count(), allEmails.Count); // no duplicates across pages
+        Assert.Equal(4, page1.Total);
+    }
+
+    [Fact]
+    public async Task GetSummaries_SortByEmail_Ascending()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(
+            new GetAdventEntrySummariesQuery(1, 25, SortBy: "email", SortDir: "asc"), CancellationToken.None);
+
+        Assert.Equal(["a@example.com", "b@example.com", "c@example.com"], result.Items.Select(i => i.Email));
+    }
+
+    [Fact]
+    public async Task GetSummaries_SortByLastDay_Ascending()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(
+            new GetAdventEntrySummariesQuery(1, 25, SortBy: "lastDay", SortDir: "asc"), CancellationToken.None);
+
+        // LastDay: a=3, b=5, c=10.
+        Assert.Equal(["a@example.com", "b@example.com", "c@example.com"], result.Items.Select(i => i.Email));
+    }
+
+    [Fact]
+    public async Task GetSummaries_NoEntries_ReturnsEmptyItemsAndZeroTotal()
+    {
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(1, 25), CancellationToken.None);
+
+        Assert.Empty(result.Items);
+        Assert.Equal(0, result.Total);
+    }
 }
