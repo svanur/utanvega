@@ -700,4 +700,113 @@ public class AdventHandlerTests : IDisposable
         Assert.Empty(result.Items);
         Assert.Equal(0, result.Total);
     }
+
+    // ── GetAdventStatsQuery: KPI rollup + per-day grouping (#1894) ─────────────
+
+    [Fact]
+    public async Task GetStats_SameEmailAcrossMultipleDays_CountsTowardTotalParticipantsOnce()
+    {
+        using (var db = _factory.CreateContext())
+        {
+            db.AdventEntries.AddRange(
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 2, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 2) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) });
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new GetAdventStatsQueryHandler(_factory.CreateContext());
+        var result = await handler.Handle(new GetAdventStatsQuery(), CancellationToken.None);
+
+        Assert.Equal(1, result.TotalParticipants); // one email, 3 days
+    }
+
+    [Fact]
+    public async Task GetStats_FiveAnswersTwoShares_RollsUpTicketAndSourceTotals()
+    {
+        using (var db = _factory.CreateContext())
+        {
+            // Days spread out so the (Email, Day, Source) unique index never collides.
+            db.AdventEntries.AddRange(
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 2, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 2) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "c@example.com", Day = 4, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 4) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "d@example.com", Day = 5, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 5) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Share, CreatedAt = new DateTime(2026, 12, 1, 1, 0, 0) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 3, Source = AdventEntrySource.Share, CreatedAt = new DateTime(2026, 12, 3, 1, 0, 0) });
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new GetAdventStatsQueryHandler(_factory.CreateContext());
+        var result = await handler.Handle(new GetAdventStatsQuery(), CancellationToken.None);
+
+        Assert.Equal(7, result.TotalTickets);
+        Assert.Equal(5, result.TotalAnswers);
+        Assert.Equal(2, result.TotalShares);
+    }
+
+    /// <summary>
+    /// Day 3: 4 distinct emails answer, one of them (b@example.com) also shares that same day —
+    /// 5 rows total but only 4 distinct entrants, proving ParticipantCount and TicketCount diverge
+    /// per day exactly as they do for the site-wide totals.
+    /// </summary>
+    [Fact]
+    public async Task GetStats_DailyStats_ParticipantCountIsDistinctEmails_TicketCountIsRowCount()
+    {
+        using (var db = _factory.CreateContext())
+        {
+            db.AdventEntries.AddRange(
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "c@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "d@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 3, Source = AdventEntrySource.Share, CreatedAt = new DateTime(2026, 12, 3, 1, 0, 0) });
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new GetAdventStatsQueryHandler(_factory.CreateContext());
+        var result = await handler.Handle(new GetAdventStatsQuery(), CancellationToken.None);
+
+        var day3 = result.DailyStats.Single(d => d.Day == 3);
+        Assert.Equal(4, day3.ParticipantCount);
+        Assert.Equal(5, day3.TicketCount);
+    }
+
+    /// <summary>
+    /// AC: sparse, not zero-filled — a day with zero <see cref="AdventEntry"/> rows must not
+    /// appear in <see cref="AdventStatsDto.DailyStats"/> at all, even though day 2 sits between
+    /// two days that do have entries.
+    /// </summary>
+    [Fact]
+    public async Task GetStats_DailyStats_OmitsDaysWithZeroEntries()
+    {
+        using (var db = _factory.CreateContext())
+        {
+            db.AdventEntries.AddRange(
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1) },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 3, Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 3) });
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new GetAdventStatsQueryHandler(_factory.CreateContext());
+        var result = await handler.Handle(new GetAdventStatsQuery(), CancellationToken.None);
+
+        Assert.Equal([1, 3], result.DailyStats.Select(d => d.Day));
+        Assert.DoesNotContain(result.DailyStats, d => d.Day == 2);
+    }
+
+    [Fact]
+    public async Task GetStats_NoEntries_ReturnsZeroedTotalsAndEmptyDailyStats()
+    {
+        var handler = new GetAdventStatsQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventStatsQuery(), CancellationToken.None);
+
+        Assert.Equal(0, result.TotalParticipants);
+        Assert.Equal(0, result.TotalTickets);
+        Assert.Equal(0, result.TotalAnswers);
+        Assert.Equal(0, result.TotalShares);
+        Assert.Empty(result.DailyStats);
+    }
 }
