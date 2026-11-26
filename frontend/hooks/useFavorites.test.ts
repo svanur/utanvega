@@ -103,6 +103,22 @@ runFavoriteHookSuite({
     useHook: useFavorites,
 });
 
+describe('useFavorites hydration', () => {
+    // #1903: favorites must hydrate synchronously from localStorage so the very first render
+    // already reflects a returning visitor's stored list — no one-frame empty-favorites flash
+    // while a post-mount effect catches up (the bug useAdventCalendar.ts fixed for #1884).
+    it('reflects previously-stored favorites on the very first render, with no empty-array render first', () => {
+        localStorage.setItem('utanvega_favorites', JSON.stringify(['a-trail', 'b-trail']));
+
+        const { result } = renderHook(() => useFavorites());
+
+        // Asserted immediately after renderHook, without act()/waitFor — if hydration happened
+        // in a useEffect instead of the lazy useState initializer, this first render would still
+        // show [].
+        expect(result.current.favorites).toEqual(['a-trail', 'b-trail']);
+    });
+});
+
 runFavoriteHookSuite({
     label: 'useFavoriteEvents',
     storageKey: 'utanvega_favorite_events',
