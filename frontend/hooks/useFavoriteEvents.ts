@@ -1,20 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'utanvega_favorite_events';
 
-export function useFavoriteEvents() {
-    const [favoriteEvents, setFavoriteEvents] = useState<string[]>([]);
+function readFromStorage(): string[] {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+    try {
+        return JSON.parse(stored);
+    } catch (e) {
+        console.error('Failed to parse favorite events from localStorage', e);
+        return [];
+    }
+}
 
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                setFavoriteEvents(JSON.parse(stored));
-            } catch (e) {
-                console.error('Failed to parse favorite events from localStorage', e);
-            }
-        }
-    }, []);
+export function useFavoriteEvents() {
+    // Lazy initializer: reads localStorage synchronously on first render so a returning visitor's
+    // already-favorited events render as favorited immediately — no post-mount effect flipping them
+    // from an empty list on the first paint (mirrors useFavorites.ts's #1903 fix).
+    const [favoriteEvents, setFavoriteEvents] = useState<string[]>(() => readFromStorage());
 
     const toggleFavoriteEvent = useCallback((slug: string) => {
         setFavoriteEvents(prev => {

@@ -128,6 +128,22 @@ runFavoriteHookSuite({
     useHook: useFavoriteEvents,
 });
 
+describe('useFavoriteEvents hydration', () => {
+    // #1915: same hydration-flash bug as useFavorites (#1903) — favorite events must hydrate
+    // synchronously from localStorage so the very first render already reflects a returning
+    // visitor's stored list, with no one-frame empty-favorites flash from a post-mount effect.
+    it('reflects previously-stored favorite events on the very first render, with no empty-array render first', () => {
+        localStorage.setItem('utanvega_favorite_events', JSON.stringify(['event-a', 'event-b']));
+
+        const { result } = renderHook(() => useFavoriteEvents());
+
+        // Asserted immediately after renderHook, without act()/waitFor — if hydration happened
+        // in a useEffect instead of the lazy useState initializer, this first render would still
+        // show [].
+        expect(result.current.favoriteEvents).toEqual(['event-a', 'event-b']);
+    });
+});
+
 runFavoriteHookSuite({
     label: 'useFavoriteLocations',
     storageKey: 'utanvega_favorite_locations',
@@ -135,4 +151,20 @@ runFavoriteHookSuite({
     isFavKey: 'isFavoriteLocation',
     toggleKey: 'toggleFavoriteLocation',
     useHook: useFavoriteLocations,
+});
+
+describe('useFavoriteLocations hydration', () => {
+    // #1915: same hydration-flash bug as useFavorites (#1903) — favorite locations must hydrate
+    // synchronously from localStorage so the very first render already reflects a returning
+    // visitor's stored list, with no one-frame empty-favorites flash from a post-mount effect.
+    it('reflects previously-stored favorite locations on the very first render, with no empty-array render first', () => {
+        localStorage.setItem('utanvega_favorite_locations', JSON.stringify(['loc-a', 'loc-b']));
+
+        const { result } = renderHook(() => useFavoriteLocations());
+
+        // Asserted immediately after renderHook, without act()/waitFor — if hydration happened
+        // in a useEffect instead of the lazy useState initializer, this first render would still
+        // show [].
+        expect(result.current.favoriteLocations).toEqual(['loc-a', 'loc-b']);
+    });
 });
