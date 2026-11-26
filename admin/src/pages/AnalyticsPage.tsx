@@ -4,6 +4,7 @@ import {
     TableCell, TableContainer, TableHead, TableRow, Stack, Button, Tooltip as MuiTooltip,
     useTheme
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -114,10 +115,14 @@ const HOUR_LABELS = Array.from({ length: 24 }, (_, i) =>
 const MONDAY_FIRST_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const COLORS = ['#2e7d32', '#43a047', '#66bb6a', '#81c784', '#a5d6a7', '#c8e6c9', '#e8f5e9', '#f1f8e9', '#f9fbe7', '#fffde7'];
-
 export default function AnalyticsPage() {
     const theme = useTheme();
+
+    // No single palette token covers a 10-step sequential ramp, so this fades
+    // primary.main (forest green) toward transparent via alpha() instead of a
+    // literal hex gradient — still dark-mode-safe (CLAUDE.md) and gives each of
+    // the Top 10 bars a visually distinct shade. See #1908.
+    const COLORS = Array.from({ length: 10 }, (_, i) => alpha(theme.palette.primary.main, 1 - i * 0.09));
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -296,19 +301,24 @@ export default function AnalyticsPage() {
                         <Tooltip
                             labelFormatter={(label) => new Date(String(label)).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
                         />
+                        {/* info.main for the same reason as the StatCard tiles above: #1976d2
+                            was MUI's default primary blue before this app's theme overrode
+                            primary.main to forest green. See #1899/#1908. */}
                         <Area
                             type="monotone"
                             dataKey="views"
-                            stroke="#1976d2"
-                            fill="#1976d2"
+                            stroke={theme.palette.info.main}
+                            fill={theme.palette.info.main}
                             fillOpacity={0.15}
                             strokeWidth={2}
                             name="Views"
                         />
+                        {/* secondary.main is MUI's default purple (#9c27b0) — the theme never
+                            overrides secondary, so this resolves to the same colour. See #1908. */}
                         <Line
                             type="monotone"
                             dataKey="uniqueVisitors"
-                            stroke="#9c27b0"
+                            stroke={theme.palette.secondary.main}
                             strokeWidth={2}
                             dot={false}
                             name="Unique Visitors"
