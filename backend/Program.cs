@@ -2788,6 +2788,13 @@ app.MapGet("/api/v1/admin/advent/entries", [Authorize(Policy = "AdminOnly")] asy
 })
 .WithName("GetAdventEntrySummaries");
 
+app.MapGet("/api/v1/admin/advent/stats", [Authorize(Policy = "AdminOnly")] async (IMediator mediator) =>
+{
+    var result = await mediator.Send(new GetAdventStatsQuery());
+    return Results.Ok(result);
+})
+.WithName("GetAdventStats");
+
 if (isMigrateMode)
 {
     var directUrlUsed = builder.Configuration["DIRECT_DATABASE_URL"] is not null;

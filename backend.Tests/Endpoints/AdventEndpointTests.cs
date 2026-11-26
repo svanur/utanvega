@@ -100,4 +100,46 @@ public class AdventEndpointTests : IDisposable
         Assert.Equal("a@example.com", result.Items[0].Email);
         Assert.Equal(2, result.Items[0].TicketCount);
     }
+
+    // ── GET /api/v1/admin/advent/stats (#1894) ─────────────────────────────────
+
+    [Fact]
+    public async Task Stats_Unauthenticated_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/admin/advent/stats");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Stats_NonAdminRole_ReturnsForbidden()
+    {
+        var client = _factory.CreateAuthenticatedClient("some-user", role: "member");
+        var response = await client.GetAsync("/api/v1/admin/advent/stats");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Stats_Admin_ReturnsKpiRollupAndDailyStats()
+    {
+        using (var db = _factory.CreateDbContext())
+        {
+            db.AdventEntries.AddRange(
+                new AdventEntry { Id = Guid.NewGuid(), Email = "a@example.com", Day = 1, Source = AdventEntrySource.Answer, CreatedAt = DateTime.UtcNow },
+                new AdventEntry { Id = Guid.NewGuid(), Email = "b@example.com", Day = 1, Source = AdventEntrySource.Share, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateAuthenticatedClient("admin-user");
+        var response = await client.GetAsync("/api/v1/admin/advent/stats");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<AdventStatsDto>();
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.TotalParticipants);
+        Assert.Equal(2, result.TotalTickets);
+        Assert.Equal(1, result.TotalAnswers);
+        Assert.Equal(1, result.TotalShares);
+        Assert.Equal(1, result.DailyStats.Single().Day);
+    }
 }
