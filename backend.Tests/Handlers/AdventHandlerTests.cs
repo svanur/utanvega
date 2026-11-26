@@ -595,6 +595,20 @@ public class AdventHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSummaries_LastAnsweredAt_ReflectsMaxCreatedAtAcrossBothSources()
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(1, 25), CancellationToken.None);
+
+        // a's Answer rows top out at 2026-12-03 (day 3); its Share rows are earlier with a time
+        // component (2026-12-01 01:00, 2026-12-02 01:00) — max is still the day-3 Answer row.
+        var a = result.Items.Single(i => i.Email == "a@example.com");
+        Assert.Equal(new DateTime(2026, 12, 3), a.LastAnsweredAt);
+    }
+
+    [Fact]
     public async Task GetSummaries_NoSortBy_DefaultsTo_TicketCountDescending()
     {
         await SeedSummaryFixture();
