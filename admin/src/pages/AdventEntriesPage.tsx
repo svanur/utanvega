@@ -255,8 +255,13 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                                 <YAxis fontSize={12} allowDecimals={false} />
                                 <Tooltip />
                                 <Legend />
-                                <Bar dataKey="ticketCount" name="Tickets" fill="#2e7d32" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="participantCount" name="Participants" fill="#1976d2" radius={[4, 4, 0, 0]} />
+                                {/* #2e7d32 is this app's primary.main (forest green, App.tsx) — mapped
+                                    directly rather than left as a literal. #1976d2 was MUI's default
+                                    primary blue before that override; info.main is the closest
+                                    semantic blue the theme still resolves to its MUI default, same
+                                    reasoning as the StatCard tiles above. See #1899/#1908. */}
+                                <Bar dataKey="ticketCount" name="Tickets" fill={theme.palette.primary.main} radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="participantCount" name="Participants" fill={theme.palette.info.main} radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </Paper>
