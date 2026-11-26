@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'utanvega_advent_calendar_2026';
 
@@ -59,13 +59,11 @@ function writeToStorage(state: AdventCalendarState) {
 }
 
 export function useAdventCalendar() {
-    const [state, setState] = useState<AdventCalendarState>(EMPTY_STATE);
-
-    // Initialize from localStorage — mirrors useFavorites.ts's init-in-an-effect shape so this
-    // hook is safe to call during SSR/first render without touching `localStorage` synchronously.
-    useEffect(() => {
-        setState(readFromStorage());
-    }, []);
+    // Lazy initializer: reads localStorage synchronously on first render so a returning visitor's
+    // already-won doors render as won immediately — no post-mount effect flipping them from the
+    // unwon EMPTY_STATE on the first paint. readFromStorage() is try/catch-wrapped and touches only
+    // localStorage, so it's safe here (unlike a hook with side effects beyond storage reads).
+    const [state, setState] = useState<AdventCalendarState>(() => readFromStorage());
 
     const setEmail = useCallback((email: string) => {
         setState(prev => {
