@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
-import AdventEntriesPage, { fillDailyStats } from './AdventEntriesPage';
+import AdventEntriesPage from './AdventEntriesPage';
+import { fillDailyStats } from './adventEntriesHelpers';
 
 // Issue #1895: KPI tiles + daily bar chart above the existing per-email table. The two fetches
 // (/stats and /entries) are independent — this suite mocks apiFetch to control each separately.
