@@ -1,16 +1,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-    Box, Typography, Paper, CircularProgress, Alert, Table, TableBody,
+    Box, Typography, Paper, Grid, CircularProgress, Alert, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
     Button, Pagination,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DownloadIcon from '@mui/icons-material/Download';
+import PeopleIcon from '@mui/icons-material/People';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts';
 import { apiFetch } from '../hooks/api';
 import { supabase } from '../hooks/supabase';
+import StatCard from '../components/StatCard';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const PAGE_SIZE = 25;
+const ADVENT_DAYS = 24;
 
 interface AdventEntrySummaryDto {
     email: string;
@@ -24,11 +32,37 @@ interface AdventEntrySummariesResult {
     total: number;
 }
 
+// Mirrors backend/Application/Advent/Queries/GetAdventStatsQuery.cs's AdventDailyStatDto/AdventStatsDto.
+interface AdventDailyStatDto {
+    day: number;
+    participantCount: number;
+    ticketCount: number;
+}
+
+interface AdventStatsDto {
+    totalParticipants: number;
+    totalTickets: number;
+    totalAnswers: number;
+    totalShares: number;
+    dailyStats: AdventDailyStatDto[];
+}
+
 type SortBy = 'email' | 'lastDay' | 'ticketCount';
 type SortDir = 'asc' | 'desc';
 
 function formatDate(iso: string) {
     return new Date(iso).toLocaleString('is-IS', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+// dailyStats is sparse (days with zero entries are never materialized server-side, see
+// GetAdventStatsQuery.cs) — build the full 1-24 range here so the chart never shows a gap in
+// the axis, same technique as AnalyticsPage.tsx's filledHourlyViews.
+export function fillDailyStats(dailyStats: AdventDailyStatDto[]): AdventDailyStatDto[] {
+    return Array.from({ length: ADVENT_DAYS }, (_, i) => {
+        const day = i + 1;
+        const found = dailyStats.find(d => d.day === day);
+        return found ?? { day, participantCount: 0, ticketCount: 0 };
+    });
 }
 
 export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string, severity?: 'success' | 'error') => void }) {
@@ -41,6 +75,20 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
     const [sortBy, setSortBy] = useState<SortBy>('ticketCount');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
     const [downloading, setDownloading] = useState(false);
+
+    // Independent of the table's load()/items state below — the KPI/chart section must be able
+    // to fail (e.g. the stats endpoint erroring) without blocking the per-email table from
+    // rendering, per #1895's acceptance criteria.
+    const [stats, setStats] = useState<AdventStatsDto | null>(null);
+    const [statsLoading, setStatsLoading] = useState(true);
+    const [statsError, setStatsError] = useState(false);
+
+    useEffect(() => {
+        apiFetch<AdventStatsDto>('/api/v1/admin/advent/stats')
+            .then(data => { setStats(data); setStatsError(false); })
+            .catch(() => setStatsError(true))
+            .finally(() => setStatsLoading(false));
+    }, []);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -140,6 +188,63 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                     <Typography variant="body2" color="text.secondary">{total} emails</Typography>
                 </Box>
             </Box>
+
+            {/* KPI row + daily chart — independent of the table below: a failed /stats fetch
+                shows an inline alert here but never blocks the per-email table from rendering. */}
+            {statsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress size={28} /></Box>
+            ) : statsError || !stats ? (
+                <Alert severity="warning" sx={{ mb: 2 }}>Failed to load advent stats.</Alert>
+            ) : (
+                <>
+                    <Grid container spacing={2} columns={10} mb={3}>
+                        <Grid item xs={5} md={2}>
+                            <StatCard
+                                title="Total Participants"
+                                value={stats.totalParticipants.toLocaleString()}
+                                subtitle="Distinct emails"
+                                icon={<PeopleIcon />}
+                                color="#1976d2"
+                            />
+                        </Grid>
+                        <Grid item xs={5} md={2}>
+                            <StatCard
+                                title="Total Tickets"
+                                value={stats.totalTickets.toLocaleString()}
+                                subtitle="Entries earned"
+                                icon={<ConfirmationNumberIcon />}
+                                color="#2e7d32"
+                            />
+                        </Grid>
+                        <Grid item xs={5} md={2}>
+                            <StatCard
+                                title="Answers vs Shares"
+                                value={`${stats.totalAnswers.toLocaleString()} / ${stats.totalShares.toLocaleString()}`}
+                                subtitle="Answer entries / share entries"
+                                icon={<QuestionAnswerIcon />}
+                                color="#ed6c02"
+                            />
+                        </Grid>
+                    </Grid>
+
+                    <Paper elevation={2} sx={{ p: 2.5, mb: 3 }}>
+                        <Typography variant="h6" fontWeight="bold" mb={2}>
+                            Tickets by Day
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={fillDailyStats(stats.dailyStats)}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="day" fontSize={12} />
+                                <YAxis fontSize={12} allowDecimals={false} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="ticketCount" name="Tickets" fill="#2e7d32" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="participantCount" name="Participants" fill="#1976d2" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </Paper>
+                </>
+            )}
 
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}><CircularProgress /></Box>
