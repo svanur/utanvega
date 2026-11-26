@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
     Box, Typography, Paper, Grid, CircularProgress, Alert, Table, TableBody,
     TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
-    Button, Pagination,
+    Button, Pagination, useTheme,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -66,6 +66,7 @@ export function fillDailyStats(dailyStats: AdventDailyStatDto[]): AdventDailySta
 }
 
 export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string, severity?: 'success' | 'error') => void }) {
+    const theme = useTheme();
     const [items, setItems] = useState<AdventEntrySummaryDto[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -198,13 +199,17 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
             ) : (
                 <>
                     <Grid container spacing={2} columns={10} mb={3}>
+                        {/* #1976d2 was MUI's default primary blue, but this app's theme
+                            overrides primary.main to forest green (App.tsx) — mapping to
+                            primary.main here would silently turn this tile green. info.main
+                            is the closest semantic blue left at MUI default. See #1899. */}
                         <Grid item xs={5} md={2}>
                             <StatCard
                                 title="Total Participants"
                                 value={stats.totalParticipants.toLocaleString()}
                                 subtitle="Distinct emails"
                                 icon={<PeopleIcon />}
-                                color="#1976d2"
+                                color={theme.palette.info.main}
                             />
                         </Grid>
                         <Grid item xs={5} md={2}>
@@ -213,7 +218,7 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                                 value={stats.totalTickets.toLocaleString()}
                                 subtitle="Entries earned"
                                 icon={<ConfirmationNumberIcon />}
-                                color="#2e7d32"
+                                color={theme.palette.success.main}
                             />
                         </Grid>
                         <Grid item xs={5} md={2}>
@@ -222,7 +227,7 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                                 value={`${stats.totalAnswers.toLocaleString()} / ${stats.totalShares.toLocaleString()}`}
                                 subtitle="Answer entries / share entries"
                                 icon={<QuestionAnswerIcon />}
-                                color="#ed6c02"
+                                color={theme.palette.warning.main}
                             />
                         </Grid>
                     </Grid>
