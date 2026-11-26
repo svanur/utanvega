@@ -195,7 +195,7 @@ export default function AdventCalendarPage({ mode, onToggleMode }: AdventCalenda
                             const unlocked = isDoorUnlocked(day);
                             const won = hasWon(day);
                             return (
-                                <Grid item xs={3} sm={2} md={1} key={day}>
+                                <Grid item xs={3} sm={2} md={2} key={day}>
                                     <Button
                                         aria-label={
                                             won
