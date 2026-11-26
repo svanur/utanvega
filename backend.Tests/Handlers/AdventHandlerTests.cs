@@ -403,7 +403,7 @@ public class AdventHandlerTests : IDisposable
     public async Task Share_NoPriorAnswerForDay_ReturnsNoPriorAnswer_CreatesNoRow()
     {
         using var db = _factory.CreateContext();
-        var handler = new GrantAdventShareBonusCommandHandler(db);
+        var handler = new GrantAdventShareBonusCommandHandler(db, OnDay10);
 
         var outcome = await handler.Handle(new GrantAdventShareBonusCommand(10, "runner@example.com"), CancellationToken.None);
 
@@ -425,12 +425,38 @@ public class AdventHandlerTests : IDisposable
         }
 
         using var db = _factory.CreateContext();
-        var handler = new GrantAdventShareBonusCommandHandler(db);
+        var handler = new GrantAdventShareBonusCommandHandler(db, OnDay10);
         var outcome = await handler.Handle(new GrantAdventShareBonusCommand(10, "runner@example.com"), CancellationToken.None);
 
         Assert.Equal(GrantAdventShareBonusOutcome.Granted, outcome);
         var shareRows = db.AdventEntries.Where(e => e.Source == AdventEntrySource.Share).ToList();
         Assert.Single(shareRows);
+    }
+
+    /// <summary>
+    /// #1879: the handler must write the persisted row's <c>CreatedAt</c> from the injected
+    /// <see cref="TimeProvider"/>, not <c>DateTime.UtcNow</c> — pin the clock to a known instant and
+    /// assert the row's <c>CreatedAt</c> equals it exactly.
+    /// </summary>
+    [Fact]
+    public async Task Share_UsesInjectedTimeProvider_ForCreatedAt()
+    {
+        using (var seed = _factory.CreateContext())
+        {
+            seed.AdventEntries.Add(new AdventEntry
+            {
+                Id = Guid.NewGuid(), Email = "runner@example.com", Day = 10,
+                Source = AdventEntrySource.Answer, CreatedAt = DateTime.UtcNow,
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        using var db = _factory.CreateContext();
+        var handler = new GrantAdventShareBonusCommandHandler(db, OnDay10);
+        await handler.Handle(new GrantAdventShareBonusCommand(10, "runner@example.com"), CancellationToken.None);
+
+        var shareRow = db.AdventEntries.Single(e => e.Source == AdventEntrySource.Share);
+        Assert.Equal(OnDay10.GetUtcNow().UtcDateTime, shareRow.CreatedAt);
     }
 
     [Fact]
@@ -448,13 +474,13 @@ public class AdventHandlerTests : IDisposable
 
         using (var db1 = _factory.CreateContext())
         {
-            var handler1 = new GrantAdventShareBonusCommandHandler(db1);
+            var handler1 = new GrantAdventShareBonusCommandHandler(db1, OnDay10);
             await handler1.Handle(new GrantAdventShareBonusCommand(10, "runner@example.com"), CancellationToken.None);
         }
 
         using (var db2 = _factory.CreateContext())
         {
-            var handler2 = new GrantAdventShareBonusCommandHandler(db2);
+            var handler2 = new GrantAdventShareBonusCommandHandler(db2, OnDay10);
             var outcome = await handler2.Handle(new GrantAdventShareBonusCommand(10, "runner@example.com"), CancellationToken.None);
             Assert.Equal(GrantAdventShareBonusOutcome.Granted, outcome);
         }
@@ -483,7 +509,7 @@ public class AdventHandlerTests : IDisposable
         }
 
         using var db = _factory.CreateContext();
-        var handler = new GrantAdventShareBonusCommandHandler(db);
+        var handler = new GrantAdventShareBonusCommandHandler(db, OnDay10);
         var outcome = await handler.Handle(
             new GrantAdventShareBonusCommand(10, "Runner Example <Runner@Example.com>"), CancellationToken.None);
 
