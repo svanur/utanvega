@@ -137,7 +137,7 @@ export default function AnalyticsPage() {
                     not shift when the data arrives. */}
                 <Grid container spacing={2} columns={10} mb={3}>
                     {[1, 2, 3, 4, 5].map(i => (
-                        <Grid item xs={5} md={2} key={i}>
+                        <Grid item xs={10} sm={5} md={2} key={i}>
                             <Skeleton variant="rounded" height={100} />
                         </Grid>
                     ))}
