@@ -31,6 +31,11 @@ public class GetFeedbackQueryHandler(UtanvegaDbContext db) : IRequestHandler<Get
 {
     public async Task<GetFeedbackResult> Handle(GetFeedbackQuery request, CancellationToken cancellationToken)
     {
+        // Caller-supplied page/pageSize are unbounded over the wire (#1889) — clamp here so a
+        // pathological pageSize can't force an unbounded Skip/Take against the DB.
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
         var q = db.Feedback.AsQueryable();
         if (!string.IsNullOrEmpty(request.Status))
             q = q.Where(f => f.Status == request.Status);
@@ -58,8 +63,8 @@ public class GetFeedbackQueryHandler(UtanvegaDbContext db) : IRequestHandler<Get
         };
 
         var items = await q
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(f => new FeedbackDto(f.Id, f.FeedbackNumber, f.PageUrl, f.Message, f.Category, f.Name, f.Email,
                                          f.StepsToReproduce, f.BrowserInfo, f.ScreenshotUrl,
                                          f.Status, f.Priority, f.GitHubIssue, f.AdminComment, f.CreatedAt, f.ClosedAt))

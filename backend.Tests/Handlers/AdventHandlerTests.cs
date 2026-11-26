@@ -701,6 +701,49 @@ public class AdventHandlerTests : IDisposable
         Assert.Equal(0, result.Total);
     }
 
+    /// <summary>
+    /// #1889: a caller-supplied pageSize above the 100 max must clamp to a 100-row page, not an
+    /// unbounded one — seed more than 100 distinct emails so an unclamped Take would prove the gap.
+    /// </summary>
+    [Fact]
+    public async Task GetSummaries_PageSizeAboveMax_ClampsTo100()
+    {
+        using (var db = _factory.CreateContext())
+        {
+            for (var i = 0; i < 150; i++)
+            {
+                db.AdventEntries.Add(new AdventEntry
+                {
+                    Id = Guid.NewGuid(), Email = $"user{i:D3}@example.com", Day = 1,
+                    Source = AdventEntrySource.Answer, CreatedAt = new DateTime(2026, 12, 1),
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(1, 500), CancellationToken.None);
+
+        Assert.Equal(150, result.Total); // Total is unaffected by the clamp
+        Assert.Equal(100, result.Items.Count); // but the page itself is capped at 100
+    }
+
+    /// <summary>#1889: page/pageSize <= 0 must behave as if they were 1, not throw or return empty.</summary>
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(-1, -5)]
+    public async Task GetSummaries_PageOrPageSizeZeroOrNegative_ClampsToOne(int page, int pageSize)
+    {
+        await SeedSummaryFixture();
+        var handler = new GetAdventEntrySummariesQueryHandler(_factory.CreateContext());
+
+        var result = await handler.Handle(new GetAdventEntrySummariesQuery(page, pageSize), CancellationToken.None);
+
+        // page=1, pageSize=1 → exactly the first row of the default sort (ticketCount desc): a@example.com.
+        Assert.Single(result.Items);
+        Assert.Equal("a@example.com", result.Items[0].Email);
+    }
+
     // ── GetAdventStatsQuery: KPI rollup + per-day grouping (#1894) ─────────────
 
     [Fact]

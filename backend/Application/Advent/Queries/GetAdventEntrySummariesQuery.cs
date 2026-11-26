@@ -26,6 +26,11 @@ public class GetAdventEntrySummariesQueryHandler(UtanvegaDbContext db)
 {
     public async Task<GetAdventEntrySummariesResult> Handle(GetAdventEntrySummariesQuery request, CancellationToken cancellationToken)
     {
+        // Caller-supplied page/pageSize are unbounded over the wire (#1889) — clamp here so a
+        // pathological pageSize can't force an unbounded Skip/Take against the DB.
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+
         // Projected to an anonymous type (not AdventEntrySummaryDto directly) — the SQLite provider
         // can't translate an ORDER BY against a property read off a record built by a positional
         // constructor call inside the same query, only off named members of an anonymous type.
@@ -55,8 +60,8 @@ public class GetAdventEntrySummariesQueryHandler(UtanvegaDbContext db)
         };
 
         var items = await grouped
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => new AdventEntrySummaryDto(s.Email, s.TicketCount, s.LastDay, s.LastAnsweredAt))
             .ToListAsync(cancellationToken);
 
