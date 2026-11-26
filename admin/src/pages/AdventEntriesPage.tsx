@@ -198,12 +198,18 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                 <Alert severity="warning" sx={{ mb: 2 }}>Failed to load advent stats.</Alert>
             ) : (
                 <>
+                    {/* Below the sm breakpoint (<600px, i.e. phones) tiles stack one-per-row
+                        (xs=10) — at 375px two xs=5 tiles were only ~155px of content width each,
+                        too tight for "Answers vs Shares" plus its "Answer entries / share
+                        entries" subtitle without crowding. sm=5 keeps the familiar two-per-row
+                        for tablets, md=2 (five-per-row, matching AnalyticsPage.tsx) is unchanged.
+                        See #1900. */}
                     <Grid container spacing={2} columns={10} mb={3}>
                         {/* #1976d2 was MUI's default primary blue, but this app's theme
                             overrides primary.main to forest green (App.tsx) — mapping to
                             primary.main here would silently turn this tile green. info.main
                             is the closest semantic blue left at MUI default. See #1899. */}
-                        <Grid item xs={5} md={2}>
+                        <Grid item xs={10} sm={5} md={2}>
                             <StatCard
                                 title="Total Participants"
                                 value={stats.totalParticipants.toLocaleString()}
@@ -212,7 +218,7 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                                 color={theme.palette.info.main}
                             />
                         </Grid>
-                        <Grid item xs={5} md={2}>
+                        <Grid item xs={10} sm={5} md={2}>
                             <StatCard
                                 title="Total Tickets"
                                 value={stats.totalTickets.toLocaleString()}
@@ -221,7 +227,7 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                                 color={theme.palette.success.main}
                             />
                         </Grid>
-                        <Grid item xs={5} md={2}>
+                        <Grid item xs={10} sm={5} md={2}>
                             <StatCard
                                 title="Answers vs Shares"
                                 value={`${stats.totalAnswers.toLocaleString()} / ${stats.totalShares.toLocaleString()}`}
