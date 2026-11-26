@@ -35,6 +35,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { useAdminShortcuts, GO_TO_PAGES } from './hooks/useAdminShortcuts';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import FeedbackIcon from '@mui/icons-material/Feedback';
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 
 // Lazy-loaded pages (only the active page's chunk needs to load)
 const TrailsListPage = lazy(() => import('./pages/TrailsListPage'));
@@ -60,6 +61,7 @@ const PoolsPage = lazy(() => import('./pages/PoolsPage'));
 const TranslationHealth = lazy(() => import('./pages/TranslationHealth'));
 const RaceDayPage = lazy(() => import('./pages/RaceDayPage'));
 const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+const AdventEntriesPage = lazy(() => import('./pages/AdventEntriesPage'));
 const EventDetailPage = lazy(() => import('./pages/EventDetailPage'));
 const EventWizardPage = lazy(() => import('./pages/EventWizardPage'));
 
@@ -99,6 +101,7 @@ const PAGE_PATHS: Record<PageKey, string> = {
   'pools': '/pools',
   'race-day': '/race-day',
   feedback: '/feedback',
+  'advent-entries': '/advent-entries',
 };
 
 function pathToPage(pathname: string): PageKey {
@@ -312,6 +315,7 @@ function AdminContent() {
               { key: 'edition-health' as const,      icon: <HealthAndSafetyIcon sx={{ color: '#9c27b0' }} />, label: 'Edition Health' },
               { key: 'translation-health' as const,  icon: <TranslateIcon />,                                 label: 'Translations' },
               { key: 'feedback' as const,            icon: <FeedbackIcon />,                                  label: 'Feedback' },
+              { key: 'advent-entries' as const,      icon: <CardGiftcardIcon />,                              label: 'Jólaleikur Entries' },
               { key: 'map' as const,                 icon: <MapIcon />,                                       label: 'Trail Map' },
               { key: 'analytics' as const,           icon: <BarChartIcon />,                                  label: 'Analytics' },
               { key: 'hero-themes' as const,         icon: <ViewDayOutlinedIcon />,                           label: 'Hero Themes' },
@@ -417,6 +421,8 @@ function AdminContent() {
             <TranslationHealth onNotify={notify} />
           ) : currentPage === 'feedback' ? (
             <FeedbackPage onNotify={notify} />
+          ) : currentPage === 'advent-entries' ? (
+            <AdventEntriesPage onNotify={notify} />
           ) : currentPage === 'locations' ? (
             <Routes>
               <Route path="/locations/new" element={<LocationDetailPage onNotify={notify} />} />
