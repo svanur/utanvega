@@ -7,6 +7,7 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DownloadIcon from '@mui/icons-material/Download';
 import { apiFetch } from '../hooks/api';
+import { supabase } from '../hooks/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const PAGE_SIZE = 25;
@@ -39,6 +40,7 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
     // the initial render doesn't flash one order and then re-sort to another.
     const [sortBy, setSortBy] = useState<SortBy>('ticketCount');
     const [sortDir, setSortDir] = useState<SortDir>('desc');
+    const [downloading, setDownloading] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -74,6 +76,34 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
         onNotify('Ticket list copied to clipboard', 'success');
     }
 
+    // The export endpoint is [Authorize(Policy = "AdminOnly")] and admin auth here is
+    // bearer-token-only (no cookie scheme) — a bare <a href download> sends no Authorization
+    // header and 401s, so the file is fetched with the token and downloaded via a blob + object
+    // URL instead, same end result for the user but actually authenticated.
+    async function handleDownload() {
+        setDownloading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const response = await fetch(`${API_URL}/api/v1/admin/advent/entries/export`, {
+                headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+            });
+            if (!response.ok) throw new Error(response.statusText);
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'advent-entries.txt';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch {
+            onNotify('Failed to download participant list', 'error');
+        } finally {
+            setDownloading(false);
+        }
+    }
+
     const pageCount = Math.ceil(total / PAGE_SIZE);
 
     const sortProps = (col: SortBy) => ({
@@ -100,9 +130,8 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                     <Button
                         variant="outlined"
                         size="small"
-                        component="a"
-                        href={`${API_URL}/api/v1/admin/advent/entries/export`}
-                        download="advent-entries.txt"
+                        onClick={() => void handleDownload()}
+                        disabled={downloading}
                         startIcon={<DownloadIcon />}
                         sx={{ textTransform: 'none' }}
                     >
