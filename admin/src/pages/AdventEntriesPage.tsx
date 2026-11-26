@@ -242,6 +242,12 @@ export default function AdventEntriesPage({ onNotify }: { onNotify: (msg: string
                         <Typography variant="h6" fontWeight="bold" mb={2}>
                             Tickets by Day
                         </Typography>
+                        {/* No explicit interval/angle here: recharts v3's default auto tick-interval
+                            already thins all 24 day labels down to a non-overlapping subset at narrow
+                            widths (e.g. 1,3,5,...,24 at 320px) rather than rendering all 24. Verified
+                            with a real chromium render (jsdom, used by AdventEntriesPage.test.tsx, has
+                            no layout engine and can't catch tick overlap) at 375px and 320px viewports
+                            — no overlap or clipping at either width. See #1901. */}
                         <ResponsiveContainer width="100%" height={280}>
                             <BarChart data={fillDailyStats(stats.dailyStats)}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
