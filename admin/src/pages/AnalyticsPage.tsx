@@ -216,10 +216,13 @@ export default function AnalyticsPage() {
 
             {/* Summary cards — most recent first, cumulative figures after.
                 A 10-column grid rather than the default 12: five cards divide
-                into it evenly (md=2), which 12 cannot do, while xs=5 keeps the
-                familiar two-per-row on a phone. */}
+                into it evenly (md=2), which 12 cannot do. Below the sm breakpoint (<600px,
+                i.e. phones) tiles stack one-per-row (xs=10) — at 375px two xs=5 tiles were only
+                ~155px of content width each, too tight for titles/subtitles like "Answers vs
+                Shares" or the longest line here ("Views, Last 7 Days") without crowding. sm=5
+                keeps the familiar two-per-row for tablets, md=2 is unchanged. See #1900. */}
             <Grid container spacing={2} columns={10} mb={3}>
-                <Grid item xs={5} md={2}>
+                <Grid item xs={10} sm={5} md={2}>
                     <StatCard
                         title="Views Today"
                         value={summary.viewsToday.toLocaleString()}
@@ -228,7 +231,7 @@ export default function AnalyticsPage() {
                         color={theme.palette.info.main}
                     />
                 </Grid>
-                <Grid item xs={5} md={2}>
+                <Grid item xs={10} sm={5} md={2}>
                     <StatCard
                         title="Views, Last 7 Days"
                         value={summary.viewsThisWeek.toLocaleString()}
@@ -241,7 +244,7 @@ export default function AnalyticsPage() {
                     primary.main to forest green (App.tsx) — mapping to primary.main here would
                     silently turn this tile green. info.main is the closest semantic blue the
                     theme still resolves to its MUI default. See #1899. */}
-                <Grid item xs={5} md={2}>
+                <Grid item xs={10} sm={5} md={2}>
                     <StatCard
                         title="Total Views"
                         value={summary.totalViews.toLocaleString()}
@@ -250,7 +253,7 @@ export default function AnalyticsPage() {
                         color={theme.palette.info.main}
                     />
                 </Grid>
-                <Grid item xs={5} md={2}>
+                <Grid item xs={10} sm={5} md={2}>
                     <StatCard
                         title="Unique Visitors"
                         value={summary.uniqueVisitors.toLocaleString()}
@@ -261,7 +264,7 @@ export default function AnalyticsPage() {
                         color={theme.palette.secondary.main}
                     />
                 </Grid>
-                <Grid item xs={5} md={2}>
+                <Grid item xs={10} sm={5} md={2}>
                     <StatCard
                         title="Avg Views / Trail"
                         value={summary.avgViewsPerTrail}
