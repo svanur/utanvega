@@ -23,7 +23,7 @@ public sealed record GrantAdventShareBonusCommand(int Day, string Email) : IRequ
 /// only gate is that the email already holds a real <see cref="AdventEntrySource.Answer"/> ticket
 /// for that day, so the bonus can never be earned on its own. Repeat calls are idempotent.
 /// </summary>
-public sealed class GrantAdventShareBonusCommandHandler(UtanvegaDbContext db)
+public sealed class GrantAdventShareBonusCommandHandler(UtanvegaDbContext db, TimeProvider timeProvider)
     : IRequestHandler<GrantAdventShareBonusCommand, GrantAdventShareBonusOutcome>
 {
     public async Task<GrantAdventShareBonusOutcome> Handle(GrantAdventShareBonusCommand request, CancellationToken cancellationToken)
@@ -49,7 +49,7 @@ public sealed class GrantAdventShareBonusCommandHandler(UtanvegaDbContext db)
                 Email = normalizedEmail,
                 Day = request.Day,
                 Source = AdventEntrySource.Share,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = timeProvider.GetUtcNow().UtcDateTime,
             });
 
             try
