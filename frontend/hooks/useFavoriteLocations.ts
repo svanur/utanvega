@@ -1,20 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'utanvega_favorite_locations';
 
-export function useFavoriteLocations() {
-    const [favoriteLocations, setFavoriteLocations] = useState<string[]>([]);
+function readFromStorage(): string[] {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+    try {
+        return JSON.parse(stored);
+    } catch (e) {
+        console.error('Failed to parse favorite locations from localStorage', e);
+        return [];
+    }
+}
 
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            try {
-                setFavoriteLocations(JSON.parse(stored));
-            } catch (e) {
-                console.error('Failed to parse favorite locations from localStorage', e);
-            }
-        }
-    }, []);
+export function useFavoriteLocations() {
+    // Lazy initializer: reads localStorage synchronously on first render so a returning visitor's
+    // already-favorited locations render as favorited immediately — no post-mount effect flipping them
+    // from an empty list on the first paint (mirrors useFavorites.ts's #1903 fix).
+    const [favoriteLocations, setFavoriteLocations] = useState<string[]>(() => readFromStorage());
 
     const toggleFavoriteLocation = useCallback((slug: string) => {
         setFavoriteLocations(prev => {
