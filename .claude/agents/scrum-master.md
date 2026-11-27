@@ -116,7 +116,7 @@ AREA: frontend | admin | backend | database | mixed
 BRANCH: <number>-<kebab-slug-of-title>
 
 CONTEXT
-<2-5 sentences: what exists today, why this change is wanted. Cite real files you verified exist, as path:line where useful.>
+<2-5 sentences: what exists today, why this change is wanted. Cite real files you verified exist, as path:line where useful. This applies to every file you name as "existing precedent"/"following the pattern of"/"existing convention" too — confirm it with Read or Glob before naming it, never infer it from issue-body prose alone (an issue author can be wrong about what's already in the repo).>
 
 SCOPE
 <Bulleted list of what to change. Concrete and bounded.>
@@ -132,7 +132,7 @@ REPO-SPECIFIC REQUIREMENTS
 English-only — never put an i18n requirement on an admin-scoped work order); new backend logic needs xUnit tests in backend.Tests; MUI theme colours only (no hardcoded colours, breaks dark mode); mobile-first layout; AsNoTracking() for read-only queries; file-scoped namespaces.>
 
 STARTING POINTS
-<Files worth reading first, with paths.>
+<Files worth reading first, with paths. The same verified-with-Read/Glob rule from CONTEXT applies here: every path you list must exist, not just be plausible.>
 ```
 
 Keep it tight. The Programmer gets this and nothing else — it will not see your reasoning.
