@@ -347,7 +347,7 @@ export default function AnalyticsPage() {
                                     {filledHourlyViews.map((entry, index) => (
                                         <Cell
                                             key={index}
-                                            fill={`rgba(46, 125, 50, ${0.3 + (entry.views / maxHourlyViews) * 0.7})`}
+                                            fill={alpha(theme.palette.success.main, 0.3 + (entry.views / maxHourlyViews) * 0.7)}
                                         />
                                     ))}
                                 </Bar>
@@ -375,7 +375,7 @@ export default function AnalyticsPage() {
                                                 sx={{
                                                     height: 28,
                                                     borderRadius: 1,
-                                                    bgcolor: `rgba(46, 125, 50, ${0.3 + (d.views / maxDayOfWeekViews) * 0.7})`,
+                                                    bgcolor: alpha(theme.palette.success.main, 0.3 + (d.views / maxDayOfWeekViews) * 0.7),
                                                 }}
                                             />
                                             <Typography variant="caption" color="text.secondary" fontSize={11}>
