@@ -131,7 +131,7 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
     }
 
     function handleClose() {
-        setOpen(false);
+        setOpen(inline);
         setMessage('');
         setName('');
         setEmail('');
