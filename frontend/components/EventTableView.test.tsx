@@ -7,9 +7,9 @@
 // the untouched isAllSoldOut chip check); RacesPage.test.tsx covers the two list-view call sites.
 // Follows RacesPage.test.tsx's jsdom-opt-in + RTL + real-i18n pattern.
 import React from 'react';
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { unstable_HistoryRouter as HistoryRouter, UNSAFE_createMemoryHistory as createMemoryHistory } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -28,7 +28,6 @@ void i18n.use(initReactI18next).init({
 
 // EventTableView reads getHolidays/isEnabled but nothing about them is under test here — mocked to
 // bare passthroughs, mirroring RacesPage.test.tsx's equivalent mocks for the same two hooks.
-import { vi } from 'vitest';
 vi.mock('../hooks/useFeatureFlags', () => ({
     useFeatureFlags: () => ({ flags: {}, loaded: true, isEnabled: () => false }),
 }));
@@ -94,7 +93,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
 function renderTable(events: EventSummary[]) {
     const theme = createAppTheme('light');
     return render(
-        <MemoryRouter>
+        <HistoryRouter history={createMemoryHistory()}>
             <ThemeProvider theme={theme}>
                 <EventTableView
                     events={events}
@@ -105,8 +104,34 @@ function renderTable(events: EventSummary[]) {
                     months={[]}
                 />
             </ThemeProvider>
-        </MemoryRouter>
+        </HistoryRouter>
     );
+}
+
+// #1925 round 2: spying on history.push directly (rather than observing useLocation() from
+// inside the tree) sidesteps React 18's event-handler batching — two synchronous navigate()
+// calls from the same click (row onClick + the link's own click-through, if stopPropagation were
+// missing) each still call history.push once, even though React only re-renders once with the
+// final location, which would make a useLocation()-based counter undercount the duplicate.
+function renderTableWithHistorySpy(events: EventSummary[]) {
+    const theme = createAppTheme('light');
+    const history = createMemoryHistory();
+    const pushSpy = vi.spyOn(history, 'push');
+    const utils = render(
+        <HistoryRouter history={history}>
+            <ThemeProvider theme={theme}>
+                <EventTableView
+                    events={events}
+                    userLocation={null}
+                    onToggleFavorite={() => {}}
+                    isFavoriteEvent={() => false}
+                    weekRange={null}
+                    months={[]}
+                />
+            </ThemeProvider>
+        </HistoryRouter>
+    );
+    return { ...utils, pushSpy };
 }
 
 describe('EventTableView Register button respects per-race NotStarted ticketStatus (#1601)', () => {
@@ -151,5 +176,83 @@ describe('EventTableView Register button respects per-race NotStarted ticketStat
         renderTable([makeEvent({ distances: [] })]);
 
         expect(screen.getByText('Register')).not.toBeNull();
+    });
+});
+
+// #1925: the event-name cell previously only navigated via the <TableRow>'s own onClick — no
+// <a> anywhere in the row, so right-click "open in new tab" / middle-click had nothing to attach
+// to. The name cell now wraps its text in a RouterLink; the row's onClick stays for clicks
+// elsewhere in the row.
+describe('EventTableView event-name cell renders as a real anchor, not click-only (#1925)', () => {
+    it('renders the regular-row event name as an <a href="/events/<slug>">', () => {
+        const { container } = renderTable([makeEvent({ slug: 'regular-run', name: 'Regular Run' })]);
+
+        expect(screen.getByText('Regular Run')).not.toBeNull();
+        const link = container.querySelector('a[href="/events/regular-run"]');
+        expect(link).not.toBeNull();
+        expect(link!.tagName).toBe('A');
+        expect(link!.textContent).toBe('Regular Run');
+    });
+
+    it('renders the series-grouped row event name as an <a href="/events/<slug>"> pointing at the parent event', () => {
+        const { container } = renderTable([makeEvent({
+            slug: 'series-run', name: 'Series Run', type: 'Series',
+            seriesRaces: [{
+                raceId: 'race-1',
+                raceName: 'Series Race One',
+                raceNameEn: null,
+                dateOfRace: '2026-12-01',
+                startTime: null,
+                distanceLabel: '10 km',
+                trailElevationGain: null,
+                ticketStatus: 'Open',
+                registrationUrl: null,
+            }],
+        })]);
+
+        // This row's name cell renders "<event name> • <race name>" as one run of text inside a
+        // single <a> (no nested element wraps the race name alone), so getByText('Series Race
+        // One') can't match it the way the regular-row test above does — assert on the anchor's
+        // own textContent instead.
+        const link = container.querySelector('a[href="/events/series-run"]');
+        expect(link).not.toBeNull();
+        expect(link!.textContent).toContain('Series Race One');
+    });
+
+    // #1925 round 2 (tester-requested): the name link sits inside the <TableRow>'s own onClick,
+    // and react-router's Link doesn't stop propagation on its own — without an explicit
+    // stopPropagation on the link, a click on the name bubbles up and also fires the row's
+    // onClick, pushing a *second* history.push on top of the Link's own navigation. Spying on
+    // history.push (via renderTableWithHistorySpy) catches both calls even though React's event
+    // batching would only ever render the final location once either way.
+    it('calls history.push exactly once when clicking the regular-row name link, not twice via row onClick bubbling', () => {
+        const { container, pushSpy } = renderTableWithHistorySpy([makeEvent({ slug: 'regular-run', name: 'Regular Run' })]);
+
+        const link = container.querySelector('a[href="/events/regular-run"]') as HTMLAnchorElement;
+        fireEvent.click(link);
+
+        expect(pushSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls history.push exactly once when clicking the series-grouped row name link, not twice via row onClick bubbling', () => {
+        const { container, pushSpy } = renderTableWithHistorySpy([makeEvent({
+            slug: 'series-run', name: 'Series Run', type: 'Series',
+            seriesRaces: [{
+                raceId: 'race-1',
+                raceName: 'Series Race One',
+                raceNameEn: null,
+                dateOfRace: '2026-12-01',
+                startTime: null,
+                distanceLabel: '10 km',
+                trailElevationGain: null,
+                ticketStatus: 'Open',
+                registrationUrl: null,
+            }],
+        })]);
+
+        const link = container.querySelector('a[href="/events/series-run"]') as HTMLAnchorElement;
+        fireEvent.click(link);
+
+        expect(pushSpy).toHaveBeenCalledTimes(1);
     });
 });

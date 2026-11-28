@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import {
@@ -1271,7 +1271,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     borderLeft: `4px solid ${theme.palette.success.main}`,
                                                 }}
                                             >
-                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
+                                                <CardActionArea component={RouterLink} to={`/events/${comp.slug}`} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.5, sm: 1 } }}>
                                                             <Box sx={{ minWidth: 0, width: '100%' }}>
@@ -1457,7 +1457,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                     ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
                                                 }}
                                             >
-                                                <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
+                                                <CardActionArea component={RouterLink} to={`/events/${comp.slug}`} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                                     <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                                         {/* Row 1: race name — full width, no chips/buttons */}
                                                         <Stack direction="row" alignItems="flex-start" gap={1}>
@@ -1699,7 +1699,7 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                         ...(isEffectivelyCancelled(comp) && { opacity: 0.65 }),
                                     }}
                                 >
-                                    <CardActionArea onClick={() => navigate(`/events/${comp.slug}`)} onMouseEnter={() => prefetchEvent(comp.slug)}>
+                                    <CardActionArea component={RouterLink} to={`/events/${comp.slug}`} onMouseEnter={() => prefetchEvent(comp.slug)}>
                                         <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pr: { xs: 6, sm: 6 } }}>
                                             {/* Row 1: name — full width, no chips/buttons */}
                                             <Stack direction="row" alignItems="flex-start" gap={1}>
