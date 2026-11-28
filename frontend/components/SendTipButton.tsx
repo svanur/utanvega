@@ -199,8 +199,9 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
                             {mode === 'detailed' && (
                                 <>
                                     <FormControl size="small" fullWidth sx={{ mb: 1 }}>
-                                        <InputLabel>{t('tip.category')}</InputLabel>
+                                        <InputLabel id="tip-category-label">{t('tip.category')}</InputLabel>
                                         <Select
+                                            labelId="tip-category-label"
                                             value={category}
                                             label={t('tip.category')}
                                             onChange={e => setCategory(e.target.value as Category)}
