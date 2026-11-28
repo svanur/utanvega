@@ -95,3 +95,125 @@ describe('SendTipButton (#1924)', () => {
         expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 });
+
+// #1928: handleClose() used to hard-reset mode to 'simple' and clear name/email on every
+// close, so a detailed-mode report lost its detailed fields (and dropped back to simple) the
+// moment it reopened after a send. Mode and category/name/email should now survive a
+// close+reopen; only message/stepsToReproduce/screenshot state should still reset.
+describe('SendTipButton (#1928)', () => {
+    beforeEach(() => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    });
+
+    const CATEGORY_LABEL = 'Category';
+    const NAME_LABEL = 'Your name (optional)';
+    const EMAIL_LABEL = 'Your email (optional)';
+    const STEPS_LABEL = 'Steps to reproduce';
+    const MODE_SIMPLE_NAME = 'Quick tip';
+    const MODE_DETAILED_NAME = 'Detailed report';
+
+    it('inline: detailed mode persists across a send+close+reopen', async () => {
+        render(<SendTipButton type="event" inline />);
+
+        // inline starts in detailed mode already; send once to reach the "sent" state.
+        fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), { target: { value: 'first comment' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        await waitFor(() => expect(screen.getByText(SENT_MESSAGE)).not.toBeNull());
+
+        fireEvent.click(closeButton());
+
+        await screen.findByPlaceholderText(PLACEHOLDER);
+        // MUI duplicates the InputLabel text into the OutlinedInput's notch legend, so
+        // "Category" is never a unique text node — assert presence via getAllByText instead.
+        expect(screen.getAllByText(CATEGORY_LABEL).length).toBeGreaterThan(0);
+        expect(screen.getByLabelText(STEPS_LABEL)).not.toBeNull();
+    });
+
+    it('inline: simple mode persists across a send+close+reopen (no regression)', async () => {
+        render(<SendTipButton type="event" inline />);
+
+        // Switch to simple first, since inline starts in detailed.
+        fireEvent.click(screen.getByRole('button', { name: MODE_SIMPLE_NAME }));
+        fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), { target: { value: 'first comment' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        await waitFor(() => expect(screen.getByText(SENT_MESSAGE)).not.toBeNull());
+
+        fireEvent.click(closeButton());
+
+        await screen.findByPlaceholderText(PLACEHOLDER);
+        expect(screen.queryAllByText(CATEGORY_LABEL).length).toBe(0);
+        expect(screen.queryByLabelText(STEPS_LABEL)).toBeNull();
+    });
+
+    it('non-inline: detailed mode persists across a send+close+reopen', async () => {
+        render(<SendTipButton type="event" />);
+
+        fireEvent.click(screen.getByRole('button', { name: TOGGLE_BUTTON_NAME }));
+        fireEvent.click(screen.getByRole('button', { name: MODE_DETAILED_NAME }));
+        fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), { target: { value: 'a tip' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        await waitFor(() => expect(screen.getByText(SENT_MESSAGE)).not.toBeNull());
+
+        fireEvent.click(closeButton());
+        expect(screen.queryByText(SENT_MESSAGE)).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', { name: TOGGLE_BUTTON_NAME }));
+
+        await screen.findByPlaceholderText(PLACEHOLDER);
+        // MUI duplicates the InputLabel text into the OutlinedInput's notch legend, so
+        // "Category" is never a unique text node — assert presence via getAllByText instead.
+        expect(screen.getAllByText(CATEGORY_LABEL).length).toBeGreaterThan(0);
+        expect(screen.getByLabelText(STEPS_LABEL)).not.toBeNull();
+    });
+
+    it('non-inline: simple mode persists across a send+close+reopen (no regression)', async () => {
+        render(<SendTipButton type="event" />);
+
+        fireEvent.click(screen.getByRole('button', { name: TOGGLE_BUTTON_NAME }));
+        fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), { target: { value: 'a tip' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        await waitFor(() => expect(screen.getByText(SENT_MESSAGE)).not.toBeNull());
+
+        fireEvent.click(closeButton());
+        fireEvent.click(screen.getByRole('button', { name: TOGGLE_BUTTON_NAME }));
+
+        await screen.findByPlaceholderText(PLACEHOLDER);
+        expect(screen.queryAllByText(CATEGORY_LABEL).length).toBe(0);
+        expect(screen.queryByLabelText(STEPS_LABEL)).toBeNull();
+    });
+
+    it('detailed send+close+reopen: category/name/email persist, steps/message/screenshot reset', async () => {
+        render(<SendTipButton type="event" inline />);
+
+        // MUI Select: open via mousedown on the combobox, pick the option from the listbox.
+        // The InputLabel/Select pair isn't id/labelId-wired (out of scope here), so the
+        // combobox has no accessible name — there's only one on the form, select by role alone.
+        fireEvent.mouseDown(screen.getByRole('combobox'));
+        fireEvent.click(screen.getByRole('option', { name: 'Suggestion' }));
+
+        const nameInput = screen.getByLabelText(NAME_LABEL) as HTMLInputElement;
+        const emailInput = screen.getByLabelText(EMAIL_LABEL) as HTMLInputElement;
+        fireEvent.change(nameInput, { target: { value: 'Jón' } });
+        fireEvent.change(emailInput, { target: { value: 'jon@example.com' } });
+        fireEvent.change(screen.getByLabelText(STEPS_LABEL), { target: { value: 'clicked the button' } });
+        fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), { target: { value: 'a detailed tip' } });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        await waitFor(() => expect(screen.getByText(SENT_MESSAGE)).not.toBeNull());
+
+        fireEvent.click(closeButton());
+
+        const reopenedName = await screen.findByLabelText(NAME_LABEL) as HTMLInputElement;
+        const reopenedEmail = screen.getByLabelText(EMAIL_LABEL) as HTMLInputElement;
+        const reopenedMessage = screen.getByPlaceholderText(PLACEHOLDER) as HTMLInputElement;
+        const reopenedSteps = screen.getByLabelText(STEPS_LABEL) as HTMLInputElement;
+
+        expect(screen.getByRole('combobox').textContent).toContain('Suggestion');
+        expect(reopenedName.value).toBe('Jón');
+        expect(reopenedEmail.value).toBe('jon@example.com');
+        expect(reopenedMessage.value).toBe('');
+        expect(reopenedSteps.value).toBe('');
+        // Screenshot state resets too: no preview image survives the close.
+        expect(screen.queryByAltText('Page screenshot')).toBeNull();
+    });
+});
