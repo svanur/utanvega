@@ -311,7 +311,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                             <ActivityIcons activityTypes={event.activityTypes} activityType={event.activityType} />
                                             <Stack spacing={0.25}>
                                                 <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 280 }}>
-                                                    <RouterLink to={`/events/${event.slug}`} style={{ color: 'inherit', textDecoration: 'inherit' }}>
+                                                    <RouterLink to={`/events/${event.slug}`} onClick={e => e.stopPropagation()} style={{ color: 'inherit', textDecoration: 'inherit' }}>
                                                         {loc(event.name, event.nameEn) ?? event.name}
                                                         {' '}
                                                         <svg width="6" height="6" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 1, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
@@ -456,7 +456,7 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                             ...(isEffectivelyCancelled(event) && { textDecoration: 'line-through' }),
                                                         }}
                                                     >
-                                                        <RouterLink to={`/events/${event.slug}`} style={{ color: 'inherit', textDecoration: 'inherit' }}>
+                                                        <RouterLink to={`/events/${event.slug}`} onClick={e => e.stopPropagation()} style={{ color: 'inherit', textDecoration: 'inherit' }}>
                                                             {loc(event.name, event.nameEn) ?? event.name}
                                                         </RouterLink>
                                                     </Typography>
