@@ -36,6 +36,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         distances: null,
         registrationUrl: null,
         registrationStatus: null,
+        registrationOpens: null,
         registrationCloses: null,
         resultsUrl: null,
         galleries: [],

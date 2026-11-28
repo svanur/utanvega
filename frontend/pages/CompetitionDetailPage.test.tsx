@@ -180,6 +180,7 @@ function makeEvent(overrides: Partial<EventDetail> = {}): EventDetail {
         distances: null,
         registrationUrl: null,
         registrationStatus: null,
+        registrationOpens: null,
         registrationCloses: null,
         resultsUrl: null,
         galleries: [],
