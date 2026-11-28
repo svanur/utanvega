@@ -69,6 +69,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         distances: [{ label: '10 km', ticketStatus: null }],
         registrationUrl: 'https://example.com/register',
         registrationStatus: 'Open',
+        registrationOpens: null,
         registrationCloses: null,
         resultsUrl: null,
         galleries: [],
@@ -176,6 +177,86 @@ describe('EventTableView Register button respects per-race NotStarted ticketStat
         renderTable([makeEvent({ distances: [] })]);
 
         expect(screen.getByText('Register')).not.toBeNull();
+    });
+});
+
+// #1926: the Links cell rendered nothing (null) for a NotStarted-status edition whose distances
+// are therefore all NotStarted (isAllUnavailableForRegistration true) — the visitor had no idea
+// registration was coming, only that it wasn't open yet. Mirrors CompetitionDetailPage's #1863 chip.
+describe('EventTableView shows a "Registration opens" chip for NotStarted status (#1926)', () => {
+    it('shows the chip when registrationStatus is NotStarted and registrationOpens is set', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-10T00:00:00Z',
+            distances: [{ label: '10 km', ticketStatus: 'NotStarted' }],
+        })]);
+
+        expect(screen.getByText(/Registration opens/)).not.toBeNull();
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('renders nothing when registrationStatus is NotStarted but registrationOpens is null (regression guard)', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'NotStarted',
+            registrationOpens: null,
+            distances: [{ label: '10 km', ticketStatus: 'NotStarted' }],
+        })]);
+
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('does not show the chip for Open status, unchanged from before #1926', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'Open',
+            registrationOpens: '2026-12-10T00:00:00Z',
+        })]);
+
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+        expect(screen.getByText('Register')).not.toBeNull();
+    });
+
+    it('does not show the chip for Closed status, unchanged from before #1926', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'Closed',
+            registrationOpens: '2026-12-10T00:00:00Z',
+            distances: [{ label: '10 km', ticketStatus: 'Closed' }],
+        })]);
+
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('does not show the chip for NotRequired status, unchanged from before #1926', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'NotRequired',
+            registrationOpens: '2026-12-10T00:00:00Z',
+        })]);
+
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('does not show the chip for Invitational status, unchanged from before #1926', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'Invitational',
+            registrationOpens: '2026-12-10T00:00:00Z',
+        })]);
+
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    // Review round 1 (PR #1936): isAllUnavailableForRegistration(null/[]) is false regardless of
+    // registrationStatus, so a NotStarted edition with no races yet must fall into the Register
+    // branch, not the chip branch — locks in the ternary-chain structure RacesPage.tsx was fixed
+    // to mirror.
+    it('shows the Register button, not the chip, when NotStarted but distances is null (mutual exclusion regression guard)', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-10T00:00:00Z',
+            distances: null,
+        })]);
+
+        expect(screen.getByText('Register')).not.toBeNull();
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
     });
 });
 

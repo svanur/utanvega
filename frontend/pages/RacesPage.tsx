@@ -1606,31 +1606,60 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                     }
                                     leftActions={
                                         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllUnavailableForRegistration(comp.distances) && isRegistrationRequired(comp.registrationStatus) && (
-                                                <Box
-                                                    component="a"
-                                                    href={comp.registrationUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                                                    sx={{
-                                                        flex: 1,
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        bgcolor: 'success.main',
-                                                        color: 'white',
-                                                        textDecoration: 'none',
-                                                        gap: 0.5,
-                                                        px: 1,
-                                                        fontSize: '0.7rem',
-                                                        fontWeight: 600,
-                                                    }}
-                                                >
-                                                    <OpenInNewIcon sx={{ fontSize: 18 }} />
-                                                    {t('races.register', 'Register')}
-                                                </Box>
+                                            {/* #1926 (review round 1): a single ternary chain, not two independent conditions — with
+                                                distances null/empty, isAllUnavailableForRegistration returns false, so an independent
+                                                `registrationStatus === 'NotStarted'` check below would render this chip *alongside* the
+                                                register box rather than in place of it. Nesting the chip inside the
+                                                isAllUnavailableForRegistration branch (mirrors EventTableView.tsx's Links cell) keeps
+                                                them mutually exclusive without adding a 4th slot to the fixed revealWidth={168} budget. */}
+                                            {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && isRegistrationRequired(comp.registrationStatus) && (
+                                                isAllUnavailableForRegistration(comp.distances) ? (
+                                                    comp.registrationStatus === 'NotStarted' && comp.registrationOpens && (
+                                                        <Box
+                                                            sx={{
+                                                                flex: 1,
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                bgcolor: 'info.main',
+                                                                color: 'white',
+                                                                textAlign: 'center',
+                                                                gap: 0.5,
+                                                                px: 1,
+                                                                fontSize: '0.6rem',
+                                                                fontWeight: 600,
+                                                            }}
+                                                        >
+                                                            {t('races.registrationOpensOn', { date: formatNextDate(comp.registrationOpens.slice(0, 10), t) })}
+                                                        </Box>
+                                                    )
+                                                ) : (
+                                                    <Box
+                                                        component="a"
+                                                        href={comp.registrationUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                        sx={{
+                                                            flex: 1,
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            bgcolor: 'success.main',
+                                                            color: 'white',
+                                                            textDecoration: 'none',
+                                                            gap: 0.5,
+                                                            px: 1,
+                                                            fontSize: '0.7rem',
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        <OpenInNewIcon sx={{ fontSize: 18 }} />
+                                                        {t('races.register', 'Register')}
+                                                    </Box>
+                                                )
                                             )}
                                             {(comp.displayDate ?? comp.nextEditionDate) && (
                                                 <Box
@@ -1724,12 +1753,29 @@ export default function RacesPage({ mode, onToggleMode, showQuote = false }: Rac
                                                         <Chip label={t('races.statusUpcoming')} size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />
                                                     )}
                                                 </Stack>
-                                                {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl) && (
+                                                {(comp.registrationUrl || comp.organizerWebsite || comp.resultsUrl || (comp.galleries?.length ?? 0) > 0 || comp.youtubeUrl || (comp.registrationStatus === 'NotStarted' && comp.registrationOpens)) && (
                                                     <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap" justifyContent="flex-end">
-                                                        {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && !isAllUnavailableForRegistration(comp.distances) && isRegistrationRequired(comp.registrationStatus) && (
-                                                            <Button size="small" variant="contained" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
-                                                                {t('races.register', 'Register')}
-                                                            </Button>
+                                                        {/* #1926 (review round 1): a single ternary chain, not two independent conditions —
+                                                            with distances null/empty, isAllUnavailableForRegistration returns false, so an
+                                                            independent `registrationStatus === 'NotStarted'` check would render this chip
+                                                            *alongside* the Register button rather than in place of it. Nesting the chip
+                                                            inside the isAllUnavailableForRegistration branch (mirrors EventTableView.tsx's
+                                                            Links cell) keeps them mutually exclusive. */}
+                                                        {comp.registrationUrl && comp.daysUntil != null && comp.daysUntil >= 0 && isRegistrationRequired(comp.registrationStatus) && (
+                                                            isAllUnavailableForRegistration(comp.distances) ? (
+                                                                comp.registrationStatus === 'NotStarted' && comp.registrationOpens && (
+                                                                    <Chip
+                                                                        label={t('races.registrationOpensOn', { date: formatNextDate(comp.registrationOpens.slice(0, 10), t) })}
+                                                                        size="small"
+                                                                        color="info"
+                                                                        sx={{ fontSize: '0.75rem' }}
+                                                                    />
+                                                                )
+                                                            ) : (
+                                                                <Button size="small" variant="contained" href={comp.registrationUrl} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>
+                                                                    {t('races.register', 'Register')}
+                                                                </Button>
+                                                            )
                                                         )}
                                                         {comp.organizerWebsite && (
                                                             <Button size="small" variant="outlined" href={comp.organizerWebsite} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewIcon sx={{ fontSize: 12 }} />} onClick={(e) => e.stopPropagation()} sx={{ textTransform: 'none', fontSize: '0.75rem' }}>

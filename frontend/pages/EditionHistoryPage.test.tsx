@@ -151,6 +151,7 @@ function makeEvent(edition: EventEditionDto, overrides: Partial<EventDetail> = {
         distances: null,
         registrationUrl: null,
         registrationStatus: null,
+        registrationOpens: null,
         registrationCloses: null,
         resultsUrl: null,
         galleries: [],

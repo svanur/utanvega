@@ -129,6 +129,7 @@ function makeEvent(overrides: Partial<EventSummary> = {}): EventSummary {
         distances: [{ label: '10 km', ticketStatus: null }],
         registrationUrl: null,
         registrationStatus: null,
+        registrationOpens: null,
         registrationCloses: null,
         resultsUrl: null,
         galleries: [],
@@ -697,6 +698,100 @@ describe('RacesPage list view Register button respects per-race NotStarted ticke
         renderRacesPage('/events');
 
         await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+    });
+});
+
+// #1926: a NotStarted-status event hid the Register button (via #1601's isAllUnavailableForRegistration
+// gate) with nothing to explain why — the visitor just saw no registration UI at all. Only the
+// visible card chip (RacesPage.tsx's non-swipe branch) is exercised here: SwipeableCard
+// (components/SwipeableCard.tsx:126) doesn't mount leftActions into the DOM at all until the card
+// is actually swiped, so the hidden swipe-reveal counterpart never shows up in these queries.
+describe('RacesPage list view shows a "Registration opens" chip for NotStarted status (#1926)', () => {
+    function makeNotStartedEvent(overrides: Partial<EventSummary> = {}): EventSummary {
+        return makeEvent({
+            registrationUrl: 'https://example.com/register',
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-10T00:00:00Z',
+            daysUntil: 10,
+            distances: [{ label: '10 km', ticketStatus: 'NotStarted' }],
+            ...overrides,
+        });
+    }
+
+    it('shows the chip when registrationStatus is NotStarted and registrationOpens is set', async () => {
+        mockEvents.current = [makeNotStartedEvent()];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
+        expect(screen.getByText(/Registration opens/)).not.toBeNull();
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('renders nothing when registrationStatus is NotStarted but registrationOpens is null (regression guard)', async () => {
+        mockEvents.current = [makeNotStartedEvent({ registrationOpens: null })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+        expect(screen.queryByText('Register')).toBeNull();
+    });
+
+    it('does not show the chip for Open status, unchanged from before #1926', async () => {
+        mockEvents.current = [makeNotStartedEvent({
+            registrationStatus: 'Open',
+            distances: [{ label: '10 km', ticketStatus: null }],
+        })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('does not show the chip for Closed status, unchanged from before #1926', async () => {
+        mockEvents.current = [makeNotStartedEvent({
+            registrationStatus: 'Closed',
+            distances: [{ label: '10 km', ticketStatus: 'Closed' }],
+        })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('does not show the chip for NotRequired status, unchanged from before #1926', async () => {
+        mockEvents.current = [makeNotStartedEvent({ registrationStatus: 'NotRequired' })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('does not show the chip for Invitational status, unchanged from before #1926', async () => {
+        mockEvents.current = [makeNotStartedEvent({ registrationStatus: 'Invitational' })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    // Review round 1 (PR #1936): with distances null/empty, isAllUnavailableForRegistration
+    // returns false regardless of registrationStatus, so a NotStarted edition with no races yet
+    // falls into the Register-button branch, not the chip branch — the two must stay mutually
+    // exclusive instead of two independently-gated conditions that can both fire at once.
+    it('shows the Register button, not the chip, when NotStarted but distances is null (mutual exclusion regression guard)', async () => {
+        mockEvents.current = [makeNotStartedEvent({ distances: null })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('shows the Register button, not the chip, when NotStarted but distances is empty (mutual exclusion regression guard)', async () => {
+        mockEvents.current = [makeNotStartedEvent({ distances: [] })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
     });
 });
 

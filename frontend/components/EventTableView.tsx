@@ -535,7 +535,16 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                         color="error"
                                                         variant="outlined"
                                                     />
-                                                ) : isAllUnavailableForRegistration(event.distances) ? null : (
+                                                ) : isAllUnavailableForRegistration(event.distances) ? (
+                                                    event.registrationStatus === 'NotStarted' && event.registrationOpens ? (
+                                                        <Chip
+                                                            label={t('races.registrationOpensOn', { date: formatNextDate(event.registrationOpens.slice(0, 10), t) })}
+                                                            size="small"
+                                                            color="info"
+                                                            variant="outlined"
+                                                        />
+                                                    ) : null
+                                                ) : (
                                                     <Button
                                                         size="small"
                                                         variant="contained"
