@@ -773,6 +773,26 @@ describe('RacesPage list view shows a "Registration opens" chip for NotStarted s
         await waitFor(() => expect(screen.getByText('Event')).not.toBeNull());
         expect(screen.queryByText(/Registration opens/)).toBeNull();
     });
+
+    // Review round 1 (PR #1936): with distances null/empty, isAllUnavailableForRegistration
+    // returns false regardless of registrationStatus, so a NotStarted edition with no races yet
+    // falls into the Register-button branch, not the chip branch — the two must stay mutually
+    // exclusive instead of two independently-gated conditions that can both fire at once.
+    it('shows the Register button, not the chip, when NotStarted but distances is null (mutual exclusion regression guard)', async () => {
+        mockEvents.current = [makeNotStartedEvent({ distances: null })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
+
+    it('shows the Register button, not the chip, when NotStarted but distances is empty (mutual exclusion regression guard)', async () => {
+        mockEvents.current = [makeNotStartedEvent({ distances: [] })];
+        renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Register')).not.toBeNull());
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
 });
 
 // #1664: PR #1661's list-card redesign incidentally fixed a pre-existing regression where the

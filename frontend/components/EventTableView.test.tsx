@@ -243,6 +243,21 @@ describe('EventTableView shows a "Registration opens" chip for NotStarted status
 
         expect(screen.queryByText(/Registration opens/)).toBeNull();
     });
+
+    // Review round 1 (PR #1936): isAllUnavailableForRegistration(null/[]) is false regardless of
+    // registrationStatus, so a NotStarted edition with no races yet must fall into the Register
+    // branch, not the chip branch — locks in the ternary-chain structure RacesPage.tsx was fixed
+    // to mirror.
+    it('shows the Register button, not the chip, when NotStarted but distances is null (mutual exclusion regression guard)', () => {
+        renderTable([makeEvent({
+            registrationStatus: 'NotStarted',
+            registrationOpens: '2026-12-10T00:00:00Z',
+            distances: null,
+        })]);
+
+        expect(screen.getByText('Register')).not.toBeNull();
+        expect(screen.queryByText(/Registration opens/)).toBeNull();
+    });
 });
 
 // #1925: the event-name cell previously only navigated via the <TableRow>'s own onClick — no
