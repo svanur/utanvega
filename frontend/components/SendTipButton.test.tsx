@@ -186,9 +186,9 @@ describe('SendTipButton (#1928)', () => {
         render(<SendTipButton type="event" inline />);
 
         // MUI Select: open via mousedown on the combobox, pick the option from the listbox.
-        // The InputLabel/Select pair isn't id/labelId-wired (out of scope here), so the
-        // combobox has no accessible name — there's only one on the form, select by role alone.
-        fireEvent.mouseDown(screen.getByRole('combobox'));
+        // #1930: InputLabel/Select now carry a matching id/labelId, so the combobox has its
+        // own accessible name — query by it rather than relying on "only one combobox".
+        fireEvent.mouseDown(screen.getByRole('combobox', { name: CATEGORY_LABEL }));
         fireEvent.click(screen.getByRole('option', { name: 'Suggestion' }));
 
         const nameInput = screen.getByLabelText(NAME_LABEL) as HTMLInputElement;
@@ -208,7 +208,7 @@ describe('SendTipButton (#1928)', () => {
         const reopenedMessage = screen.getByPlaceholderText(PLACEHOLDER) as HTMLInputElement;
         const reopenedSteps = screen.getByLabelText(STEPS_LABEL) as HTMLInputElement;
 
-        expect(screen.getByRole('combobox').textContent).toContain('Suggestion');
+        expect(screen.getByRole('combobox', { name: CATEGORY_LABEL }).textContent).toContain('Suggestion');
         expect(reopenedName.value).toBe('Jón');
         expect(reopenedEmail.value).toBe('jon@example.com');
         expect(reopenedMessage.value).toBe('');
