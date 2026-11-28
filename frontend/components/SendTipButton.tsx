@@ -133,11 +133,8 @@ export default function SendTipButton({ type: _type, sx, inline = false }: SendT
     function handleClose() {
         setOpen(inline);
         setMessage('');
-        setName('');
-        setEmail('');
         setSteps('');
         setStatus('idle');
-        setMode('simple');
         setScreenshotDataUrl(null);
         setIncludeScreenshot(false);
         setScreenshotPreviewOpen(false);
