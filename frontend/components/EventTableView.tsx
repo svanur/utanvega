@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     TableSortLabel, Paper, Typography, Chip, IconButton, Tooltip, Stack,
@@ -311,11 +311,13 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                             <ActivityIcons activityTypes={event.activityTypes} activityType={event.activityType} />
                                             <Stack spacing={0.25}>
                                                 <Typography variant="body2" fontWeight={700} noWrap sx={{ maxWidth: 280 }}>
-                                                    {loc(event.name, event.nameEn) ?? event.name}
-                                                    {' '}
-                                                    <svg width="6" height="6" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 1, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
-                                                    {' '}
-                                                    {loc(race.raceName, race.raceNameEn) ?? race.raceName}
+                                                    <RouterLink to={`/events/${event.slug}`} style={{ color: 'inherit', textDecoration: 'inherit' }}>
+                                                        {loc(event.name, event.nameEn) ?? event.name}
+                                                        {' '}
+                                                        <svg width="6" height="6" viewBox="0 0 24 24" style={{ display: 'inline', verticalAlign: 'middle', marginBottom: 1, opacity: 0.5 }}><circle cx="12" cy="12" r="8" fill="currentColor" /></svg>
+                                                        {' '}
+                                                        {loc(race.raceName, race.raceNameEn) ?? race.raceName}
+                                                    </RouterLink>
                                                 </Typography>
                                                 <Chip label={t(`races.eventTypes.Series`, 'Series')} size="small" color={getEventTypeColor('Series')} variant="outlined" sx={{ fontSize: '0.65rem', height: 18, alignSelf: 'flex-start' }} />
                                             </Stack>
@@ -454,7 +456,9 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                                             ...(isEffectivelyCancelled(event) && { textDecoration: 'line-through' }),
                                                         }}
                                                     >
-                                                        {loc(event.name, event.nameEn) ?? event.name}
+                                                        <RouterLink to={`/events/${event.slug}`} style={{ color: 'inherit', textDecoration: 'inherit' }}>
+                                                            {loc(event.name, event.nameEn) ?? event.name}
+                                                        </RouterLink>
                                                     </Typography>
                                                     {event.type === 'Advertisement' && (
                                                         <Chip label={t('races.eventTypes.Advertisement', 'Sponsored')} size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem' }} />

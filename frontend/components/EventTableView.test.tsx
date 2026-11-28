@@ -153,3 +153,44 @@ describe('EventTableView Register button respects per-race NotStarted ticketStat
         expect(screen.getByText('Register')).not.toBeNull();
     });
 });
+
+// #1925: the event-name cell previously only navigated via the <TableRow>'s own onClick — no
+// <a> anywhere in the row, so right-click "open in new tab" / middle-click had nothing to attach
+// to. The name cell now wraps its text in a RouterLink; the row's onClick stays for clicks
+// elsewhere in the row.
+describe('EventTableView event-name cell renders as a real anchor, not click-only (#1925)', () => {
+    it('renders the regular-row event name as an <a href="/events/<slug>">', () => {
+        const { container } = renderTable([makeEvent({ slug: 'regular-run', name: 'Regular Run' })]);
+
+        expect(screen.getByText('Regular Run')).not.toBeNull();
+        const link = container.querySelector('a[href="/events/regular-run"]');
+        expect(link).not.toBeNull();
+        expect(link!.tagName).toBe('A');
+        expect(link!.textContent).toBe('Regular Run');
+    });
+
+    it('renders the series-grouped row event name as an <a href="/events/<slug>"> pointing at the parent event', () => {
+        const { container } = renderTable([makeEvent({
+            slug: 'series-run', name: 'Series Run', type: 'Series',
+            seriesRaces: [{
+                raceId: 'race-1',
+                raceName: 'Series Race One',
+                raceNameEn: null,
+                dateOfRace: '2026-12-01',
+                startTime: null,
+                distanceLabel: '10 km',
+                trailElevationGain: null,
+                ticketStatus: 'Open',
+                registrationUrl: null,
+            }],
+        })]);
+
+        // This row's name cell renders "<event name> • <race name>" as one run of text inside a
+        // single <a> (no nested element wraps the race name alone), so getByText('Series Race
+        // One') can't match it the way the regular-row test above does — assert on the anchor's
+        // own textContent instead.
+        const link = container.querySelector('a[href="/events/series-run"]');
+        expect(link).not.toBeNull();
+        expect(link!.textContent).toContain('Series Race One');
+    });
+});

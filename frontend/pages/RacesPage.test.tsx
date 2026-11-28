@@ -8,7 +8,7 @@
 import React, { useEffect } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, cleanup, fireEvent, within } from '@testing-library/react';
-import { MemoryRouter, useNavigate } from 'react-router-dom';
+import { MemoryRouter, useNavigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import i18n from 'i18next';
@@ -168,21 +168,32 @@ function NavigateCapture({ navigateRef }: { navigateRef: { current: ((to: string
     return null;
 }
 
+// #1925: captures the router's current pathname so a test can click a rendered <a> (the
+// CardActionArea's RouterLink) and confirm history actually moved, without needing a second
+// matched <Route> for the destination to render into.
+function LocationCapture({ pathnameRef }: { pathnameRef: { current: string | null } }) {
+    const location = useLocation();
+    useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname, pathnameRef]);
+    return null;
+}
+
 function renderRacesPage(initialPath: string) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const theme = createAppTheme('light');
     const navigateRef: { current: ((to: string) => void) | null } = { current: null };
+    const pathnameRef: { current: string | null } = { current: null };
     const utils = render(
         <MemoryRouter initialEntries={[initialPath]}>
             <QueryClientProvider client={queryClient}>
                 <ThemeProvider theme={theme}>
                     <NavigateCapture navigateRef={navigateRef} />
+                    <LocationCapture pathnameRef={pathnameRef} />
                     <RacesPage mode="light" onToggleMode={() => {}} />
                 </ThemeProvider>
             </QueryClientProvider>
         </MemoryRouter>
     );
-    return { ...utils, navigateRef };
+    return { ...utils, navigateRef, pathnameRef };
 }
 
 describe('RacesPage URL->state hydration effect (#1026, #1235)', () => {
@@ -741,5 +752,73 @@ describe('RacesPage series-race row renders Cancelled/Unconfirmed/Announcement (
 
         await waitFor(() => expect(screen.getByText('Series Race One')).not.toBeNull());
         expect(screen.getByText('Route changed this year due to construction')).not.toBeNull();
+    });
+});
+
+// #1925: CardActionArea previously navigated purely via an onClick handler, with no `href` —
+// browsers have nothing to attach "open in new tab"/"copy link" to, and middle-click/ctrl-click
+// silently did nothing. Converting to `component={RouterLink} to=...` renders a real `<a>`.
+describe('RacesPage event cards render as real anchors, not div-only onClick (#1925)', () => {
+    it('renders the default list-view event card as an <a href="/events/<slug>">', async () => {
+        mockEvents.current = [runningEvent];
+        const { container } = renderRacesPage('/events?activity=Running');
+
+        await waitFor(() => expect(screen.getByText('Midnight Sun Run')).not.toBeNull());
+
+        const link = container.querySelector('a[href="/events/midnight-sun-run"]');
+        expect(link).not.toBeNull();
+        expect(link!.tagName).toBe('A');
+    });
+
+    it('still navigates client-side on a plain left-click of the card', async () => {
+        mockEvents.current = [runningEvent];
+        const { container, pathnameRef } = renderRacesPage('/events?activity=Running');
+
+        await waitFor(() => expect(screen.getByText('Midnight Sun Run')).not.toBeNull());
+        expect(pathnameRef.current).toBe('/events');
+
+        const link = container.querySelector('a[href="/events/midnight-sun-run"]') as HTMLAnchorElement;
+        fireEvent.click(link);
+
+        await waitFor(() => expect(pathnameRef.current).toBe('/events/midnight-sun-run'));
+    });
+
+    it('renders the "recently completed" (justRaced) card as a real anchor', async () => {
+        const justRacedEvent = makeEvent({
+            id: 'event-just-raced', slug: 'just-raced-run', name: 'Just Raced Run',
+            daysUntil: -1, displayDate: '2026-11-20', nextEditionDate: '2026-11-20',
+            recentlyCompletedSeriesRace: null,
+        });
+        mockEvents.current = [justRacedEvent];
+        const { container } = renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Just Raced Run')).not.toBeNull());
+
+        const link = container.querySelector('a[href="/events/just-raced-run"]');
+        expect(link).not.toBeNull();
+    });
+
+    it('renders a series-race list-view card as a real anchor pointing at the parent event slug', async () => {
+        const seriesEvent = makeEvent({
+            id: 'event-series', slug: 'series-run', name: 'Series Run', type: 'Series',
+            seriesRaces: [{
+                raceId: 'race-1',
+                raceName: 'Series Race One',
+                raceNameEn: null,
+                dateOfRace: '2026-12-01',
+                startTime: null,
+                distanceLabel: '10 km',
+                trailElevationGain: null,
+                ticketStatus: 'Open',
+                registrationUrl: null,
+            }],
+        });
+        mockEvents.current = [seriesEvent];
+        const { container } = renderRacesPage('/events');
+
+        await waitFor(() => expect(screen.getByText('Series Race One')).not.toBeNull());
+
+        const link = container.querySelector('a[href="/events/series-run"]');
+        expect(link).not.toBeNull();
     });
 });
