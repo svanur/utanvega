@@ -256,3 +256,40 @@ describe('EventTableView event-name cell renders as a real anchor, not click-onl
         expect(pushSpy).toHaveBeenCalledTimes(1);
     });
 });
+
+// #1933: once the name cell got its own RouterLink (#1925/#1932), the row's own role="link" +
+// tabIndex={0} became a second keyboard/AT focus stop for the same destination. Row keeps its
+// onClick for mouse/touch clicks elsewhere, but must no longer expose itself as a focusable
+// "link" — the anchor is the sole tab stop.
+describe('EventTableView table row is not a second keyboard tab stop (#1933)', () => {
+    it('regular row: TableRow has no role="link" or tabIndex, while its name anchor still has an href', () => {
+        const { container } = renderTable([makeEvent({ slug: 'regular-run', name: 'Regular Run' })]);
+
+        const row = container.querySelectorAll('tbody tr')[0];
+        expect(row.getAttribute('role')).not.toBe('link');
+        expect(row.getAttribute('tabindex')).toBeNull();
+        expect(container.querySelector('a[href="/events/regular-run"]')).not.toBeNull();
+    });
+
+    it('series-grouped row: TableRow has no role="link" or tabIndex, while its name anchor still has an href', () => {
+        const { container } = renderTable([makeEvent({
+            slug: 'series-run', name: 'Series Run', type: 'Series',
+            seriesRaces: [{
+                raceId: 'race-1',
+                raceName: 'Series Race One',
+                raceNameEn: null,
+                dateOfRace: '2026-12-01',
+                startTime: null,
+                distanceLabel: '10 km',
+                trailElevationGain: null,
+                ticketStatus: 'Open',
+                registrationUrl: null,
+            }],
+        })]);
+
+        const row = container.querySelectorAll('tbody tr')[0];
+        expect(row.getAttribute('role')).not.toBe('link');
+        expect(row.getAttribute('tabindex')).toBeNull();
+        expect(container.querySelector('a[href="/events/series-run"]')).not.toBeNull();
+    });
+});

@@ -269,11 +269,8 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                     {holidaySeparator}
                                     <TableRow
                                         hover
-                                        tabIndex={0}
-                                        role="link"
                                         sx={{ cursor: 'pointer', bgcolor: idx % 2 === 1 ? 'action.hover' : 'transparent' }}
                                         onClick={() => navigate(`/events/${event.slug}`)}
-                                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
                                 >
                                     <TableCell sx={{ p: 0.5 }} />
                                     <TableCell sx={{ p: 0.5 }} onClick={e => e.stopPropagation()}>
@@ -384,8 +381,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                 {holidaySeparator}
                                 <TableRow
                                     hover
-                                    tabIndex={0}
-                                    role="link"
                                     sx={{
                                         cursor: 'pointer',
                                         '& td': { borderBottom: isExpanded ? 0 : undefined },
@@ -395,7 +390,6 @@ const EventTableView: React.FC<EventTableViewProps> = ({ events, userLocation, o
                                         ...(isEffectivelyCancelled(event) && { opacity: 0.6 }),
                                     }}
                                     onClick={() => navigate(`/events/${event.slug}`)}
-                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/events/${event.slug}`); } }}
                                 >
                                     <TableCell sx={{ p: 0.5 }}>
                                         <IconButton
